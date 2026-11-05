@@ -3,6 +3,10 @@ name: Publish archives to Pages
 on:
   release:
     types: [published, deleted]
+  # A change to how the site is built republishes it (the manifest's script, this workflow).
+  push:
+    branches: [main]
+    paths: ['.github/workflows/pages.yml', 'scripts/**']
   workflow_dispatch:
 
 permissions:

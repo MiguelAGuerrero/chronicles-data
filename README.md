@@ -17,7 +17,7 @@ Archives are built by `scripts/build-places-archive.js` in the app repo (its dec
 gh release create v20261105 places-us-20261105.pmtiles --repo MiguelAGuerrero/chronicles-data --title "US places 2026-11-05"
 ```
 
-Publishing (or deleting) a release runs `.github/workflows/pages.yml`, which downloads the archives of the newest three releases, writes `manifest.json` and deploys them to Pages. The archives live only on releases, so this repo's history stays small, and the three newest versions stay online so an app that read an older manifest still finds its file.
+Publishing (or deleting) a release, or a change to the workflow or `scripts/` on `main`, runs `.github/workflows/pages.yml`, which downloads the archives of the newest three releases, writes `manifest.json` and deploys them to Pages. The archives live only on releases, so this repo's history stays small, and the three newest versions stay online so an app that read an older manifest still finds its file.
 
 ## Licences
 
