@@ -1,0 +1,53 @@
+name: Publish archives to Pages
+
+on:
+  release:
+    types: [published, deleted]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  # How many of the newest releases stay online (older app sessions may still hold their manifest).
+  KEEP: 3
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download the newest releases' archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p site
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 50 --json tagName,isDraft,isPrerelease,publishedAt \
+            --jq '[.[] | select((.isDraft or .isPrerelease) | not)] | sort_by(.publishedAt) | reverse | .[:'"$KEEP"'] | .[].tagName' > tags.txt
+          while read -r tag; do
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'places-*.pmtiles' --dir site --skip-existing
+          done < tags.txt
+      - name: Write the manifest
+        run: node scripts/manifest.mjs site > site/manifest.json && touch site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

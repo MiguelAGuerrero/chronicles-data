@@ -1,0 +1,5 @@
+# Archives are published as release assets, never committed.
+*.pmtiles
+site/
+tags.txt
+node_modules/
