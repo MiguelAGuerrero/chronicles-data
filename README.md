@@ -11,7 +11,7 @@ The app reads `manifest.json` (at most daily) and then only the parts of the cur
 
 ## How a new version is published
 
-Archives are built by `scripts/build-places-archive.js` in the app repo (its decision 0096), never in this repo. To publish one:
+Archives are built by `scripts/build-places-archive.js` in the app repo (its decision 0101), never in this repo. To publish one:
 
 ```bash
 gh release create v20261105 places-us-20261105.pmtiles --repo MiguelAGuerrero/chronicles-data --title "US places 2026-11-05"
