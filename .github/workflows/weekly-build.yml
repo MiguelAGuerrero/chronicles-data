@@ -41,7 +41,8 @@ jobs:
       - name: Build the archive
         id: build
         run: |
-          version=$(date -u +%Y%m%d)
+          # The run number keeps a second run on the same day from colliding with the first's tag.
+          version="$(date -u +%Y%m%d).${{ github.run_number }}"
           mkdir -p out
           node app/scripts/build-places-archive.mjs --wikidata items.jsonl --edits app/src/lib/discovery/archiveEdits.json --region us --version "$version" --out out
           echo "version=$version" >> "$GITHUB_OUTPUT"
