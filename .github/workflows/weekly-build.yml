@@ -1,0 +1,61 @@
+name: Weekly places build
+
+# Places worth the stop (PW19, decision 0102 in the app repo): rebuild the US archive from Wikidata once a week and
+# publish a release only when it changed, so the weekly build is also the check for changes. The build's scripts
+# live in the app repo (scripts/build-places-archive.mjs and scripts/places-archive/), which this checks out.
+
+on:
+  schedule:
+    - cron: '17 7 * * 1' # Mondays, 07:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # create the release
+  actions: write # start the Pages workflow (a release made with this token starts no workflow by itself)
+
+concurrency:
+  group: places-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: MiguelAGuerrero/chronicles
+          ref: main
+          path: app
+          # A private app repo needs a read token saved as APP_REPO_TOKEN; a public one reads with the default.
+          token: ${{ secrets.APP_REPO_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        working-directory: app
+      - name: Fetch the US items from Wikidata, one cell at a time
+        run: node app/scripts/places-archive/fetch-wikidata.mjs --region us --out items.jsonl
+      - name: Build the archive
+        id: build
+        run: |
+          version=$(date -u +%Y%m%d)
+          mkdir -p out
+          node app/scripts/build-places-archive.mjs --wikidata items.jsonl --edits app/src/lib/discovery/archiveEdits.json --region us --version "$version" --out out
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Decide whether it changed
+        id: decide
+        run: node app/scripts/places-archive/publish.mjs --region us --archive "out/places-us-${{ steps.build.outputs.version }}.pmtiles" --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
+      - name: Publish a release, and republish the site
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${{ steps.build.outputs.version }}"
+          gh release create "v$v" "out/places-us-$v.pmtiles" --repo "$GITHUB_REPOSITORY" --title "US places $v" --notes "Weekly build: ${{ steps.decide.outputs.reason }}."
+          gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+      - name: Nothing changed
+        if: steps.decide.outputs.publish != 'true'
+        run: echo "Not published: ${{ steps.decide.outputs.reason }}"

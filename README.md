@@ -11,6 +11,8 @@ The app reads `manifest.json` (at most daily) and then only the parts of the cur
 
 ## How a new version is published
 
+A scheduled workflow (`.github/workflows/weekly-build.yml`, Mondays) fetches the US items from Wikidata, builds the archive with the app repo's scripts, and publishes a release only when the archive changed (PW19). It reads the app repo's `main`; a private app repo needs a read token saved here as the `APP_REPO_TOKEN` secret. By hand, the same is:
+
 Archives are built by `scripts/build-places-archive.js` in the app repo (its decision 0102), never in this repo. To publish one:
 
 ```bash
