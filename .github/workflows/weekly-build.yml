@@ -59,4 +59,5 @@ jobs:
           gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
       - name: Nothing changed
         if: steps.decide.outputs.publish != 'true'
-        run: echo "Not published: ${{ steps.decide.outputs.reason }}"
+        run: |
+          echo "Not published: ${{ steps.decide.outputs.reason }}"
