@@ -1,0 +1,93 @@
+// The raw store (PP2): each source's answers exactly as received, by run, with the time and a SHA-256, so every
+// stage after fetch reads files and never the network. Layout: <dir>/<source>/<run>/<part>, and an index.json per
+// run listing its parts. A run that finished writes `complete: true`; only a complete run is used as a fallback (PP14).
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+export interface RawPart {
+  part: string;
+  sha256: string;
+  fetchedAt: string;
+}
+
+interface RunIndex {
+  parts: RawPart[];
+  complete: boolean;
+}
+
+const SAFE = /^[A-Za-z0-9._-]+$/;
+const sha = (s: string) => createHash('sha256').update(s).digest('hex');
+
+export function createRawStore(dir: string) {
+  const runDir = (source: string, run: string) => {
+    if (!SAFE.test(source) || !SAFE.test(run)) throw new Error(`bad raw store path: ${source}/${run}`);
+    return join(dir, source, run);
+  };
+  const indexOf = (source: string, run: string): RunIndex => {
+    const f = join(runDir(source, run), 'index.json');
+    return existsSync(f) ? (JSON.parse(readFileSync(f, 'utf8')) as RunIndex) : { parts: [], complete: false };
+  };
+  const writeIndex = (source: string, run: string, ix: RunIndex) => {
+    mkdirSync(runDir(source, run), { recursive: true });
+    writeFileSync(join(runDir(source, run), 'index.json'), `${JSON.stringify(ix, null, 1)}\n`);
+  };
+
+  const runs = (source: string): string[] => {
+    const d = join(dir, source);
+    return existsSync(d) ? readdirSync(d).filter((r) => SAFE.test(r)).sort() : [];
+  };
+
+  return {
+    /** Keeps one answer; a part written twice in a run keeps the last. */
+    put(source: string, run: string, part: string, body: string, fetchedAt: string): RawPart {
+      if (!SAFE.test(part) || part === 'index.json') throw new Error(`bad raw part name: ${part}`);
+      const d = runDir(source, run);
+      mkdirSync(d, { recursive: true });
+      writeFileSync(join(d, part), body);
+      const ix = indexOf(source, run);
+      const entry = { part, sha256: sha(body), fetchedAt };
+      ix.parts = [...ix.parts.filter((p) => p.part !== part), entry];
+      writeIndex(source, run, ix);
+      return entry;
+    },
+    /** Marks a run's fetch as finished, so it can stand in for a later failed one. */
+    complete(source: string, run: string) {
+      writeIndex(source, run, { ...indexOf(source, run), complete: true });
+    },
+    parts(source: string, run: string): RawPart[] {
+      return [...indexOf(source, run).parts].sort((a, b) => (a.part < b.part ? -1 : 1));
+    },
+    /** A part's text, checked against its hash. */
+    read(source: string, run: string, part: string): string {
+      const entry = indexOf(source, run).parts.find((p) => p.part === part);
+      if (!entry) throw new Error(`no raw part ${source}/${run}/${part}`);
+      const body = readFileSync(join(runDir(source, run), part), 'utf8');
+      if (sha(body) !== entry.sha256) throw new Error(`raw part ${source}/${run}/${part} does not match its hash`);
+      return body;
+    },
+    runs,
+    /** The newest complete run before `before` (PP14), or null. */
+    lastComplete(source: string, before: string): string | null {
+      return runs(source).filter((r) => r < before && indexOf(source, r).complete).at(-1) ?? null;
+    },
+    /** PP1: deletes a source's runs whose newest answer is older than its retention. */
+    prune(source: string, retentionDays: number | null, now: number) {
+      if (retentionDays == null) return;
+      for (const r of runs(source)) {
+        const fetched = indexOf(source, r).parts.map((p) => Date.parse(p.fetchedAt)).filter(Number.isFinite);
+        const newest = fetched.length ? Math.max(...fetched) : 0;
+        if (now - newest > retentionDays * 86_400_000) rmSync(runDir(source, r), { recursive: true, force: true });
+      }
+    },
+    /** PP15: keeps a source's newest `n` runs, so the saved state stays a few weeks long. */
+    keepNewest(source: string, n: number) {
+      for (const r of runs(source).slice(0, Math.max(0, runs(source).length - n))) rmSync(runDir(source, r), { recursive: true, force: true });
+    },
+    sources(): string[] {
+      return existsSync(dir) ? readdirSync(dir).filter((s) => SAFE.test(s)).sort() : [];
+    },
+  };
+}
+
+export type RawStore = ReturnType<typeof createRawStore>;

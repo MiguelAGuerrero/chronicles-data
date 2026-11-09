@@ -1,0 +1,35 @@
+{
+  "contractVersion": 1,
+  "classes": [
+    "monument",
+    "memorial",
+    "statue",
+    "marker",
+    "mural",
+    "sculpture",
+    "overlook",
+    "tower",
+    "folly",
+    "novelty_building",
+    "roadside_giant",
+    "natural_oddity",
+    "odd_engineering",
+    "marks_a_fact",
+    "art_environment",
+    "ruin",
+    "heritage_building"
+  ],
+  "sources": [
+    {
+      "name": "wikidata",
+      "code": "wd",
+      "license": "CC0 1.0",
+      "licenseFamily": "cc0",
+      "attribution": "Wikidata",
+      "role": "locates",
+      "hosts": [
+        "query.wikidata.org"
+      ]
+    }
+  ]
+}

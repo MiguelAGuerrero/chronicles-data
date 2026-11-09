@@ -3,3 +3,6 @@
 site/
 tags.txt
 node_modules/
+!contract/example/*.pmtiles
+state/
+out/

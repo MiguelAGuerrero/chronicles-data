@@ -1,0 +1,21 @@
+{
+  "name": "chronicles-data",
+  "private": true,
+  "type": "module",
+  "description": "The places data Chronicles reads: the pipeline that builds it, the contract it keeps, and the packs it serves.",
+  "scripts": {
+    "build": "node --import tsx src/cli.ts",
+    "contract": "node --import tsx src/contract.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@mapbox/vector-tile": "3.0.0",
+    "@types/node": "^22.20.5",
+    "pbf": "5.1.2",
+    "pmtiles": "^4.5.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "zod": "^4"
+  }
+}

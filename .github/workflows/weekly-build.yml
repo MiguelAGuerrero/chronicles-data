@@ -1,9 +1,9 @@
 name: Weekly places build
 
-# The places pipeline (PP1-PP16, decisions 0103 and 0104 in the app repo): once a week, fetch every source through
-# its adapter, build the US archive and publish a release only when a block's places changed (PP12). The pipeline
-# lives in the app repo (scripts/places-pipeline/), which this checks out. Its state (raw answers and the place ID
-# registry) is kept between runs as the `state-us` pre-release, which the Pages workflow never serves (PP15).
+# The places pipeline (docs/spec.md; decisions 0103 and 0104 in the app repo): once a week, fetch every source
+# through its adapter, build the US archive and publish a release only when a block's places changed (PP12). Its
+# state (raw answers and the place ID registry) is kept between runs as the `state-us` pre-release, which the Pages
+# workflow never serves (PP15).
 
 on:
   schedule:
@@ -24,19 +24,11 @@ jobs:
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: MiguelAGuerrero/chronicles
-          ref: main
-          path: app
-          # A private app repo needs a read token saved as APP_REPO_TOKEN; a public one reads with the default.
-          token: ${{ secrets.APP_REPO_TOKEN || github.token }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: app/package-lock.json
       - run: npm ci
-        working-directory: app
       - name: Restore the pipeline's state (raw answers and the place ID registry)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -49,8 +41,7 @@ jobs:
           # The run number keeps a second run on the same day from colliding with the first's tag.
           version="$(date -u +%Y%m%d).${{ github.run_number }}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          node --import tsx app/scripts/places-pipeline/cli.ts --region us --version "$version" --state state --out out \
-            --edits app/src/lib/discovery/archiveEdits.json \
+          npm run -s build -- --region us --version "$version" --state state --out out --edits edits.json \
             --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
       - name: Save the state for next week (only sources whose terms allow it)
         env:

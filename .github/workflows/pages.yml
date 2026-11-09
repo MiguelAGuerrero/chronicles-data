@@ -6,7 +6,7 @@ on:
   # A change to how the site is built republishes it (the manifest's script, this workflow).
   push:
     branches: [main]
-    paths: ['.github/workflows/pages.yml', 'scripts/**']
+    paths: ['.github/workflows/pages.yml', 'scripts/**', 'contract/**']
   workflow_dispatch:
 
 permissions:
@@ -40,8 +40,10 @@ jobs:
           while read -r tag; do
             gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'places-*.pmtiles' --pattern 'places-*.blocks.json' --dir site --skip-existing
           done < tags.txt
-      - name: Write the manifest
-        run: node scripts/manifest.mjs site > site/manifest.json && touch site/.nojekyll
+      - name: Write the manifest, and serve the contract beside it
+        run: |
+          node scripts/manifest.mjs site > site/manifest.json && touch site/.nojekyll
+          mkdir -p site/contract && cp contract/*.json site/contract/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -1,0 +1,187 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "coord",
+   "p31",
+   "nhl",
+   "dissolved",
+   "closed",
+   "stateLabel"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1001"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Hessian Folly"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.2 40.7)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q180174"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1002"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Soldiers Monument"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.38 40.61)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q179700"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1002"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Soldiers Monument"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.38 40.61)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q4989906"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1003"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Old Mill"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.05 40.95)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q12345"
+    },
+    "nhl": {
+     "type": "literal",
+     "value": "true"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1004"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Bethlehem Historic District"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.37 40.62)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q15243209"
+    },
+    "nhl": {
+     "type": "literal",
+     "value": "true"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1005"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Gone Tower"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.6 41.1)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1440300"
+    },
+    "stateLabel": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "demolished"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1006"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Ghost Town Ruins"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.9 41.5)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q74047"
+    },
+    "dissolved": {
+     "type": "literal",
+     "value": "1901-01-01T00:00:00Z"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1007"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Random Thing"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-75.1 40.8)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q5"
+    }
+   }
+  ]
+ }
+}

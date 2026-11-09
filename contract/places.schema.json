@@ -1,0 +1,221 @@
+{
+  "$comment": "Generated from src/schema.ts by `npm run contract`; a test fails when they differ (PP5).",
+  "contractVersion": 1,
+  "candidate": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "source": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "sourceId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "at": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "class": {
+        "type": "string",
+        "enum": [
+          "monument",
+          "memorial",
+          "statue",
+          "marker",
+          "mural",
+          "sculpture",
+          "overlook",
+          "tower",
+          "folly",
+          "novelty_building",
+          "roadside_giant",
+          "natural_oddity",
+          "odd_engineering",
+          "marks_a_fact",
+          "art_environment",
+          "ruin",
+          "heritage_building"
+        ]
+      },
+      "signals": {
+        "type": "object",
+        "properties": {
+          "gone": {
+            "type": "boolean"
+          },
+          "heritage": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "sameAs": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*:.+$"
+        }
+      },
+      "evidence": {
+        "type": "string"
+      },
+      "fetchedAt": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      }
+    },
+    "required": [
+      "source",
+      "sourceId",
+      "name",
+      "signals",
+      "fetchedAt"
+    ],
+    "additionalProperties": false
+  },
+  "place": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^p_[0-9a-f]{16}$"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "at": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "class": {
+        "type": "string",
+        "enum": [
+          "monument",
+          "memorial",
+          "statue",
+          "marker",
+          "mural",
+          "sculpture",
+          "overlook",
+          "tower",
+          "folly",
+          "novelty_building",
+          "roadside_giant",
+          "natural_oddity",
+          "odd_engineering",
+          "marks_a_fact",
+          "art_environment",
+          "ruin",
+          "heritage_building"
+        ]
+      },
+      "gone": {
+        "type": "boolean"
+      },
+      "src": {
+        "type": "string",
+        "pattern": "^[a-z]{2,8}$"
+      },
+      "license": {
+        "type": "string",
+        "enum": [
+          "cc0",
+          "odbl",
+          "cdla-permissive",
+          "apache"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "at",
+      "gone",
+      "src",
+      "license"
+    ],
+    "additionalProperties": false
+  },
+  "feature": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "class": {
+        "type": "string",
+        "enum": [
+          "monument",
+          "memorial",
+          "statue",
+          "marker",
+          "mural",
+          "sculpture",
+          "overlook",
+          "tower",
+          "folly",
+          "novelty_building",
+          "roadside_giant",
+          "natural_oddity",
+          "odd_engineering",
+          "marks_a_fact",
+          "art_environment",
+          "ruin",
+          "heritage_building"
+        ]
+      },
+      "src": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "class",
+      "src",
+      "id"
+    ],
+    "additionalProperties": false
+  }
+}

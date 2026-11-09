@@ -1,0 +1,56 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "coord",
+   "p31",
+   "nhl",
+   "dissolved",
+   "closed",
+   "stateLabel"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1008"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Big Duck"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-72.6 40.9)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q548879"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1009"
+    },
+    "label": {
+     "type": "literal",
+     "xml:lang": "en",
+     "value": "Overlook Point"
+    },
+    "coord": {
+     "type": "literal",
+     "value": "Point(-73.9 41.2)"
+    },
+    "p31": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q6017969"
+    }
+   }
+  ]
+ }
+}

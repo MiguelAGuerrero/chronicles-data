@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "regions": [
+    {
+      "id": "example",
+      "current": {
+        "file": "places-example-20261109.pmtiles",
+        "version": "20261109",
+        "bytes": 1120,
+        "sha256": "7083eb21949f32e528edb5e1e4a520e8b465161e35d2b7f8b148ed5c20f9fdcd",
+        "minzoom": 12,
+        "maxzoom": 12,
+        "bounds": [
+          -75.9,
+          40.61,
+          -72.6,
+          41.5
+        ],
+        "blocks": {
+          "8/74/95": "f50c779919b66617",
+          "8/74/96": "1a4438b0e521e438",
+          "8/75/95": "942d3d28305994d6",
+          "8/76/96": "6e49ab212503056f"
+        }
+      },
+      "previous": []
+    }
+  ]
+}
