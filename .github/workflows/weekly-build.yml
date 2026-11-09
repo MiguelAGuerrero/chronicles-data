@@ -1,8 +1,9 @@
 name: Weekly places build
 
-# Places worth the stop (PW19, decision 0102 in the app repo): rebuild the US archive from Wikidata once a week and
-# publish a release only when it changed, so the weekly build is also the check for changes. The build's scripts
-# live in the app repo (scripts/build-places-archive.mjs and scripts/places-archive/), which this checks out.
+# The places pipeline (PP1-PP16, decisions 0103 and 0104 in the app repo): once a week, fetch every source through
+# its adapter, build the US archive and publish a release only when a block's places changed (PP12). The pipeline
+# lives in the app repo (scripts/places-pipeline/), which this checks out. Its state (raw answers and the place ID
+# registry) is kept between runs as the `state-us` pre-release, which the Pages workflow never serves (PP15).
 
 on:
   schedule:
@@ -36,27 +37,42 @@ jobs:
           cache-dependency-path: app/package-lock.json
       - run: npm ci
         working-directory: app
-      - name: Fetch the US items from Wikidata, one cell at a time
-        run: node app/scripts/places-archive/fetch-wikidata.mjs --region us --out items.jsonl
-      - name: Build the archive
-        id: build
-        run: |
-          # The run number keeps a second run on the same day from colliding with the first's tag.
-          version="$(date -u +%Y%m%d).${{ github.run_number }}"
-          mkdir -p out
-          node app/scripts/build-places-archive.mjs --wikidata items.jsonl --edits app/src/lib/discovery/archiveEdits.json --region us --version "$version" --out out
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - name: Decide whether it changed
-        id: decide
-        run: node app/scripts/places-archive/publish.mjs --region us --archive "out/places-us-${{ steps.build.outputs.version }}.pmtiles" --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
-      - name: Publish a release, and republish the site
-        if: steps.decide.outputs.publish == 'true'
+      - name: Restore the pipeline's state (raw answers and the place ID registry)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          v="${{ steps.build.outputs.version }}"
-          gh release create "v$v" "out/places-us-$v.pmtiles" --repo "$GITHUB_REPOSITORY" --title "US places $v" --notes "Weekly build: ${{ steps.decide.outputs.reason }}."
+          mkdir -p state
+          if gh release download state-us --repo "$GITHUB_REPOSITORY" --pattern 'state-us.tar.gz'; then tar -xzf state-us.tar.gz -C state; fi
+      - name: Run the pipeline (fetch, adapt, conflate, gate, package, decide)
+        id: run
+        run: |
+          # The run number keeps a second run on the same day from colliding with the first's tag.
+          version="$(date -u +%Y%m%d).${{ github.run_number }}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          node --import tsx app/scripts/places-pipeline/cli.ts --region us --version "$version" --state state --out out \
+            --edits app/src/lib/discovery/archiveEdits.json \
+            --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
+      - name: Save the state for next week (only sources whose terms allow it)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          paths="registry-us.json"
+          for s in ${{ steps.run.outputs.state-sources }}; do [ -d "state/raw/$s" ] && paths="$paths raw/$s"; done
+          tar -czf state-us.tar.gz -C state $paths
+          gh release view state-us --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+            gh release create state-us --repo "$GITHUB_REPOSITORY" --prerelease --title "Pipeline state (us)" --notes "The places pipeline's raw answers and place ID registry, restored by each weekly run. Not an archive."
+          gh release upload state-us state-us.tar.gz --repo "$GITHUB_REPOSITORY" --clobber
+      - name: Publish a release, and republish the site
+        if: steps.run.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${{ steps.run.outputs.version }}"
+          assets=""
+          for f in ${{ steps.run.outputs.files }}; do assets="$assets out/$f out/${f%.pmtiles}.blocks.json"; done
+          gh release create "v$v" $assets --repo "$GITHUB_REPOSITORY" --title "US places $v" --notes "Weekly build: ${{ steps.run.outputs.reason }}."
           gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
       - name: Nothing changed
-        if: steps.decide.outputs.publish != 'true'
-        run: echo "Not published: ${{ steps.decide.outputs.reason }}"
+        if: steps.run.outputs.publish != 'true'
+        run: |
+          echo "Not published: ${{ steps.run.outputs.reason }}"
