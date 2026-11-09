@@ -28,7 +28,7 @@ What a client may rely on, generated from the code by `npm run contract` and che
 
 A change to the contract bumps `CONTRACT_VERSION` (`src/classes.ts`); the app pins a copy and its tests fail until it
 takes the new one. The rules the contract keeps (no popularity, a gate never a measure, nominations never in a pack)
-are the app's decisions 0103 and 0107.
+are the app's decisions 0103 and 0108.
 
 ## The pipeline (`src/`)
 

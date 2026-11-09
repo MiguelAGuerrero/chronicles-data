@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The places pipeline's command line (docs/spec.md, decision 0107 in the app repo), run by the weekly job:
+// The places pipeline's command line (docs/spec.md, decision 0108 in the app repo), run by the weekly job:
 //
 //   npm run build -- --region us --version 20261116 --state state --out out \
 //        --manifest-url https://…/manifest.json [--edits edits.json] [--no-fetch]

@@ -1,4 +1,4 @@
-// The gate (PP6, PP10, decisions 0103, 0107): which places enter a pack. It is written in the archive's own class
+// The gate (PP6, PP10, decisions 0103, 0108): which places enter a pack. It is written in the archive's own class
 // vocabulary and reads no source name, no number of sources and no count: a place with a class, a position and no
 // sign that it is gone enters, whoever named it. Then the owner's edits, as PW13. It imports no adapter.
 import { metres, norm, SAME_PLACE_M, type Ids } from './conflate';

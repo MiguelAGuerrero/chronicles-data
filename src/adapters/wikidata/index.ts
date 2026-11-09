@@ -1,4 +1,4 @@
-// The Wikidata adapter (decision 0107): today's places-archive fetch (PW14) behind the adapter contract. It knows
+// The Wikidata adapter (decision 0108): today's places-archive fetch (PW14) behind the adapter contract. It knows
 // SPARQL, P31 classes and Wikidata's "gone" signals; it hands on candidates in the archive's own vocabulary and
 // nothing about articles or popularity (PW7).
 import { classify, gone } from './classify.mjs';

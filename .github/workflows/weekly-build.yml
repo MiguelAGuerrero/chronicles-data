@@ -1,6 +1,6 @@
 name: Weekly places build
 
-# The places pipeline (docs/spec.md; decisions 0103 and 0107 in the app repo): once a week, fetch every source
+# The places pipeline (docs/spec.md; decisions 0103 and 0108 in the app repo): once a week, fetch every source
 # through its adapter, build the US archive and publish a release only when a block's places changed (PP12). Its
 # state (raw answers and the place ID registry) is kept between runs as the `state-us` pre-release, which the Pages
 # workflow never serves (PP15).

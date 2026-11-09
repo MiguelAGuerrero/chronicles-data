@@ -1,4 +1,4 @@
-// The adapter contract (decision 0107): a source's declaration plus two functions. This is the only place a source's
+// The adapter contract (decision 0108): a source's declaration plus two functions. This is the only place a source's
 // quirks live; nothing after `adapt` knows which source a candidate came from except by its name.
 import type { RawStore } from './rawStore';
 import type { Declaration } from './schema';

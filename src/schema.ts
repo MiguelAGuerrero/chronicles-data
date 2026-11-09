@@ -1,4 +1,4 @@
-// The places pipeline's canonical shape (docs/spec.md, decision 0107 in the app repo): an adapter's declaration, the
+// The places pipeline's canonical shape (docs/spec.md, decision 0108 in the app repo): an adapter's declaration, the
 // candidates every adapter emits, the places the pipeline makes of them, and a pack's tile feature. One schema for
 // every source; `contract/places.schema.json` is its JSON Schema export, committed and served with the archives, so
 // any tool can check a file (PP5) and the app can pin it.
@@ -44,7 +44,7 @@ export const DeclarationSchema = z
     }),
     /** The day its terms were read (YYYY-MM-DD). */
     termsChecked: z.iso.date(),
-    /** The decision record that admitted it (`0107`); required of a nominating adapter (decision 0107). */
+    /** The decision record that admitted it (`0108`); required of a nominating adapter (decision 0108). */
     decision: z.string().regex(/^\d{4}$/).optional(),
   })
   .refine((d) => d.role !== 'nominates' || d.decision != null, { path: ['decision'], message: 'a nominating adapter names the decision record that admitted it' })

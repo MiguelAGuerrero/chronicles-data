@@ -1,6 +1,6 @@
 name: Test
 
-# The pipeline's tests, its typecheck, and that contract/ is what the code generates (decision 0107 in the app repo).
+# The pipeline's tests, its typecheck, and that contract/ is what the code generates (decision 0108 in the app repo).
 on:
   push:
     branches: [main]
