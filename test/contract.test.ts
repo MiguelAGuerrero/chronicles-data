@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { contractFiles } from '../src/contract';
 
-// The contract (decision 0104 in the app repo): what the app may rely on is what the code says, committed.
+// The contract (decision 0107 in the app repo): what the app may rely on is what the code says, committed.
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 
 test('CT1: contract/ is exactly what the code generates (run `npm run contract` after a change)', async () => {

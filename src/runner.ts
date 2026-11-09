@@ -1,4 +1,4 @@
-// The runner (PP1-PP4, PP7, PP14, decision 0104): checks each adapter's declaration, fetches through its polite
+// The runner (PP1-PP4, PP7, PP14, decision 0107): checks each adapter's declaration, fetches through its polite
 // fetch into the raw store, adapts every raw answer and checks each candidate, then conflates, gates, applies the
 // owner's edits and packages. Only `fetch` touches the network; with `fetch: false` the run reads the raw store alone.
 import type { Adapter, Box } from './adapter';

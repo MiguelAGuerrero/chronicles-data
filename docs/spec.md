@@ -1,7 +1,7 @@
 <!-- Places pipeline. Written in the app repo (MiguelAGuerrero/chronicles, specs/places-pipeline) on 2026-11-09 and moved
      here the same day (the owner: the data repo houses the frame, the schemas and the plans, as the interface the app
      consumes). Research: "Places data pipeline: research" (https://claude.ai/artifact/R1GLx9Q5gurtYdJrLsRi4s). The
-     product rules it keeps are the app's decisions 0103 and 0104. -->
+     product rules it keeps are the app's decisions 0103 and 0107. -->
 
 # Places pipeline: the frame, with Wikidata behind it (PP)
 
@@ -34,7 +34,7 @@ Criteria: PP5 (closed schema, no number but a position); PP7 (a place needs a lo
 Open: none (the owner's calls below)
 ```
 
-## Decisions (the owner's calls, Nov 9; decision 0104 in the app repo)
+## Decisions (the owner's calls, Nov 9; decision 0107 in the app repo)
 
 - **This repo owns the pipeline and the contract** (Nov 9, after slice 1 was built in the app repo): the code, the
   schemas, the class names, the owner's edits and these docs live here; `contract/` is what the app may rely on,
@@ -47,7 +47,7 @@ Open: none (the owner's calls below)
 - **Zod 4** as a dev dependency for the schema and its JSON Schema export.
 - **Nominations reach only a review list** (after the steward's review): never a pack, even when a locating source
   confirms them; the owner adds a place through the edits. Each nominating adapter needs its own decision record
-  (decision 0104).
+  (decision 0107).
 - **Architecture as researched:** stages fetch, raw store, adapt, conflate, gate, package, publish; an adapter is a
   declaration plus `fetch` and `adapt`; roles locate, corroborate or deny, nominate.
 

@@ -1,4 +1,4 @@
-// The contract the app reads (decision 0104 in the app repo): everything a client may rely on, generated from the
+// The contract the app reads (decision 0107 in the app repo): everything a client may rely on, generated from the
 // pipeline's own code and committed in contract/, then served beside the archives by the Pages workflow.
 //
 //   npm run contract            writes contract/

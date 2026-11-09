@@ -1,4 +1,4 @@
-// Conflate (PP7, PP8, decision 0104): candidates from every source become places with opaque IDs that last from
+// Conflate (PP7, PP8, decision 0107): candidates from every source become places with opaque IDs that last from
 // build to build. Only a locating source makes a place; a confirming source can only confirm one or mark it gone;
 // nominations never come here (the runner keeps them for the owner's review list).
 //

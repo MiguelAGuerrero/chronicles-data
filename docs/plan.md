@@ -104,7 +104,7 @@ All eight findings accepted; each made a criterion stricter. Nothing rejected.
 | S7 nothing holds "phones never call a source" | Accepted as PP16 |
 | S8 slice 1 has no surface; later adapters must not inherit "aligned" | Accepted into PP1: a nominating adapter names the decision record that admitted it. The verdict stays aligned for the frame, whose gate rules are the slice's point |
 
-The owner's call on S1 (Nov 9, decision 0104): a review list only, never a pack.
+The owner's call on S1 (Nov 9, decision 0107): a review list only, never a pack.
 
 ## Data
 

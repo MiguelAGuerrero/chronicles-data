@@ -1,4 +1,4 @@
-// The class names a place may carry: the contract's vocabulary (decision 0104 in the app repo). The data repo owns
+// The class names a place may carry: the contract's vocabulary (decision 0107 in the app repo). The data repo owns
 // it; the app maps each name to its own category and kind (its `archivePois.ts`) and pins a copy of this list
 // through `contract/places.schema.json`. A new name is a contract change: bump CONTRACT_VERSION and tell the app.
 export const CONTRACT_VERSION = 1;

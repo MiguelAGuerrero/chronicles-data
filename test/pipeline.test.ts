@@ -20,7 +20,7 @@ import { createRawStore, type RawStore } from '../src/rawStore';
 import { checkAdapters, declarationProblems, redistributable, run, type RunOptions } from '../src/runner';
 import { CandidateSchema as Candidate, jsonSchema, PlaceSchema as Place, type Declaration } from '../src/schema';
 
-// The places pipeline (docs/spec.md; decision 0104 in the app repo): the frame, with Wikidata behind it.
+// The places pipeline (docs/spec.md; decision 0107 in the app repo): the frame, with Wikidata behind it.
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const FIX = join(ROOT, 'test/fixtures');
@@ -128,8 +128,8 @@ test('PP1: an adapter without its full declaration is refused, and its declared 
   assert.deepEqual(declarationProblems(wikidata.declaration), []);
   const nominator = { ...wikidata.declaration, name: 'forum', role: 'nominates' as const, allowed: { ...wikidata.declaration.allowed, reachPack: false } };
   assert.ok(declarationProblems(nominator).some((p) => p.startsWith('decision')), 'a nominating adapter names its decision record');
-  assert.deepEqual(declarationProblems({ ...nominator, decision: '0104' }), []);
-  assert.ok(declarationProblems({ ...nominator, decision: '0104', allowed: { ...nominator.allowed, reachPack: true } }).length, 'a nomination never reaches a pack');
+  assert.deepEqual(declarationProblems({ ...nominator, decision: '0107' }), []);
+  assert.ok(declarationProblems({ ...nominator, decision: '0107', allowed: { ...nominator.allowed, reachPack: true } }).length, 'a nomination never reaches a pack');
 
   // A source that may not reach a pack adds nothing to one.
   const shy = listAdapter({ name: 'shy', allowed: { store: true, retentionDays: null, redistribute: true, reachPack: false } }, [cand('shy', '1', 'Hidden Folly', [-75, 41])]);
@@ -241,7 +241,7 @@ test('PP6: from the same Wikidata items the pipeline yields the same places, thr
 
 test('PP7: a place needs a locating source, and nominations never change a pack', async () => {
   const nominator = (n: number) =>
-    listAdapter({ name: 'forum', role: 'nominates', decision: '0104', allowed: { store: true, retentionDays: 30, redistribute: false, reachPack: false } },
+    listAdapter({ name: 'forum', role: 'nominates', decision: '0107', allowed: { store: true, retentionDays: 30, redistribute: false, reachPack: false } },
       Array.from({ length: n }, (_, i) => cand('forum', `t${i}`, i % 2 ? 'Hessian Folly' : 'Corner Diner', [-75.2, 40.7], { evidence: `https://forum.example/t${i}` })));
   const builds = [];
   for (const n of [0, 1, 50]) builds.push(await run(opts({ store: tmpStore(), adapters: [wikidata, nominator(n)] })));
