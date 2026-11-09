@@ -1,7 +1,9 @@
 // Writes manifest.json from the archives in a folder: node scripts/manifest.mjs <dir>
-// Each archive is places-<region>-<version>.pmtiles; the newest version of a region is current.
+// Each archive is places-<region>-<version>.pmtiles; the newest version of a region is current. An archive the places
+// pipeline built has places-<region>-<version>.blocks.json beside it, a hash per z8 block of its places, copied into
+// its entry as `blocks` (PP11), so the app rebuilds an area only when its block changed.
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dir = process.argv[2];
@@ -25,6 +27,8 @@ for (const file of readdirSync(dir)) {
   const path = join(dir, file);
   const buf = readFileSync(path);
   const entry = { file, version: m[2], bytes: statSync(path).size, sha256: createHash('sha256').update(buf).digest('hex'), ...header(buf) };
+  const blocks = path.replace(/\.pmtiles$/, '.blocks.json');
+  if (existsSync(blocks)) entry.blocks = JSON.parse(readFileSync(blocks, 'utf8'));
   if (!byRegion.has(m[1])) byRegion.set(m[1], []);
   byRegion.get(m[1]).push(entry);
 }
