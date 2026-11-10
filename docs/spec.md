@@ -111,7 +111,7 @@ Open: none (the owner's calls below)
 2. **CT2 The manifest's shape is written down.** The example manifest names its file, version, bounds and blocks as
    `contract/manifest.schema.json` says; the Pages workflow serves `contract/` beside the manifest.
 
-## Changes first (CF, decision 0114 in the app repo)
+## Changes first (CF, decision 0120 in the app repo)
 
 The Wikidata adapter asks every 2° cell of the region each week (about 630 queries, roughly 1-2 hours). Measured on
 Nov 9, "items of a class modified since a date", filtered by country, answers in 1-7 s a class; the same filtered by

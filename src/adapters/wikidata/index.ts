@@ -2,7 +2,7 @@
 // SPARQL, P31 classes and Wikidata's "gone" signals; it hands on candidates in the archive's own vocabulary and
 // nothing about articles or popularity (PW7).
 //
-// Changes first (CF1-CF5, decision 0114 in the app repo): a first run sweeps every cell; after that, a weekly run asks
+// Changes first (CF1-CF5, decision 0120 in the app repo): a first run sweeps every cell; after that, a weekly run asks
 // each pinned class, by country, for what was modified since the earlier run began, checks the held items for any
 // modified away, merged or deleted, sweeps one cell in thirteen as a backstop, and carries the earlier answers it did
 // not re-ask. `settle` replays every answer in time order, so the newest answer about an item wins.

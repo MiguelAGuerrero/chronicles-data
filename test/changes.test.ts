@@ -13,7 +13,7 @@ import type { Pack } from '../src/package';
 import { createRawStore, type RawStore } from '../src/rawStore';
 import { run, type RunOptions } from '../src/runner';
 
-// Changes first (docs/spec.md, CF1-CF6; decision 0114 in the app repo): written from the spec before the code. The new
+// Changes first (docs/spec.md, CF1-CF6; decision 0120 in the app repo): written from the spec before the code. The new
 // exports are loaded inside each test, so one that doesn't exist yet fails its own test only.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
