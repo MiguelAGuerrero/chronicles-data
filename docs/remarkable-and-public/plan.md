@@ -33,15 +33,20 @@ The pipeline:
 - `schema.ts`: `signals` gains `listed`, `needsOpen`, `open`, `closed` (booleans; RD14); `PlaceSchema` gains
   `needsOpen`, `open`, `closed` (booleans); the feature is unchanged.
 - `conflate.ts`: a confirming candidate may also set `open` or `closed` on the place it confirms (it still never makes
-  one, and nothing counts confirmations); a place a confirming source changed takes that source's license family
-  (RD11).
+  one, and nothing counts confirmations: `open` and `closed` are ORs, `closed` wins; PP7 amended in `docs/spec.md`).
+  It records, per region, whether any ODbL source's signal reached the gate, and that decides the pack's family
+  (RD11), not the surviving places' licenses.
 - `gate.ts`: a place enters with a class, not gone, not `closed`, and, when it `needsOpen`, only if `open` (RD8, RD9).
   It still reads no source name and no count.
 - `package.ts`: a region's pack is one license family: when any place is `odbl`, the whole region's pack is `odbl`
   and keeps the region's id (RD11; PP9's one-family rule holds, the CC0 places inside an ODbL database).
 - `runner.ts`, `cli.ts`: the run's report gains `added` (per `--review-areas` test area: name, class, reason) and a
-  per-class, per-reason summary; it stays out of the release (RD12).
-- `classes.ts`: the five classes, `CONTRACT_VERSION` 2; `npm run contract` (RD13). `contract/sources.json` lists OSM
+  per-class, per-reason summary; the reason is worked out from the candidates for the report, never stored on a place or
+  in the registry; it stays out of the release and the state pre-release (RD12).
+- `classes.ts`: the five classes, `heritage_building` renamed `building_structure`, `CONTRACT_VERSION` 2; `npm run
+  contract` (RD13). The 0103 Landmark fallback takes the new name too.
+- `README.md` (Licences, Published) and `package.ts`'s header: one pack per region, its license family in the manifest,
+  ODbL when OpenStreetMap changed it (steward 4). `contract/sources.json` lists OSM
   with its license and attribution.
 - `.github/workflows/weekly-build.yml`: install `osmium-tool`; run with the OSM adapter; keep the report as a workflow
   artifact only.
@@ -51,7 +56,8 @@ The app (its repo, after this merges):
 
 - Take contract v2 into `src/lib/__tests__/explore/contract/`; `ARCHIVE_CLASSES` gains the five classes (History /
   Places of worship, History / Cemeteries, Culture / Theatres, Culture / Museums and galleries, History / Monuments and
-  ruins); RP9's test returns; PP17 pins v2.
+  ruins) and maps `building_structure` (History / Buildings and structures) in place of `heritage_building`; RP9's test
+  returns; PP17 pins v2.
 - The map's credits already name OpenStreetMap (PW15); nothing new on screen.
 
 ## Data
@@ -75,13 +81,13 @@ tag, `access=private`, `historic=building`, `was:railway`, `demolished:building`
 | RD4 | RD4: a district never enters, also typed ghost town or monument |
 | RD5 | RD5: an ended listing is none; a cut-off answer splits the cell |
 | RD6 | RD6: museums and sites take their own class; 0103's classes keep theirs |
-| RD7 | RD7: the OSM adapter confirms by wikidata tag only, and never makes a place |
+| RD7 | RD7: the OSM adapter confirms by wikidata tag only, never makes a place; one, two or five open elements give identical blocks, and closed wins |
 | RD8 | RD8: a listed house enters only shown open (a museum type or an OSM visitor tag); historic=building is no sign |
 | RD9 | RD9: access=private or no keeps a place out, a Landmark too |
 | RD10 | RD10: was:* keeps a place; demolished:, razed:, destroyed: remove it |
-| RD11 | RD11: a region OSM changed packs as one ODbL file under the region's id |
+| RD11 | RD11: a region OSM changed packs as one ODbL file under the region's id; one where OSM only closed a place too |
 | RD12 | RD12: the report lists each added place with its reason per test area, and is not in the release |
-| RD13 | RD13: contract v2 has the five classes and is the code's |
+| RD13 | RD13: contract v2 has the five classes and building_structure, no class name names significance, and it is the code's |
 | RD14 | RD14: the new signals are booleans and every object stays closed |
 
 PP1-PP16 and the carried PW tests keep passing; `expected-places.json` (PP6) is re-frozen deliberately, since the gate

@@ -36,7 +36,7 @@ The Wikidata adapter (the app's RP1-RP8, RP10 and its audit 1, 10, 12, 13):
 1. **RD1 Listed and public by type.** A National Register item whose type is in a pinned public group enters: places of
    worship (`church`), cemeteries (`cemetery`), theatres and opera houses (`theatre`), and civic buildings, libraries,
    stations, bridges, dams, locks, aqueducts, mills, factories, breweries, furnaces, lighthouses, water towers, forts,
-   fountains (`heritage_building`). The groups are pinned with their subclasses by `scripts/pin-types.mjs`, never
+   fountains (`building_structure`). The groups are pinned with their subclasses by `scripts/pin-types.mjs`, never
    looked up at build time.
 2. **RD2 A home is never public by type.** A class reached from a house, residential building, single-family home or
    apartment building is taken out of every public group; another mundane class (an office, a school, a hotel) stays
@@ -52,7 +52,10 @@ OpenStreetMap (the app's RP2, RP5, RP7 and audit 2, 4, 11):
 
 7. **RD7 An OSM adapter that confirms.** Its declaration: role `confirms`, ODbL, "© OpenStreetMap contributors", its
    host, its pace, terms checked. It reads only elements carrying a `wikidata` tag and emits confirming candidates
-   whose `sameAs` is that id (`wikidata=Q1;Q2` speaks for both). It never makes a place.
+   whose `sameAs` is that id (`wikidata=Q1;Q2` speaks for both). It never makes a place. **PP7 is amended:** a
+   confirming source may also say a place is open or closed, which decides whether a `needsOpen` place enters and
+   keeps a closed one out. `open` and `closed` are each true when any confirming element says so, and `closed` wins:
+   one, two or five elements saying `open` give identical blocks; nothing counts them (steward 1).
 8. **RD8 Shown open.** A listed item of no public type, not a Landmark and of no Wikidata museum or historic-site type
    enters only when an OSM element carrying its id has `tourism=museum|attraction|gallery`,
    `historic=monument|memorial|castle|ruins|fort|archaeological_site` or
@@ -61,18 +64,35 @@ OpenStreetMap (the app's RP2, RP5, RP7 and audit 2, 4, 11):
 10. **RD10 Gone.** Only `demolished:*`, `razed:*` and `destroyed:*` say a place is gone; `was:*` is a former use.
 11. **RD11 A pack OpenStreetMap changed is ODbL.** When the OSM adapter's signals changed any place of a region, the
     region's pack is of the license family `odbl`: one pack, the region keeping its id (`us`), so the app reads one
-    file; the manifest and `contract/sources.json` say so, and the attribution names OpenStreetMap.
+    file; the manifest and `contract/sources.json` say so, and the attribution names OpenStreetMap. The family is
+    decided by the OSM signals that reached the gate, so a region where OSM only closed or removed places is ODbL too
+    (steward 3). A region's id can change license between versions; the manifest's `license` says which (steward 4).
 
 The owner's review and the contract:
 
 12. **RD12 The owner's review.** For named test areas, the run's report lists every place added with its class and why
-    it entered (public type, shown open, Landmark), and a summary per class and reason for the region. The report is
-    never part of a release, the archive or the manifest.
-13. **RD13 Contract v2.** `church`, `cemetery`, `theatre`, `museum` and `historic_site` join the class names;
-    `CONTRACT_VERSION` is 2; `npm run contract` regenerates `contract/`. The app takes the copy and maps them (the
-    app's RP9).
+    it entered (public type, shown open, Landmark), and a summary per class and reason for the region. The reason is
+    worked out for the report from the candidates; no place or registry field holds it (steward 5). The report is a
+    workflow artifact, never part of a release, the archive, the manifest or the state pre-release.
+13. **RD13 Contract v2.** `church`, `cemetery`, `theatre`, `museum` and `historic_site` join the class names, and
+    `heritage_building` becomes `building_structure`: no class name holds a register's name or a word for significance
+    (heritage, listed, landmark, notable), the data side's RP18 (steward 2). `CONTRACT_VERSION` is 2; `npm run
+    contract` regenerates `contract/`. The app takes the copy and maps them (the app's RP9).
 14. **RD14 Still no score.** The new signals (`listed`, `needsOpen`, `open`, `closed`) are booleans; every object stays
     closed (PP5); a pack's feature keeps name, class, src and id (PP9).
+
+## Steward (Nov 10) and triage
+
+1. A confirming source now admits and removes places, and PP7 was not amended; disagreeing elements could become a vote:
+   accepted, RD7 amends PP7 and makes `open`/`closed` ORs with `closed` winning, tested.
+2. `heritage_building` stores the listing in the published contract: accepted, renamed `building_structure` in v2, and
+   no class name may name significance (RD13).
+3. A region OSM only subtracted from would ship CC0: accepted, the family comes from the signals that reached the gate
+   (RD11).
+4. The README says an ODbL archive has a pack of its own: accepted, the README's Licences and Published sections and
+   `package.ts`'s header change (plan).
+5. The report's reason must not land in the published registry: accepted (RD12).
+6. Credit wherever a place is named: noted, nothing new owed while the map's credits name OpenStreetMap.
 
 ## Record
 
