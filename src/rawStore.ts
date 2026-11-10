@@ -1,6 +1,8 @@
 // The raw store (PP2): each source's answers exactly as received, by run, with the time and a SHA-256, so every
 // stage after fetch reads files and never the network. Layout: <dir>/<source>/<run>/<part>, and an index.json per
 // run listing its parts. A run that finished writes `complete: true`; only a complete run is used as a fallback (PP14).
+// A run may carry an earlier run's answer forward (CF5): the copy keeps its original time and hash, and says where it
+// came from, so a run's own start is when its fetch began, not when its oldest answer was asked.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -9,11 +11,17 @@ export interface RawPart {
   part: string;
   sha256: string;
   fetchedAt: string;
+  /** CF5: the run this answer was first fetched in, when it was carried forward. */
+  carriedFrom?: string;
 }
 
 interface RunIndex {
   parts: RawPart[];
   complete: boolean;
+  /** CF1: when this run's fetch began (an earlier run's, for a sweep by hand that keeps the changes clock, CF4). */
+  startedAt?: string;
+  /** CF3: what the source records about the run beside its answers (Wikidata: the classes it asked). Never an answer. */
+  meta?: Record<string, string>;
 }
 
 const SAFE = /^[A-Za-z0-9._-]+$/;
@@ -50,6 +58,45 @@ export function createRawStore(dir: string) {
       ix.parts = [...ix.parts.filter((p) => p.part !== part), entry];
       writeIndex(source, run, ix);
       return entry;
+    },
+    /** CF1: records when a run's fetch began; a run that has a start keeps it. */
+    start(source: string, run: string, startedAt: string) {
+      const ix = indexOf(source, run);
+      if (!ix.startedAt) writeIndex(source, run, { ...ix, startedAt });
+    },
+    /** CF4: sets a run's start outright (a sweep by hand keeps the earlier run's, so the changes clock doesn't move). */
+    setStart(source: string, run: string, startedAt: string) {
+      writeIndex(source, run, { ...indexOf(source, run), startedAt });
+    },
+    /** CF1: when a run's fetch began: its recorded start, else the earliest answer it fetched itself; null if neither. */
+    startedAt(source: string, run: string): string | null {
+      const ix = indexOf(source, run);
+      if (ix.startedAt) return ix.startedAt;
+      const own = ix.parts.filter((p) => !p.carriedFrom).map((p) => p.fetchedAt).sort();
+      return own[0] ?? null;
+    },
+    /** CF3: records a note about a run beside its answers. */
+    setMeta(source: string, run: string, key: string, value: string) {
+      const ix = indexOf(source, run);
+      writeIndex(source, run, { ...ix, meta: { ...(ix.meta ?? {}), [key]: value } });
+    },
+    meta(source: string, run: string): Record<string, string> {
+      return { ...(indexOf(source, run).meta ?? {}) };
+    },
+    /** CF5: copies an earlier run's answer into this run, with its time and hash, checked against that hash. */
+    carry(source: string, from: string, to: string, part: string): RawPart {
+      const entry = indexOf(source, from).parts.find((p) => p.part === part);
+      if (!entry) throw new Error(`no raw part ${source}/${from}/${part} to carry`);
+      const body = readFileSync(join(runDir(source, from), part), 'utf8');
+      if (sha(body) !== entry.sha256) throw new Error(`raw part ${source}/${from}/${part} does not match its hash`);
+      const d = runDir(source, to);
+      mkdirSync(d, { recursive: true });
+      writeFileSync(join(d, part), body);
+      const ix = indexOf(source, to);
+      const copy: RawPart = { part, sha256: entry.sha256, fetchedAt: entry.fetchedAt, carriedFrom: entry.carriedFrom ?? from };
+      ix.parts = [...ix.parts.filter((p) => p.part !== part), copy];
+      writeIndex(source, to, ix);
+      return copy;
     },
     /** Marks a run's fetch as finished, so it can stand in for a later failed one. */
     complete(source: string, run: string) {

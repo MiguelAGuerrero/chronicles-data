@@ -2,7 +2,10 @@
 // The places pipeline's command line (docs/spec.md, decision 0108 in the app repo), run by the weekly job:
 //
 //   npm run build -- --region us --version 20261116 --state state --out out \
-//        --manifest-url https://…/manifest.json [--edits edits.json] [--no-fetch]
+//        --manifest-url https://…/manifest.json [--edits edits.json] [--no-fetch] [--box w,s,e,n]
+//
+// `--box` sweeps that box's cells by hand and asks no changes (CF4); `--no-fetch` builds from the raw store alone
+// (PP2), as a push of new edits does (CF6).
 //
 // `state` holds the raw store (state/raw) and the ID registry (state/registry-<region>.json) between runs; the job
 // restores it before and saves it after. Writes, per pack, out/<file>.pmtiles and out/<file>.blocks.json, and
@@ -29,6 +32,14 @@ export const REGIONS: Record<string, Box[]> = {
 };
 
 export const newId = () => `p_${randomBytes(8).toString('hex')}`;
+
+/** CF4: a box from "w,s,e,n", or null when absent or empty. */
+export function boxArg(v: string | null): Box | null {
+  if (!v) return null;
+  const b = v.split(',').map(Number);
+  if (b.length !== 4 || !b.every(Number.isFinite) || b[0] >= b[2] || b[1] >= b[3]) throw new Error(`--box is w,s,e,n: ${v}`);
+  return b as Box;
+}
 
 function arg(name: string) {
   const i = process.argv.indexOf(`--${name}`);
@@ -59,6 +70,7 @@ async function main() {
     registry,
     edits,
     fetch: !process.argv.includes('--no-fetch'),
+    box: boxArg(arg('box')),
     http: (u, init) => fetch(u, init),
     clock: realClock,
     newId,

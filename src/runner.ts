@@ -81,6 +81,19 @@ export interface RunOptions {
   keepRuns?: number;
   /** RD12: test areas for the owner's review in the report. */
   reviewAreas?: ReviewArea[];
+  /** CF4: the ISO week, for the safety sweep's share; from the clock when not given. */
+  week?: number;
+  /** CF4: a sweep by hand of this box. */
+  box?: Box | null;
+}
+
+/** CF4: the ISO week number of a time. */
+export function isoWeek(t: number): number {
+  const d = new Date(t);
+  const day = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+  const jan1 = Date.UTC(day.getUTCFullYear(), 0, 1);
+  return Math.ceil(((day.getTime() - jan1) / 86_400_000 + 1) / 7);
 }
 
 export interface RunResult {
@@ -102,7 +115,35 @@ export async function run(o: RunOptions): Promise<RunResult> {
     if (o.fetch) {
       try {
         const http = politeFetch(d, o.http, o.clock);
-        await a.fetch({ area: o.area, run: o.version, put: (part, body) => o.store.put(d.name, o.version, part, body, new Date(o.clock.now()).toISOString()), http, log });
+        // CF1: the earlier complete run, so the source can ask only what changed since it.
+        const prev = o.store.lastComplete(d.name, o.version);
+        o.store.start(d.name, o.version, new Date(o.clock.now()).toISOString());
+        const previous = prev
+          ? {
+              run: prev,
+              startedAt: o.store.startedAt(d.name, prev),
+              parts: o.store.parts(d.name, prev),
+              read: (part: string) => o.store.read(d.name, prev, part),
+              meta: o.store.meta(d.name, prev),
+            }
+          : null;
+        await a.fetch({
+          area: o.area,
+          run: o.version,
+          put: (part, body) => o.store.put(d.name, o.version, part, body, new Date(o.clock.now()).toISOString()),
+          http,
+          log,
+          previous,
+          week: o.week ?? isoWeek(o.clock.now()),
+          box: o.box ?? null,
+          carry: (part) => {
+            if (prev) o.store.carry(d.name, prev, o.version, part);
+          },
+          keepClock: () => {
+            if (previous?.startedAt) o.store.setStart(d.name, o.version, previous.startedAt);
+          },
+          setMeta: (key, value) => o.store.setMeta(d.name, o.version, key, value),
+        });
         o.store.complete(d.name, o.version);
         used = o.version;
       } catch (e) {
@@ -119,10 +160,14 @@ export async function run(o: RunOptions): Promise<RunResult> {
     report.sources.push(entry);
     if (!used) continue;
 
-    for (const { part, fetchedAt } of o.store.parts(d.name, used)) {
+    // CF5: a source that settles its answers reads them all at once; the others one answer at a time.
+    const batches: { part: string; rows: () => unknown[] }[] = a.settle
+      ? [{ part: '*', rows: () => a.settle!(o.store.parts(d.name, used!).map(({ part, fetchedAt }) => ({ part, fetchedAt, raw: o.store.read(d.name, used!, part) })), o.area) }]
+      : o.store.parts(d.name, used).map(({ part, fetchedAt }) => ({ part, rows: () => a.adapt(o.store.read(d.name, used!, part), part, fetchedAt) }));
+    for (const { part, rows: read } of batches) {
       let rows: unknown[];
       try {
-        rows = a.adapt(o.store.read(d.name, used, part), part, fetchedAt);
+        rows = read();
       } catch (e) {
         report.setAside.push({ source: d.name, part, reason: `unreadable: ${String((e as Error)?.message ?? e)}` });
         continue;
