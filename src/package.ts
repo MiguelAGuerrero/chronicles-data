@@ -35,7 +35,7 @@ export function blocksOf(places: Place[]): Record<string, string> {
 }
 
 export interface Pack {
-  /** The manifest's region id: the region for CC0, the region and family otherwise (`usodbl`). */
+  /** The manifest's region id: the region (a region's one pack, RD11), or the region and family when families split. */
   region: string;
   license: LicenseFamily;
   file: string;
@@ -44,9 +44,18 @@ export interface Pack {
   places: Place[];
 }
 
-/** PP9: one pack per license family; a pack never mixes families. */
-export function packages(places: Place[], region: string, version: string): Pack[] {
+/**
+ * PP9: one pack per license family; a pack never mixes families. RD11: when `family` is given (a source of that family
+ * changed a place of the region, so the whole database is derived from it), the region is one pack of that family
+ * under the region's own id, the other sources' places inside it (CC0 places may sit in an ODbL database).
+ */
+export function packages(places: Place[], region: string, version: string, family?: LicenseFamily): Pack[] {
   if (!/^[a-z0-9]+$/.test(region) || !/^\d{8}(\.\d+)?$/.test(version)) throw new Error('region is lowercase letters and digits; version is YYYYMMDD');
+  if (family) {
+    const all = places.map((p) => ({ ...p, license: family }));
+    const features = all.map((p) => ({ name: p.name, lon: p.at[0], lat: p.at[1], class: p.class as string, src: p.src, id: p.id }));
+    return all.length ? [{ region, license: family, file: `places-${region}-${version}.pmtiles`, bytes: writeArchive(features), blocks: blocksOf(all), places: all }] : [];
+  }
   const families = [...new Set(places.map((p) => p.license))].sort();
   return families.map((license) => {
     const mine = places.filter((p) => p.license === license);

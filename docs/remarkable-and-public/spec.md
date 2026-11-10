@@ -94,6 +94,20 @@ The owner's review and the contract:
 5. The report's reason must not land in the published registry: accepted (RD12).
 6. Credit wherever a place is named: noted, nothing new owed while the map's credits name OpenStreetMap.
 
-## Record
+## Record (Nov 10)
 
-(Filled in as the slice is built.)
+- **Built:** RD1-RD14, each by its test in `test/remarkable.test.ts`, the todos committed first (`8bb0d2d`; RD3 held
+  already, as a guard). PP1-PP16 and the carried PW tests pass (39 of 39).
+- **Re-pinned on purpose:** PW6 and PP6 (`heritage_building` is `building_structure`; PP6's six places are the same
+  places, checked before re-freezing), PW14 (`listed` on each item), PP15 (OSM's filtered answers are in the saved
+  state, as ODbL allows), the contract (v2: `npm run contract`).
+- **The pack's license** travels as `places-<region>-<version>.license`, uploaded with the release and read into the
+  manifest's `license` by `scripts/manifest.mjs`; `decide` publishes a region whose license changed even if no block
+  did.
+- **Never run here:** the OSM adapter's fetch (Geofabrik and osmium aren't reachable or installed in the session that
+  built it): `osmium tags-filter` in two passes and `osmium export -f geojsonseq` run for the first time in the weekly
+  build; `adapt` is tested on the GeoJSON lines that export writes.
+- **The app's side** (the app repo): contract v2 copied, `ARCHIVE_CLASSES` with the five classes and
+  `building_structure`, RP9's test back.
+- **Deferred:** the atlas History step per test area; registers outside the US; places only OpenStreetMap knows (the
+  out-of-town slice, 0115, with its own locating adapter reusing `filterExtracts`).

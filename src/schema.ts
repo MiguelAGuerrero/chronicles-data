@@ -58,7 +58,12 @@ export const CandidateSchema = z.strictObject({
   name: text,
   at: position.optional(),
   class: z.enum(CLASS_NAMES).optional(),
-  signals: z.strictObject({ gone: z.boolean().optional(), heritage: z.boolean().optional() }),
+  // RD14: yes-or-no signals only. `listed`: on the National Register; `publicType`: public by its type; `needsOpen`:
+  // listed but enters only when a confirming source says `open`; `closed`: a confirming source says it can't be reached.
+  signals: z.strictObject({
+    gone: z.boolean().optional(), heritage: z.boolean().optional(), listed: z.boolean().optional(), publicType: z.boolean().optional(),
+    needsOpen: z.boolean().optional(), open: z.boolean().optional(), closed: z.boolean().optional(),
+  }),
   /** Other sources' IDs for the same thing (`wikidata:Q123`), which a confirming source matches by. */
   sameAs: z.array(z.string().regex(/^[a-z][a-z0-9-]*:.+$/)).optional(),
   /** A link a person can follow; dropped before conflate, never reaches a place (PP5). */
@@ -74,6 +79,10 @@ export const PlaceSchema = z.strictObject({
   at: position,
   class: z.enum(CLASS_NAMES).optional(),
   gone: z.boolean(),
+  /** RD8, RD9: enters only when `open`; never when `closed`. Booleans, never stored in a pack. */
+  needsOpen: z.boolean().optional(),
+  open: z.boolean().optional(),
+  closed: z.boolean().optional(),
   src: z.string().regex(/^[a-z]{2,8}$/),
   license: z.enum(LICENSE_FAMILIES),
 });

@@ -227,7 +227,7 @@ test('PP5: every object in the schema is closed and the only numbers are a posit
 test('PP6: from the same Wikidata items the pipeline yields the same places, through a gate blind to sources', async () => {
   const expected = JSON.parse(readFileSync(join(FIX, 'expected-places.json'), 'utf8'));
   const r = await run(opts({ store: tmpStore() }));
-  assert.deepEqual(placesOf(r.packs), expected, 'the places the places archive built from these items (frozen Nov 9)');
+  assert.deepEqual(placesOf(r.packs), expected, 'the places the places archive built from these items (frozen Nov 9; heritage_building renamed building_structure in contract v2, RD13)');
   const gateSrc = readFileSync(join(ROOT, 'src/gate.ts'), 'utf8');
   assert.doesNotMatch(gateSrc, /from '\.\/adapters|from '\.\/runner/, 'the gate imports no adapter');
   const gateFn = gateSrc.slice(gateSrc.indexOf('export function gate('), gateSrc.indexOf('\n}\n', gateSrc.indexOf('export function gate(')));
@@ -365,7 +365,7 @@ test('PP15: the weekly workflow runs the stages in order, keeps the state asset 
   const first = await cli('20261109', out1);
   assert.equal(first.publish, 'true');
   assert.equal(first.files, 'places-us-20261109.pmtiles');
-  assert.equal(first['state-sources'], 'wikidata', 'only redistributable sources go in the saved state');
+  assert.equal(first['state-sources'], 'wikidata osm', 'only redistributable sources go in the saved state (OSM since RD7: ODbL allows it, with attribution)');
   assert.deepEqual(raw.runs('wikidata'), ['20261019', '20261026', '20261102'], 'the state keeps three runs');
   const registry1 = readFileSync(join(state, 'registry-us.json'), 'utf8');
   const blocks = JSON.parse(readFileSync(join(out1, 'places-us-20261109.blocks.json'), 'utf8'));

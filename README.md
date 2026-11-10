@@ -10,8 +10,10 @@ ordinary file request. Phones never call a data source: every outside request ha
 - `manifest.json`: which archive is current for each region, with its size, SHA-256, bounds, zoom range and `blocks`
   (a hash of the places in each z8 tile, so the app rebuilds an area only when its own places change), plus the
   previous versions still available.
-- `places-<region>-<version>.pmtiles`: one archive per region, version and license family (US first). A published file
-  is never changed; a new version gets a new name.
+- `places-<region>-<version>.pmtiles`: one archive per region and version (US first). A published file is never
+  changed; a new version gets a new name. Its license family is in `places-<region>-<version>.license` and the
+  manifest's `license` (none means CC0): a region OpenStreetMap changed is ODbL, one file under the region's id, so a
+  region's license can change between versions (RD11).
 - `contract/`: the contract below, beside the data it describes.
 
 The app reads `manifest.json` (at most daily) and then only the parts of the current archive it needs.
@@ -64,4 +66,4 @@ still finds its file.
 
 - Data from Wikidata: CC0.
 - National Register of Historic Places data: public domain.
-- Data from OpenStreetMap: © OpenStreetMap contributors, under the [Open Database License 1.0](https://opendatacommons.org/licenses/odbl/1-0/). An archive that includes OpenStreetMap data is a derived database, published under the ODbL, in a pack of its own.
+- Data from OpenStreetMap: © OpenStreetMap contributors, under the [Open Database License 1.0](https://opendatacommons.org/licenses/odbl/1-0/). An archive OpenStreetMap changed (a place it showed open, closed or gone, docs/remarkable-and-public RD11) is a derived database, published under the ODbL: the region's one pack, its CC0 and public-domain places inside it. The pipeline's state pre-release holds OpenStreetMap's filtered answers under the same license.

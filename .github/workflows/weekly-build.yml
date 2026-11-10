@@ -29,6 +29,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # RD7: the OpenStreetMap adapter filters Geofabrik's extracts with osmium.
+      - name: Install osmium
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
       - name: Restore the pipeline's state (raw answers and the place ID registry)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -41,8 +44,16 @@ jobs:
           # The run number keeps a second run on the same day from colliding with the first's tag.
           version="$(date -u +%Y%m%d).${{ github.run_number }}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          npm run -s build -- --region us --version "$version" --state state --out out --edits edits.json \
+          npm run -s build -- --region us --version "$version" --state state --out out --edits edits.json --review-areas review-areas.json \
             --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
+      # RD12: the owner's review stays a workflow artifact, never a release asset.
+      - name: Keep the owner's review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: out/report.json
+          if-no-files-found: ignore
       - name: Save the state for next week (only sources whose terms allow it)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -60,7 +71,7 @@ jobs:
         run: |
           v="${{ steps.run.outputs.version }}"
           assets=""
-          for f in ${{ steps.run.outputs.files }}; do assets="$assets out/$f out/${f%.pmtiles}.blocks.json"; done
+          for f in ${{ steps.run.outputs.files }}; do assets="$assets out/$f out/${f%.pmtiles}.blocks.json out/${f%.pmtiles}.license"; done
           gh release create "v$v" $assets --repo "$GITHUB_REPOSITORY" --title "US places $v" --notes "Weekly build: ${{ steps.run.outputs.reason }}."
           gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
       - name: Nothing changed

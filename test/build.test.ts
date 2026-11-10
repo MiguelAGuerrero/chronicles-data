@@ -93,7 +93,7 @@ const HOUSE = 'Q3947';
 
 test('PW6: type decides, in a fixed order of pinned Wikidata classes, never age or listing', () => {
   assert.equal(classify(item({ p31: [FOLLY], heritage: true })), 'folly', 'a listed century-old folly is a curiosity');
-  assert.equal(classify(item({ p31: [HOUSE], heritage: true, nhl: true })), 'heritage_building', 'a National Historic Landmark house is history');
+  assert.equal(classify(item({ p31: [HOUSE], heritage: true, nhl: true })), 'building_structure', 'a National Historic Landmark house is a building (heritage_building renamed in contract v2, RD13)');
   assert.equal(classify(item({ p31: [HOUSE], heritage: true, article: true })), null, 'an article is no sign: nearly every listing has one (the owner, Nov 6: landmarks only)');
   assert.equal(classify(item({ p31: [HOUSE], heritage: true })), null, 'a plain listing is left out (the owner, Nov 6)');
   assert.equal(classify(item({ p31: [DISTRICT], heritage: true, nhl: true, article: true })), null, 'a historic district is an area, never a place');
@@ -178,8 +178,8 @@ test('PW14: the fetch\'s rows become one item each, with its classes, listing an
     b({ item: 'http://www.wikidata.org/entity/Q2', label: 'Old Mill', coord: 'Point(-75.3 40.8)', p31: 'http://www.wikidata.org/entity/Q44494', dissolved: '1950-01-01', stateLabel: 'demolished' }),
   ]);
   assert.deepEqual(items, [
-    { id: 'Q1', name: 'Folly', lon: -75.2, lat: 40.7, p31: ['Q180174', 'Q3947'], nhl: true, dissolved: false, closed: false, states: [] },
-    { id: 'Q2', name: 'Old Mill', lon: -75.3, lat: 40.8, p31: ['Q44494'], nhl: false, dissolved: true, closed: false, states: ['demolished'] },
+    { id: 'Q1', name: 'Folly', lon: -75.2, lat: 40.7, p31: ['Q180174', 'Q3947'], listed: false, nhl: true, dissolved: false, closed: false, states: [] },
+    { id: 'Q2', name: 'Old Mill', lon: -75.3, lat: 40.8, p31: ['Q44494'], listed: false, nhl: false, dissolved: true, closed: false, states: ['demolished'] },
   ]);
 });
 

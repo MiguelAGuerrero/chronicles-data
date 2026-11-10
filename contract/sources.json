@@ -1,5 +1,5 @@
 {
-  "contractVersion": 1,
+  "contractVersion": 2,
   "classes": [
     "monument",
     "memorial",
@@ -17,7 +17,12 @@
     "marks_a_fact",
     "art_environment",
     "ruin",
-    "heritage_building"
+    "church",
+    "cemetery",
+    "theatre",
+    "museum",
+    "historic_site",
+    "building_structure"
   ],
   "sources": [
     {
@@ -29,6 +34,17 @@
       "role": "locates",
       "hosts": [
         "query.wikidata.org"
+      ]
+    },
+    {
+      "name": "osm",
+      "code": "osm",
+      "license": "ODbL 1.0",
+      "licenseFamily": "odbl",
+      "attribution": "© OpenStreetMap contributors",
+      "role": "confirms",
+      "hosts": [
+        "download.geofabrik.de"
       ]
     }
   ]

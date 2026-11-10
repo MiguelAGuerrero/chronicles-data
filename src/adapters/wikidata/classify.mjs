@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+
 // The Wikidata adapter's classes (PW5-PW7, decision 0103 in the app repo). Each class is a fixed list of Wikidata
 // classes (P31 values), pinned from a lookup on 2026-11-06: never a judgment at run time. The class names are the
 // contract's vocabulary (`src/classes.ts`); a test keeps them in it.
@@ -38,21 +40,48 @@ export const CLASSES = {
 export const NHL = 'Q624232';
 /** Historic district (P31): an area, never a place, so never a heritage building (the owner, Nov 6). */
 export const DISTRICT = 'Q15243209';
+/** National Register of Historic Places listing (P1435): a listed place is remarkable (RD1, the app's decision 0109). */
+export const NRHP = 'Q19558910';
+
+// RD1, RD2, RD6: the listed places' groups, each root with its subclasses, pinned by scripts/pin-types.mjs (Nov 9);
+// only a home is taken out of the public groups. Never looked up at build time.
+const TYPES = createRequire(import.meta.url)('./public-types.json');
+const GROUPS = Object.fromEntries(Object.entries(TYPES.groups).map(([g, ids]) => [g, new Set(ids)]));
+const inGroup = (p31, g) => [...p31].some((q) => GROUPS[g].has(q));
 
 /** Every Wikidata class the fetch asks for. */
 export const ALL_CLASS_IDS = [...new Set(Object.values(CLASSES).flat())].sort();
 
 /**
- * PW6: the archive class of a Wikidata item {p31: [Q…], heritage, nhl, article}: the first in ORDER whose list holds
- * one of its classes; else a heritage building, only when it is a National Historic Landmark (the owner, Nov 6: a
- * plain listing is left out, and an English Wikipedia article is no sign, as nearly every listing has one). A
- * historic district is never one. Else null.
+ * RD1-RD6, RD8: a listed or Landmark item's class and how it enters, or null. By type first (a place of worship, a
+ * cemetery, a theatre, a museum, then any public type); else shown open by its own type (a historic site); else a
+ * Landmark, whatever its type (a private house too); else it `needsOpen`: it enters only when a confirming source
+ * says it is open (RD8). A site, battlefield or wreck is `historic_site`; any other building or structure
+ * `building_structure`.
+ * @returns {{ cls: string, publicType: boolean, needsOpen: boolean } | null}
+ */
+export function listing(item) {
+  if (!item.listed && !item.nhl) return null;
+  const p31 = new Set(item.p31 ?? []);
+  if (p31.has(DISTRICT)) return null;
+  for (const cls of ['church', 'cemetery', 'theatre']) if (inGroup(p31, cls)) return { cls, publicType: true, needsOpen: false };
+  if (inGroup(p31, 'museum')) return { cls: 'museum', publicType: false, needsOpen: false };
+  const cls = inGroup(p31, 'site') ? 'historic_site' : 'building_structure';
+  if (inGroup(p31, 'public')) return { cls, publicType: true, needsOpen: false };
+  if (inGroup(p31, 'open') || item.nhl) return { cls, publicType: false, needsOpen: false };
+  return { cls, publicType: false, needsOpen: true };
+}
+
+/**
+ * PW6: the archive class of a Wikidata item {p31: [Q…], listed, nhl}: a district never (RD4, whatever else it is
+ * typed); else the first in ORDER whose list holds one of its classes (a listing never changes it, RD6); else its
+ * listed class (`listing`). Nothing about articles is read (the owner, Nov 6). Else null.
  */
 export function classify(item) {
   const p31 = new Set(item.p31 ?? []);
-  for (const cls of ORDER) if (CLASSES[cls].some((q) => p31.has(q))) return cls;
   if (p31.has(DISTRICT)) return null;
-  return item.nhl ? 'heritage_building' : null;
+  for (const cls of ORDER) if (CLASSES[cls].some((q) => p31.has(q))) return cls;
+  return listing(item)?.cls ?? null;
 }
 
 /**

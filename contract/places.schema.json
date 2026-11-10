@@ -1,6 +1,6 @@
 {
   "$comment": "Generated from src/schema.ts by `npm run contract`; a test fails when they differ (PP5).",
-  "contractVersion": 1,
+  "contractVersion": 2,
   "candidate": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -54,7 +54,12 @@
           "marks_a_fact",
           "art_environment",
           "ruin",
-          "heritage_building"
+          "church",
+          "cemetery",
+          "theatre",
+          "museum",
+          "historic_site",
+          "building_structure"
         ]
       },
       "signals": {
@@ -64,6 +69,21 @@
             "type": "boolean"
           },
           "heritage": {
+            "type": "boolean"
+          },
+          "listed": {
+            "type": "boolean"
+          },
+          "publicType": {
+            "type": "boolean"
+          },
+          "needsOpen": {
+            "type": "boolean"
+          },
+          "open": {
+            "type": "boolean"
+          },
+          "closed": {
             "type": "boolean"
           }
         },
@@ -143,10 +163,24 @@
           "marks_a_fact",
           "art_environment",
           "ruin",
-          "heritage_building"
+          "church",
+          "cemetery",
+          "theatre",
+          "museum",
+          "historic_site",
+          "building_structure"
         ]
       },
       "gone": {
+        "type": "boolean"
+      },
+      "needsOpen": {
+        "type": "boolean"
+      },
+      "open": {
+        "type": "boolean"
+      },
+      "closed": {
         "type": "boolean"
       },
       "src": {
@@ -200,7 +234,12 @@
           "marks_a_fact",
           "art_environment",
           "ruin",
-          "heritage_building"
+          "church",
+          "cemetery",
+          "theatre",
+          "museum",
+          "historic_site",
+          "building_structure"
         ]
       },
       "src": {

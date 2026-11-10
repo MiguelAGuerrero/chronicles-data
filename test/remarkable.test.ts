@@ -71,7 +71,7 @@ const placesOf = (r: Awaited<ReturnType<typeof build>>) => r.packs.flatMap((p) =
 const names = (r: Awaited<ReturnType<typeof build>>) => placesOf(r).map((p) => p.name).sort();
 const classOf = (r: Awaited<ReturnType<typeof build>>, name: string) => placesOf(r).find((p) => p.name === name)?.class;
 
-test('RD1: a listed church, cemetery, bridge, mill and station enter by type', { todo: 'test first' }, async () => {
+test('RD1: a listed church, cemetery, bridge, mill and station enter by type', async () => {
   const r = await build([wikidataOf([
     item('Central Moravian Church', [Q.church]), item('Nisky Hill Cemetery', [Q.cemetery]), item('Northampton Street Bridge', [Q.roadBridge]),
     item('Bushkill Gristmill', [Q.gristmill]), item('Mauch Chunk Station', [Q.station]),
@@ -81,22 +81,22 @@ test('RD1: a listed church, cemetery, bridge, mill and station enter by type', {
   assert.equal(classOf(r, 'Northampton Street Bridge'), 'building_structure');
 });
 
-test('RD2: a home is never public by type; a courthouse stays public', { todo: 'test first' }, async () => {
+test('RD2: a home is never public by type; a courthouse stays public', async () => {
   const r = await build([wikidataOf([item('Kistler Residence', [Q.house]), item('Old Lehigh County Courthouse', [Q.courthouse])])]);
   assert.deepEqual(names(r), ['Old Lehigh County Courthouse']);
 });
 
-test('RD3: a Landmark enters whatever its type, a private house too', { todo: 'test first' }, async () => {
+test('RD3: a Landmark enters whatever its type, a private house too', async () => {
   const r = await build([wikidataOf([item('Private Landmark House', [Q.house], { listed: false, nhl: true }), item('Landmark Office', [Q.office], { nhl: true })])]);
   assert.deepEqual(names(r), ['Landmark Office', 'Private Landmark House']);
 });
 
-test('RD4: a district never enters, also typed ghost town or monument', { todo: 'test first' }, async () => {
+test('RD4: a district never enters, also typed ghost town or monument', async () => {
   const r = await build([wikidataOf([item('Eckley Miners\' Village', [Q.district, Q.ghostTown], { nhl: true }), item('A District', [Q.district]), item('A Church', [Q.church])])]);
   assert.deepEqual(names(r), ['A Church']);
 });
 
-test('RD5: an ended listing is none; a cut-off answer splits the cell', { todo: 'test first' }, async () => {
+test('RD5: an ended listing is none; a cut-off answer splits the cell', async () => {
   assert.match(cellQuery(CELL), /p:P1435 \?h\w* \. \?h\w* ps:P1435 wd:Q19558910 \. FILTER NOT EXISTS \{ \?h\w* pq:P582/, 'an ended listing is no listing');
   const r = await build([wikidataOf([item('Delisted Mill', [Q.gristmill], { ended: true })])]);
   assert.deepEqual(names(r), []);
@@ -105,7 +105,7 @@ test('RD5: an ended listing is none; a cut-off answer splits the cell', { todo: 
   void NRHP;
 });
 
-test('RD6: museums and sites take their own class; 0103\'s classes keep theirs', { todo: 'test first' }, async () => {
+test('RD6: museums and sites take their own class; 0103\'s classes keep theirs', async () => {
   const r = await build([wikidataOf([
     item('A Museum', [Q.museum]), item('A Theatre', [Q.theatre]), item('Bushy Run Battlefield', [Q.battlefield], { nhl: true }),
     item('Indian Steps', [Q.site], { nhl: true }), item('Washington Grays Monument', [Q.statue]), item('A Lighthouse', [Q.lighthouse]),
@@ -118,7 +118,7 @@ test('RD6: museums and sites take their own class; 0103\'s classes keep theirs',
   assert.equal(classOf(r, 'A Lighthouse'), 'odd_engineering');
 });
 
-test('RD7: the OSM adapter confirms by wikidata tag only, never makes a place; one, two or five open elements give identical blocks, and closed wins', { todo: 'test first' }, async () => {
+test('RD7: the OSM adapter confirms by wikidata tag only, never makes a place; one, two or five open elements give identical blocks, and closed wins', async () => {
   const trout = item('Trout Hall', [Q.house]);
   const osm = await osmOf([{ tourism: 'museum', name: 'An OSM-only museum' }]);
   assert.equal(osm.declaration.role, 'confirms');
@@ -135,7 +135,7 @@ test('RD7: the OSM adapter confirms by wikidata tag only, never makes a place; o
   assert.deepEqual(names(await build([wikidataOf([trout]), both])), ['Trout Hall'], 'wikidata=Q1;Q2 speaks for both');
 });
 
-test('RD8: a listed house enters only shown open (a museum type or an OSM visitor tag); historic=building is no sign', { todo: 'test first' }, async () => {
+test('RD8: a listed house enters only shown open (a museum type or an OSM visitor tag); historic=building is no sign', async () => {
   const trout = item('Trout Hall', [Q.house]);
   const burnside = item('Burnside Plantation', [Q.building]);
   const plain = item('Gauff-Roth House', [Q.house]);
@@ -146,7 +146,7 @@ test('RD8: a listed house enters only shown open (a museum type or an OSM visito
   assert.deepEqual(names(noOsm), ['Gemeinhaus'], 'without OSM, only a museum type shows a house open');
 });
 
-test('RD9: access=private or no keeps a place out, a Landmark too', { todo: 'test first' }, async () => {
+test('RD9: access=private or no keeps a place out, a Landmark too', async () => {
   const estate = item('Gated Landmark Estate', [Q.house], { nhl: true });
   const chapel = item('Closed Chapel', [Q.church]);
   const open = item('Open Church', [Q.church]);
@@ -154,7 +154,7 @@ test('RD9: access=private or no keeps a place out, a Landmark too', { todo: 'tes
   assert.deepEqual(names(r), ['Open Church']);
 });
 
-test('RD10: was:* keeps a place; demolished:, razed:, destroyed: remove it', { todo: 'test first' }, async () => {
+test('RD10: was:* keeps a place; demolished:, razed:, destroyed: remove it', async () => {
   const station = item('Union Station', [Q.station]);
   const a = item('Gone Station', [Q.station]);
   const b = item('Razed Mill', [Q.gristmill]);
@@ -166,7 +166,7 @@ test('RD10: was:* keeps a place; demolished:, razed:, destroyed: remove it', { t
   assert.deepEqual(names(r), ['Union Station']);
 });
 
-test('RD11: a region OSM changed packs as one ODbL file under the region\'s id; one where OSM only closed a place too', { todo: 'test first' }, async () => {
+test('RD11: a region OSM changed packs as one ODbL file under the region\'s id; one where OSM only closed a place too', async () => {
   const trout = item('Trout Hall', [Q.house]);
   const church = item('A Church', [Q.church]);
   const opened = await build([wikidataOf([trout, church]), await osmOf([tagFor(trout, { tourism: 'museum' })])]);
@@ -179,7 +179,7 @@ test('RD11: a region OSM changed packs as one ODbL file under the region\'s id; 
   assert.equal(untouched.packs[0].license, 'cc0', 'OSM said nothing about any place here');
 });
 
-test('RD12: the report lists each added place with its reason per test area, and is not in the release', { todo: 'test first' }, async () => {
+test('RD12: the report lists each added place with its reason per test area, and is not in the release', async () => {
   const church = item('A Church', [Q.church]);
   const trout = item('Trout Hall', [Q.house]);
   const landmark = item('Landmark House', [Q.house], { nhl: true });
@@ -190,13 +190,13 @@ test('RD12: the report lists each added place with its reason per test area, and
   assert.ok(!JSON.stringify(r.registry).includes('landmark'), 'nor the registry');
 });
 
-test('RD13: contract v2 has the five classes and building_structure, no class name names significance, and it is the code\'s', { todo: 'test first' }, () => {
+test('RD13: contract v2 has the five classes and building_structure, no class name names significance, and it is the code\'s', () => {
   assert.equal(CONTRACT_VERSION, 2);
   for (const c of ['church', 'cemetery', 'theatre', 'museum', 'historic_site', 'building_structure']) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   for (const c of CLASS_NAMES) assert.ok(!/heritage|listed|landmark|notable|remarkable|historic_building/.test(c), c);
 });
 
-test('RD14: the new signals are booleans and every object stays closed', { todo: 'test first' }, () => {
+test('RD14: the new signals are booleans and every object stays closed', () => {
   const base = { source: 'wikidata', sourceId: 'Q1', name: 'A', at: [-75, 41], fetchedAt: '2026-11-10T07:17:00.000Z' };
   for (const s of ['listed', 'needsOpen', 'open', 'closed']) {
     assert.equal(CandidateSchema.safeParse({ ...base, signals: { [s]: true } }).success, true, `${s} is a signal`);

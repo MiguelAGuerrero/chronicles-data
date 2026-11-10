@@ -9,9 +9,12 @@ export interface Edits {
   add: { name: string; at: [number, number]; class: string }[];
 }
 
-/** PP6: the places that may enter a pack. */
+/**
+ * PP6, RD8, RD9: the places that may enter a pack: a class, not gone, not closed, and, when it needs a sign of being
+ * open, one. Still blind to sources: it reads booleans, never who said them or how many did.
+ */
 export function gate(places: Place[]): Place[] {
-  return places.filter((p) => p.class != null && !p.gone);
+  return places.filter((p) => p.class != null && !p.gone && !p.closed && (!p.needsOpen || p.open === true));
 }
 
 const same = (p: { name: string; at: [number, number] }, q: { name: string; at: [number, number] }) =>

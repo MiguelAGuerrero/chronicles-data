@@ -79,7 +79,9 @@ Open: none (the owner's calls below)
    position from an adapter whose role is locates. For the same other candidates, a build with zero, one or fifty
    nominations yields identical blocks. Nominations appear only in the run's report, as a list for the owner to review
    (who can add a place through the edits, PP10); never in a pack, the registry's places or the crosswalk. Confirming or
-   denying can only confirm a place or mark it gone; nothing records how many sources confirm it.
+   denying can only confirm a place, mark it gone, or (amended by RD7, Nov 10) say it is open or closed, which decides
+   whether a listed place that needs a sign of being open enters and keeps a closed one out; `open` and `closed` are
+   each true when any confirming element says so, `closed` wins, and nothing records how many sources confirm it.
 8. **PP8 Places keep their IDs.** Each place gets an opaque ID. A registry kept between builds gives a place the same ID
    when it matches the last build's (the same source ID first, else the same name within 50 m). A crosswalk lists each
    source ID with its place ID. A place that disappears keeps its ID retired, never reused.

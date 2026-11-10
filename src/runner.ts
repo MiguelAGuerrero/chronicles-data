@@ -7,13 +7,43 @@ import { applyEdits, gate, type Edits } from './gate';
 import { politeFetch, type Clock, type Fetch } from './http';
 import { packages, type Pack } from './package';
 import type { RawStore } from './rawStore';
-import { CandidateSchema, DeclarationSchema, type Candidate } from './schema';
+import { CandidateSchema, DeclarationSchema, type Candidate, type LicenseFamily, type Place } from './schema';
 
 export interface Report {
   sources: { name: string; run: string | null; fellBack?: string; error?: string }[];
   setAside: { source: string; part: string; reason: string }[];
   /** Nominations, for the owner to read: never in a pack, the registry or the crosswalk (PP7). */
   review: { source: string; name: string; evidence?: string }[];
+  /**
+   * RD12: for each test area, every place the pack holds there, with its class and why it entered; and, for the whole
+   * region, how many each class and reason add. For the owner: never in a release, the archive, the manifest or the
+   * state (the reason is worked out here from the candidates, never stored on a place or in the registry).
+   */
+  added?: { area: string; places: { name: string; class: string; reason: string; id: string; at: [number, number] }[] }[];
+  summary?: Record<string, number>;
+}
+
+/** RD12: a test area for the owner's review, [west, south, east, north]. */
+export interface ReviewArea {
+  name: string;
+  bbox: [number, number, number, number];
+}
+
+/** RD12: why a place entered, from its locating candidate's signals (booleans only, RD14). */
+export function reasonOf(c: Candidate | undefined): string {
+  const s = c?.signals ?? {};
+  if (s.needsOpen) return 'shown open';
+  if (s.publicType) return 'public type';
+  if (s.heritage) return 'landmark';
+  if (s.listed) return 'shown open';
+  return 'class';
+}
+
+/** RD11: the family a region's one pack takes when a source of another family changed its places; none otherwise. */
+export function familyOf(touched: Set<LicenseFamily>): LicenseFamily | undefined {
+  const other = [...touched].filter((f) => f !== 'cc0');
+  if (other.length > 1) throw new Error(`sources of two licenses (${other.join(', ')}) changed one region; a pack never mixes families (PP9)`);
+  return other[0];
 }
 
 /** PP1: what a declaration is missing or gets wrong, by field; empty when it may run. */
@@ -49,6 +79,8 @@ export interface RunOptions {
   log?: (line: string) => void;
   /** Runs of raw answers kept per source (PP15); default 3. */
   keepRuns?: number;
+  /** RD12: test areas for the owner's review in the report. */
+  reviewAreas?: ReviewArea[];
 }
 
 export interface RunResult {
@@ -118,8 +150,32 @@ export async function run(o: RunOptions): Promise<RunResult> {
 
   const sources: SourceInfo[] = o.adapters.map((a) => ({ name: a.declaration.name, code: a.declaration.code, role: a.declaration.role, licenseFamily: a.declaration.licenseFamily }));
   const ids = createIds(o.registry, o.newId);
-  const places = applyEdits(gate(conflate(candidates, sources, ids)), o.edits, ids);
-  return { report, packs: packages(places, o.region, o.version), registry: ids.finish() };
+  const touched = new Set<LicenseFamily>();
+  const places = applyEdits(gate(conflate(candidates, sources, ids, touched)), o.edits, ids);
+  if (o.reviewAreas?.length) review(report, places, candidates, sources, ids, o.reviewAreas);
+  return { report, packs: packages(places, o.region, o.version, familyOf(touched)), registry: ids.finish() };
+}
+
+/** RD12: the owner's review, worked out from the candidates; nothing of it is stored on a place. */
+function review(report: Report, places: Place[], candidates: Candidate[], sources: SourceInfo[], ids: ReturnType<typeof createIds>, areas: ReviewArea[]) {
+  const locating = new Set(sources.filter((s) => s.role === 'locates').map((s) => s.name));
+  const byId = new Map<string, Candidate>();
+  for (const c of candidates) {
+    if (!locating.has(c.source)) continue;
+    const id = ids.lookup(`${c.source}:${c.sourceId}`);
+    if (id && !byId.has(id)) byId.set(id, c);
+  }
+  const reason = (p: Place) => (p.src === 'owner' ? 'owner' : reasonOf(byId.get(p.id)));
+  report.summary = {};
+  for (const p of places) {
+    const k = `${p.class}: ${reason(p)}`;
+    report.summary[k] = (report.summary[k] ?? 0) + 1;
+  }
+  const inside = ([w, s, e, n]: ReviewArea['bbox'], [x, y]: [number, number]) => x >= w && x <= e && y >= s && y <= n;
+  report.added = areas.map((a) => ({
+    area: a.name,
+    places: places.filter((p) => inside(a.bbox, p.at)).map((p) => ({ name: p.name, class: String(p.class), reason: reason(p), id: p.id, at: p.at })),
+  }));
 }
 
 /** PP1: the sources whose raw answers may go into the published state asset. */

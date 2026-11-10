@@ -12,6 +12,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Adapter, Box } from './adapter';
+import { osm } from './adapters/osm';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
@@ -20,7 +21,7 @@ import { createRawStore } from './rawStore';
 import { redistributable, run } from './runner';
 
 /** The adapters, in priority order: the first source's record is promoted whole when two name one place. */
-export const ADAPTERS: Adapter[] = [wikidata];
+export const ADAPTERS: Adapter[] = [wikidata, osm];
 
 export const REGIONS: Record<string, Box[]> = {
   // The conterminous US, Alaska and Hawaii, in boxes [west, south, east, north].
@@ -41,7 +42,7 @@ async function main() {
   const out = arg('out') ?? 'out';
   const url = arg('manifest-url');
   if (!region || !REGIONS[region] || !version) {
-    console.error('usage: npm run build -- --region us --version YYYYMMDD[.n] --state dir --out dir --manifest-url URL [--edits edits.json] [--no-fetch]');
+    console.error('usage: npm run build -- --region us --version YYYYMMDD[.n] --state dir --out dir --manifest-url URL [--edits edits.json] [--review-areas areas.json] [--no-fetch]');
     process.exit(1);
   }
   mkdirSync(out, { recursive: true });
@@ -62,6 +63,8 @@ async function main() {
     clock: realClock,
     newId,
     log: (l) => console.error(l),
+    // RD12: test areas for the owner's review in report.json, which no release, archive or manifest carries.
+    reviewAreas: arg('review-areas') ? JSON.parse(readFileSync(arg('review-areas')!, 'utf8')) : undefined,
   });
 
   let manifest = null;
@@ -78,11 +81,13 @@ async function main() {
   const files: string[] = [];
   const reasons: string[] = [];
   for (const p of r.packs) {
-    const d = decide({ region: p.region, blocks: p.blocks, manifest, unreachable });
+    const d = decide({ region: p.region, blocks: p.blocks, manifest, unreachable, license: p.license });
     reasons.push(`${p.region}: ${d.reason}`);
     if (!d.publish) continue;
     writeFileSync(join(out, p.file), p.bytes);
     writeFileSync(join(out, p.file.replace(/\.pmtiles$/, '.blocks.json')), `${JSON.stringify(p.blocks)}\n`);
+    // RD11: the pack's license family beside it, read into the manifest's entry (`license`).
+    writeFileSync(join(out, p.file.replace(/\.pmtiles$/, '.license')), `${p.license}\n`);
     files.push(p.file);
   }
   if (!r.packs.length) reasons.push('no archive built');

@@ -1,5 +1,6 @@
 // Conflate (PP7, PP8, decision 0108): candidates from every source become places with opaque IDs that last from
-// build to build. Only a locating source makes a place; a confirming source can only confirm one or mark it gone;
+// build to build. Only a locating source makes a place; a confirming source can only confirm one, mark it gone, or
+// say it is open or closed (PP7 as amended by RD7: `open` and `closed` are ORs, and nothing counts how many say so);
 // nominations never come here (the runner keeps them for the owner's review list).
 //
 // Matching, cheapest first, as Overture does: the same source ID as last build (the crosswalk), then the same name
@@ -84,7 +85,7 @@ export type Ids = ReturnType<typeof createIds>;
 /**
  * PP7, PP8: places from candidates. `sources` is in priority order (the first source's record is promoted whole).
  */
-export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Ids): Place[] {
+export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Ids, touched: Set<LicenseFamily> = new Set()): Place[] {
   const order = new Map(sources.map((s, i) => [s.name, i]));
   const info = new Map(sources.map((s) => [s.name, s]));
   const roleOf = (c: Candidate) => info.get(c.source)?.role;
@@ -104,16 +105,33 @@ export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Id
       continue;
     }
     const src = info.get(c.source)!;
-    made.push({ id: ids.forKey(key, c.name, at), name: c.name, at, ...(c.class ? { class: c.class } : {}), gone: c.signals.gone === true, src: src.code, license: src.licenseFamily });
+    made.push({
+      id: ids.forKey(key, c.name, at), name: c.name, at, ...(c.class ? { class: c.class } : {}), gone: c.signals.gone === true,
+      ...(c.signals.needsOpen === true ? { needsOpen: true } : {}), src: src.code, license: src.licenseFamily,
+    });
   }
 
-  // A confirming source can only confirm a place or mark it gone (PP7); nothing records how many confirm it.
+  // A confirming source confirms a place, marks it gone, or says it is open or closed (PP7, RD7); nothing records how
+  // many confirm it. `touched` gets the source's license family when its word changed what a place is (RD11): a
+  // place it opened, closed or marked gone, so a region OSM only took places from is ODbL too.
   for (const c of candidates.filter((x) => roleOf(x) === 'confirms').sort(byKey)) {
     const id = (c.sameAs ?? []).map((k) => ids.lookup(k)).find((x) => x != null);
     const place = (id ? made.find((p) => p.id === id) : undefined) ?? (c.at ? made.find((p) => near(p, { name: c.name, at: c.at as [number, number] })) : undefined);
     if (!place) continue;
     ids.alias(`${c.source}:${c.sourceId}`, place.id);
-    if (c.signals.gone === true) place.gone = true;
+    const family = info.get(c.source)!.licenseFamily;
+    if (c.signals.gone === true && !place.gone) {
+      place.gone = true;
+      touched.add(family);
+    }
+    if (c.signals.closed === true && !place.closed) {
+      place.closed = true;
+      touched.add(family);
+    }
+    if (c.signals.open === true && !place.open) {
+      place.open = true;
+      if (place.needsOpen) touched.add(family);
+    }
   }
   return made;
 }

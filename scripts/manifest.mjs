@@ -29,6 +29,9 @@ for (const file of readdirSync(dir)) {
   const entry = { file, version: m[2], bytes: statSync(path).size, sha256: createHash('sha256').update(buf).digest('hex'), ...header(buf) };
   const blocks = path.replace(/\.pmtiles$/, '.blocks.json');
   if (existsSync(blocks)) entry.blocks = JSON.parse(readFileSync(blocks, 'utf8'));
+  // RD11: the pack's license family, from its sidecar (`odbl` when OpenStreetMap changed it); none means CC0.
+  const license = path.replace(/\.pmtiles$/, '.license');
+  if (existsSync(license)) entry.license = readFileSync(license, 'utf8').trim();
   if (!byRegion.has(m[1])) byRegion.set(m[1], []);
   byRegion.get(m[1]).push(entry);
 }
