@@ -44,6 +44,7 @@ jobs:
       - run: npm ci
       # RD7: the OpenStreetMap adapter filters Geofabrik's extracts with osmium.
       - name: Install osmium
+        timeout-minutes: 10 # a stalled apt mirror once held a run for the whole 300 minutes
         run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
       - name: Restore the pipeline's state (raw answers and the place ID registry)
         env:
