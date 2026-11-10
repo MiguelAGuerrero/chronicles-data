@@ -129,3 +129,22 @@ No SQLite migration, no IndexedDB version: the `archive` column and `profile.arc
 Nothing native changes. One device check: an install with checklist areas built under a file version rebuilds them
 once and then only when their block changes (PP13), in `docs/NATIVE_UNVERIFIED.md`.
 </content>
+
+## Changes first (CF1-CF6)
+
+- **`FetchContext`** gains `previous` (the earlier complete run: its id, when it began, its parts and a reader), `week`
+  (the ISO week), `box` (a sweep by hand) and `carry(part)`; the runner fills them from the raw store.
+- **`RawStore.carry(source, from, to, part)`** copies an answer into the new run with its original `fetchedAt` and
+  SHA-256, and marks it `carriedFrom`, so a run's start is its own parts' earliest time.
+- **`Adapter.settle?(parts, area)`**: when an adapter has it, the runner calls it once with every part of the run
+  instead of `adapt` per part. Wikidata's replays its answers in time order: a cell answer replaces the items inside
+  its box, a changes answer adds or replaces items, a check answer removes items modified away, merged or deleted.
+- **Part names** carry what `settle` needs: `cell_<w>_<s>_<e>_<n>.json` (as before), `changes_<run>_<target>_<country>.json`,
+  `held_<run>_<since-epoch>_<n>.json`.
+- **The Wikidata adapter's fetch**: no earlier run, sweep every cell; a box, sweep its cells and carry the rest; else the
+  changes queries, the held check, this week's thirteenth of the cells, and carry what wasn't re-asked. A new class too
+  big to ask whole is swept cell by cell for itself.
+- **The weekly workflow** gains a `box` input for a sweep by hand, and a push trigger on `edits.json` and the class
+  files that runs with `--no-fetch` (CF6).
+- **Tests** (`test/changes.test.ts`): CF1-CF6 against the fixtures and a fake query service that answers changes and
+  held-check queries.

@@ -111,6 +111,36 @@ Open: none (the owner's calls below)
 2. **CT2 The manifest's shape is written down.** The example manifest names its file, version, bounds and blocks as
    `contract/manifest.schema.json` says; the Pages workflow serves `contract/` beside the manifest.
 
+## Changes first (CF, decision 0114 in the app repo)
+
+The Wikidata adapter asks every 2° cell of the region each week (about 630 queries, roughly 1-2 hours). Measured on
+Nov 9, "items of a class modified since a date", filtered by country, answers in 1-7 s a class; the same filtered by
+box takes 46 s to over the 60 s limit. This slice makes the weekly fetch ask what changed, ported from the app's staged
+places build (its SB3, SB4, SB8, SB11, SB12; the rest of that slice was already this pipeline's).
+
+1. **CF1 Changes first.** With an earlier complete run in the raw store, a fetch asks no cell beyond its sweep share
+   (CF4): one query per pinned class and one for the landmarks, filtered by the region's country and modified since
+   the earlier run began (less a day for the query service's lag), and a check of the held items, at most 400 ids a
+   query. Every answer is kept as received (PP2).
+2. **CF2 Changed away leaves.** A held item the check says was modified since, that no changes answer of the same run
+   returned (it left its class or lost its location), leaves; so does one the service no longer knows (merged or
+   deleted). A held item not modified stays as its earlier answer said, and is never asked about.
+3. **CF3 A new class asks only for itself.** A pinned class the earlier run did not ask is asked once across the
+   country with no date; the other classes are asked only for changes.
+4. **CF4 The sweep, only when needed.** With no earlier complete run, every cell is swept. Run by hand with a box, only
+   that box's cells are swept and the changes clock doesn't move. Every weekly run also sweeps one cell in thirteen
+   (the ISO week's share), so every cell is re-asked once a quarter, a backstop for changes a week missed. A cell swept
+   replaces what earlier answers said inside it.
+5. **CF5 Answers carried, newest wins.** A run carries forward the earlier run's answers it did not re-ask, with their
+   original time and hash. An answer that every cell has been swept since is not carried. Where answers disagree about
+   an item, the newest wins; the same raw store builds the same places (PP2).
+6. **CF6 The owner's edits rebuild without a fetch.** A push to `main` that changes `edits.json` or the classes runs the
+   build from the raw store with no request (`--no-fetch`) and publishes only if a block changed (PP12).
+
+Found while porting (Nov 10): the cell query, like the changes query, requires the country (`wdt:P17 wd:Q30`), so
+items with no country in Wikidata (about 2% of one measured cell) enter by no query. Whether they should is the
+owner's call; this slice keeps the current rule (PP6).
+
 ## Carried from Places worth the stop
 
 The build-side criteria of the app's `specs/places-worth-the-stop` moved here with the code, tested in
