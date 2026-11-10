@@ -141,6 +141,11 @@ Found while porting (Nov 10): the cell query, like the changes query, requires t
 items with no country in Wikidata (about 2% of one measured cell) enter by no query. Whether they should is the
 owner's call; this slice keeps the current rule (PP6).
 
+Built (Nov 10, branch `claude/youthful-einstein-go1xie`): CF1-CF6 each with its test in `test/changes.test.ts`, the
+todos committed first. The raw store keeps a run's start and notes (the classes it asked) in its index and carries
+earlier answers with their time and hash; an adapter may `settle` all its answers at once; the Wikidata adapter's
+`settle` replays them in time order. Not yet run against the real query service: its first run sweeps every cell.
+
 ## Carried from Places worth the stop
 
 The build-side criteria of the app's `specs/places-worth-the-stop` moved here with the code, tested in

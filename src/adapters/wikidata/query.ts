@@ -20,23 +20,65 @@ export function splitCell([w, s, e, n]: Box): Box[] {
   return [[w, s, mx, my], [mx, s, e, my], [w, my, mx, n], [mx, my, e, n]];
 }
 
-/** PW14: one cell's query: the pinned classes or a landmark listing, in the US, with what says a place is gone. */
-export function cellQuery([w, s, e, n]: Box): string {
-  const classes = ALL_CLASS_IDS.map((q: string) => `wd:${q}`).join(' ');
+/** CF3: what a run asks for: each pinned class, and the National Historic Landmarks. */
+export const ALL_TARGETS: string[] = [...ALL_CLASS_IDS, 'NHL'];
+
+/** What every query reads about an item: its label, classes, listing and whether it is gone. */
+const DETAILS = `?item rdfs:label ?label . FILTER(LANG(?label) = "en")
+  OPTIONAL { ?item wdt:P31 ?p31 . }
+  OPTIONAL { ?item wdt:P1435 wd:${NHL} . BIND("true" AS ?nhl) }
+  OPTIONAL { ?item wdt:P576 ?dissolved . }
+  OPTIONAL { ?item wdt:P3999 ?closed . }
+  OPTIONAL { ?item (wdt:P5817|wdt:P5816) ?state . ?state rdfs:label ?stateLabel . FILTER(LANG(?stateLabel) = "en") }`;
+
+/** The pattern that picks a target's items: one class, or a landmark listing. */
+const pick = (target: string) => (target === 'NHL' ? `?item wdt:P1435 wd:${NHL} .` : `?item wdt:P31 wd:${target} .`);
+
+/**
+ * PW14: one cell's query: the pinned classes or a landmark listing, in the US, with what says a place is gone. CF3: a
+ * new class too big to ask whole is swept for itself, with `targets` holding it alone.
+ */
+export function cellQuery([w, s, e, n]: Box, targets: string[] = ALL_TARGETS): string {
+  const classes = targets.filter((t) => t !== 'NHL');
+  const parts: string[] = [];
+  if (classes.length) parts.push(`{ VALUES ?cls { ${classes.map((q) => `wd:${q}`).join(' ')} } ?item wdt:P31 ?cls . }`);
+  if (targets.includes('NHL')) parts.push(`{ ?item wdt:P1435 wd:${NHL} . }`);
   return `SELECT ?item ?label ?coord ?p31 ?nhl ?dissolved ?closed ?stateLabel WHERE {
   SERVICE wikibase:box {
     ?item wdt:P625 ?coord .
     bd:serviceParam wikibase:cornerSouthWest "Point(${w} ${s})"^^geo:wktLiteral .
     bd:serviceParam wikibase:cornerNorthEast "Point(${e} ${n})"^^geo:wktLiteral .
   }
-  { VALUES ?cls { ${classes} } ?item wdt:P31 ?cls . } UNION { ?item wdt:P1435 wd:${NHL} . }
+  ${parts.join(' UNION ')}
   ?item wdt:P17 wd:Q30 .
-  ?item rdfs:label ?label . FILTER(LANG(?label) = "en")
-  OPTIONAL { ?item wdt:P31 ?p31 . }
-  OPTIONAL { ?item wdt:P1435 wd:${NHL} . BIND("true" AS ?nhl) }
-  OPTIONAL { ?item wdt:P576 ?dissolved . }
-  OPTIONAL { ?item wdt:P3999 ?closed . }
-  OPTIONAL { ?item (wdt:P5817|wdt:P5816) ?state . ?state rdfs:label ?stateLabel . FILTER(LANG(?stateLabel) = "en") }
+  ${DETAILS}
+}`;
+}
+
+/**
+ * CF1, CF3: one target's items in one country, modified since a time, or all of them with no time. By country it
+ * answers in seconds; by box it times out (measured Nov 9).
+ */
+export function changesQuery(target: string, country: string, since: string | null): string {
+  const modified = since ? `?item schema:dateModified ?modified . FILTER(?modified > "${since}"^^xsd:dateTime)` : '';
+  return `SELECT ?item ?label ?coord ?p31 ?nhl ?dissolved ?closed ?stateLabel WHERE {
+  ${pick(target)}
+  ?item wdt:P17 wd:${country} .
+  ${modified}
+  ?item wdt:P625 ?coord .
+  ${DETAILS}
+}`;
+}
+
+/**
+ * CF2: of these held items, those modified since a time (with when) and those the service no longer knows (with no
+ * time): merged or deleted. An item not modified answers nothing.
+ */
+export function heldQuery(ids: string[], since: string): string {
+  return `SELECT ?item ?m WHERE {
+  VALUES ?item { ${ids.map((id) => `wd:${id}`).join(' ')} }
+  OPTIONAL { ?item schema:dateModified ?m . }
+  FILTER(!BOUND(?m) || ?m > "${since}"^^xsd:dateTime)
 }`;
 }
 

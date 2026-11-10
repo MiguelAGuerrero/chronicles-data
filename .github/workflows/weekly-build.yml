@@ -1,14 +1,27 @@
 name: Weekly places build
 
-# The places pipeline (docs/spec.md; decisions 0103 and 0108 in the app repo): once a week, fetch every source
-# through its adapter, build the US archive and publish a release only when a block's places changed (PP12). Its
+# The places pipeline (docs/spec.md; decisions 0103, 0108 and 0114 in the app repo): once a week, fetch every source
+# through its adapter (Wikidata changes first, CF1-CF5), build the US archive and publish a release only when a block's places changed (PP12). Its
 # state (raw answers and the place ID registry) is kept between runs as the `state-us` pre-release, which the Pages
 # workflow never serves (PP15).
 
 on:
   schedule:
     - cron: '17 7 * * 1' # Mondays, 07:17 UTC
+  # CF4: a sweep by hand of one box (w,s,e,n); empty runs the weekly fetch now.
   workflow_dispatch:
+    inputs:
+      box:
+        description: 'Sweep only this box, w,s,e,n (empty: the weekly changes-first fetch)'
+        required: false
+        default: ''
+  # CF6: the owner's edits or the classes changed: rebuild from the kept answers, asking no source.
+  push:
+    branches: [main]
+    paths:
+      - edits.json
+      - src/adapters/wikidata/classify.mjs
+      - src/classes.ts
 
 permissions:
   contents: write # create the release
@@ -37,11 +50,17 @@ jobs:
           if gh release download state-us --repo "$GITHUB_REPOSITORY" --pattern 'state-us.tar.gz'; then tar -xzf state-us.tar.gz -C state; fi
       - name: Run the pipeline (fetch, adapt, conflate, gate, package, decide)
         id: run
+        env:
+          BOX: ${{ inputs.box }}
         run: |
           # The run number keeps a second run on the same day from colliding with the first's tag.
           version="$(date -u +%Y%m%d).${{ github.run_number }}"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          npm run -s build -- --region us --version "$version" --state state --out out --edits edits.json \
+          # CF6: a push rebuilds from the kept answers (--no-fetch); CF4: a box sweeps only its cells.
+          extra=""
+          if [ "${{ github.event_name == 'push' }}" = "true" ]; then extra="--no-fetch"; fi
+          if [ -n "$BOX" ]; then extra="$extra --box $BOX"; fi
+          npm run -s build -- --region us --version "$version" --state state --out out --edits edits.json $extra \
             --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
       - name: Save the state for next week (only sources whose terms allow it)
         env:

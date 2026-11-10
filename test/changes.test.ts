@@ -91,7 +91,7 @@ const isBox = (q: string) => /wikibase:box/.test(q);
 const isHeld = (q: string) => /VALUES \?item/.test(q);
 const isChanges = (q: string) => !isBox(q) && !isHeld(q);
 
-test('CF1: with an earlier run, the fetch asks each class by country since it began, checks the held items, and no cell', { todo: 'test first' }, async () => {
+test('CF1: with an earlier run, the fetch asks each class by country since it began, checks the held items, and no cell', async () => {
   const { ALL_TARGETS } = await adapterModule();
   const { store, first } = await firstRun();
   const { http, log } = service();
@@ -108,7 +108,7 @@ test('CF1: with an earlier run, the fetch asks each class by country since it be
   assert.deepEqual(names(second.packs), names(first.packs), 'nothing changed, so the same places');
 });
 
-test('CF2: a held item modified away, merged or deleted leaves; one modified and returned is replaced; the rest stay', { todo: 'test first' }, async () => {
+test('CF2: a held item modified away, merged or deleted leaves; one modified and returned is replaced; the rest stay', async () => {
   const { store, first } = await firstRun();
   const { http } = service({
     changes: (target) => (target === FOLLY ? [binding('Q1001', 'Hessian Folly Tower', FOLLY, -75.2, 40.7)] : []),
@@ -123,21 +123,20 @@ test('CF2: a held item modified away, merged or deleted leaves; one modified and
     'the monument left its classes, the duck is merged or deleted, the folly was renamed');
 });
 
-test('CF3: a class the earlier run did not ask is asked once across the country; the others only for changes', { todo: 'test first' }, async () => {
+test('CF3: a class the earlier run did not ask is asked once across the country; the others only for changes', async () => {
   const { ALL_TARGETS } = await adapterModule();
   const { store, first } = await firstRun();
-  store.put('wikidata', '20261102', 'asked.json', JSON.stringify(ALL_TARGETS.filter((t: string) => t !== STATUE)), '2026-11-02T07:17:00.000Z');
-  store.complete('wikidata', '20261102');
+  store.setMeta('wikidata', '20261102', 'asked', JSON.stringify(ALL_TARGETS.filter((t: string) => t !== STATUE)));
   const { http, log } = service();
   await run(opts({ store, http, registry: first.registry, week: 46 }));
   const statue = log.filter((q) => isChanges(q) && q.includes(`wd:${STATUE}`));
   assert.equal(statue.length, 1);
   assert.ok(!/xsd:dateTime/.test(statue[0]), 'the new class is asked whole');
   assert.ok(log.filter((q) => isChanges(q) && q.includes(`wd:${FOLLY}`)).every((q) => /xsd:dateTime/.test(q)));
-  assert.ok(JSON.parse(store.read('wikidata', '20261109', 'asked.json')).includes(STATUE), 'recorded as asked');
+  assert.ok(JSON.parse(store.meta('wikidata', '20261109').asked).includes(STATUE), 'recorded as asked');
 });
 
-test('CF4: no earlier run sweeps every cell; a box sweeps its cells only and keeps the clock; the weekly share is one in thirteen', { todo: 'test first' }, async () => {
+test('CF4: no earlier run sweeps every cell; a box sweeps its cells only and keeps the clock; the weekly share is one in thirteen', async () => {
   const { sweepShare } = await adapterModule();
   const { http: h1, log: first } = service();
   const store = tmpStore();
@@ -159,7 +158,7 @@ test('CF4: no earlier run sweeps every cell; a box sweeps its cells only and kee
   }
 });
 
-test('CF5: answers are carried with their time and hash; the newest answer about an item wins; one every cell was swept since is dropped', { todo: 'test first' }, async () => {
+test('CF5: answers are carried with their time and hash; the newest answer about an item wins; one every cell was swept since is dropped', async () => {
   const { store, first } = await firstRun();
   const { http } = service({ held: () => [] });
   await run(opts({ store, http, registry: first.registry, week: 46 }));
@@ -184,7 +183,7 @@ test('CF5: answers are carried with their time and hash; the newest answer about
   assert.deepEqual(nameOf([old, added, swept]), ['Hessian Folly'], 'a sweep replaces what earlier answers said inside its cell');
 });
 
-test('CF6: a push that changes the edits or the classes rebuilds from the raw store with no fetch', { todo: 'test first' }, () => {
+test('CF6: a push that changes the edits or the classes rebuilds from the raw store with no fetch', () => {
   const wf = readFileSync(join(ROOT, '.github/workflows/weekly-build.yml'), 'utf8');
   const push = /\n  push:\n([\s\S]*?)\n  [a-z_]+:/.exec(`${wf.split('\njobs:')[0]}\n  end:`)?.[1] ?? '';
   for (const path of ['edits.json', 'src/adapters/wikidata/classify.mjs', 'src/classes.ts']) assert.ok(push.includes(path), `pushes to ${path} rebuild`);
