@@ -3,7 +3,8 @@
 // each names, whether it is open to visitors, closed, or gone. It never makes a place (role `confirms`), never joins by
 // name or position, and nothing counts how many elements say a thing (PP7, amended by RD7).
 import type { Adapter } from '../../adapter';
-import { filterExtracts, type Filter } from './extract';
+import { sharedExtracts, type Filter } from './extract';
+import { PLACES_FILTER } from './filters';
 
 /** RD8: tags that show a place open to visitors; `historic=building` and the like are no sign. */
 export const OPEN_TAGS: Record<string, readonly string[]> = {
@@ -49,7 +50,7 @@ export const osm: Adapter = {
   },
 
   async fetch(ctx) {
-    await filterExtracts(ctx, [FILTER]);
+    await sharedExtracts(ctx, [FILTER, PLACES_FILTER], FILTER.name);
   },
 
   /** RD7: one confirming candidate per Wikidata id an element carries (`wikidata=Q1;Q2` speaks for both). */

@@ -172,3 +172,23 @@ The build-side criteria of the app's `specs/places-worth-the-stop` moved here wi
   places (any pack OSM changed is treated as ODbL); conditional requests (the query service has none); Cloudflare R2
   (when bandwidth nears 100 GB a month, or the app is sold). Two Wikidata items with the same name within 50 m become
   one place (accepted).
+
+## OpenStreetMap locates places (OL1-OL10; the app's decision 0142 and `specs/osm-locates`)
+
+Wikidata alone proved incomplete (a significant obelisk in Harrisburg was in OpenStreetMap only). The `osm-places`
+adapter (`src/adapters/osm/places.ts`, role `locates`, ODbL) puts named and unnamed monuments and memorials on the
+map beside Wikidata's; the archive is the union. Corroboration is deferred: a place no second source confirms enters.
+The confirming adapter (`osm`) is unchanged and still closes or removes what it finds closed or gone. Contract v3: a
+candidate, place or feature may have no name. Tests: `test/osmLocates.test.ts`.
+
+- **OL1** A `historic=monument` element is a place of class `monument`, named or not.
+- **OL2** A `historic=memorial` with a pinned `memorial=*` or `monument=*` value is that value's class (`MEMORIAL_CLASSES`: obelisk and column monument; statue and bust statue; war_memorial, stone and cross memorial). The table is pinned by a test.
+- **OL3** A value the table does not name (plaque, bench, stolperstein, ghost bike, anything else) is left out, named or not; a memorial with no value is a `memorial`, named or not.
+- **OL4** One filter for named and unnamed places: the table, access and lifecycle tags (OL5) and merging (OL6) apply alike. An unnamed place has no `name` in the candidate, the place and the pack; a named record is processed before an unnamed one, so a named place is never replaced by an unnamed one. An owner's removal with no name strikes unnamed places within 50 m.
+- **OL5** `access=private|no` and `demolished:`, `razed:` and `destroyed:` keep an element out, named or not.
+- **OL6** One place: the same name within 50 m (as before); a record that names another source's item (`wikidata=Q…`, matched through the crosswalk); an unnamed record within 50 m of a place of the same class.
+- **OL7** The gate stays blind to sources and counts; a second source naming a place changes nothing about it; a feature is `name` (when it has one), `class`, `src` and `id`.
+- **OL8** The report lists what OpenStreetMap added, by area and class, with the reason `openstreetmap` (an unnamed place is `(no name)`), before a pack is published; the owner strikes it with `edits.json`.
+- **OL9** A place only OpenStreetMap knows enters with no second source. A locating source of another license family makes the region's one pack that family's (RD11), so the US pack is ODbL; a separate pack would never be read by the app, which reads the region's own id.
+- **OL10** `CONTRACT_VERSION` is 3.
+- **Shared download:** both OpenStreetMap adapters read the same four Geofabrik extracts; the first to run filters them for both and the second replays its parts (`sharedExtracts`, `extract.ts`), so the week downloads once. Unverified against real extracts: no test downloads one.

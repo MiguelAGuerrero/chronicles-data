@@ -55,7 +55,8 @@ export type Declaration = z.infer<typeof DeclarationSchema>;
 export const CandidateSchema = z.strictObject({
   source: z.string().regex(/^[a-z][a-z0-9-]*$/),
   sourceId: text,
-  name: text,
+  /** Absent for an unnamed place (contract v3, OpenStreetMap's monuments); never an empty string. */
+  name: text.optional(),
   at: position.optional(),
   class: z.enum(CLASS_NAMES).optional(),
   // RD14: yes-or-no signals only. `listed`: on the National Register; `publicType`: public by its type; `needsOpen`:
@@ -75,7 +76,7 @@ export type Candidate = z.infer<typeof CandidateSchema>;
 /** A place as the gate sees it and a pack holds it (PP6, PP9). */
 export const PlaceSchema = z.strictObject({
   id: z.string().regex(/^p_[0-9a-f]{16}$/),
-  name: text,
+  name: text.optional(),
   at: position,
   class: z.enum(CLASS_NAMES).optional(),
   gone: z.boolean(),
@@ -88,8 +89,8 @@ export const PlaceSchema = z.strictObject({
 });
 export type Place = z.infer<typeof PlaceSchema>;
 
-/** PP9: a pack's tile feature, exactly these four properties (the app's `archivePois.ts` reads them). */
-export const FeatureSchema = z.strictObject({ name: text, class: z.enum(CLASS_NAMES), src: z.string(), id: z.string() });
+/** PP9: a pack's tile feature, exactly these four properties (name only when the place has one) (the app's `archivePois.ts` reads them). */
+export const FeatureSchema = z.strictObject({ name: text.optional(), class: z.enum(CLASS_NAMES), src: z.string(), id: z.string() });
 
 /** The committed JSON Schema (PP5). */
 export function jsonSchema() {

@@ -190,8 +190,8 @@ test('RD12: the report lists each added place with its reason per test area, and
   assert.ok(!JSON.stringify(r.registry).includes('landmark'), 'nor the registry');
 });
 
-test('RD13: contract v2 has the five classes and building_structure, no class name names significance, and it is the code\'s', () => {
-  assert.equal(CONTRACT_VERSION, 2);
+test('RD13: the contract keeps the five classes and building_structure since v2, no class name names significance, and it is the code\'s', () => {
+  assert.ok(CONTRACT_VERSION >= 2);
   for (const c of ['church', 'cemetery', 'theatre', 'museum', 'historic_site', 'building_structure']) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   for (const c of CLASS_NAMES) assert.ok(!/heritage|listed|landmark|notable|remarkable|historic_building/.test(c), c);
 });

@@ -28,7 +28,7 @@ export function blocksOf(places: Place[]): Record<string, string> {
   for (const k of [...by.keys()].sort()) {
     const rows = by.get(k)!
       .sort((a, b) => (a.id < b.id ? -1 : 1))
-      .map((p) => [p.id, p.name, p.class, p.at[0].toFixed(6), p.at[1].toFixed(6)]);
+      .map((p) => [p.id, p.name ?? null, p.class, p.at[0].toFixed(6), p.at[1].toFixed(6)]);
     out[k] = createHash('sha256').update(JSON.stringify(rows)).digest('hex').slice(0, 16);
   }
   return out;
@@ -53,14 +53,14 @@ export function packages(places: Place[], region: string, version: string, famil
   if (!/^[a-z0-9]+$/.test(region) || !/^\d{8}(\.\d+)?$/.test(version)) throw new Error('region is lowercase letters and digits; version is YYYYMMDD');
   if (family) {
     const all = places.map((p) => ({ ...p, license: family }));
-    const features = all.map((p) => ({ name: p.name, lon: p.at[0], lat: p.at[1], class: p.class as string, src: p.src, id: p.id }));
+    const features = all.map((p) => ({ ...(p.name ? { name: p.name } : {}), lon: p.at[0], lat: p.at[1], class: p.class as string, src: p.src, id: p.id }));
     return all.length ? [{ region, license: family, file: `places-${region}-${version}.pmtiles`, bytes: writeArchive(features), blocks: blocksOf(all), places: all }] : [];
   }
   const families = [...new Set(places.map((p) => p.license))].sort();
   return families.map((license) => {
     const mine = places.filter((p) => p.license === license);
     const id = license === 'cc0' ? region : `${region}${license.replace(/[^a-z0-9]/g, '')}`;
-    const features = mine.map((p) => ({ name: p.name, lon: p.at[0], lat: p.at[1], class: p.class as string, src: p.src, id: p.id }));
+    const features = mine.map((p) => ({ ...(p.name ? { name: p.name } : {}), lon: p.at[0], lat: p.at[1], class: p.class as string, src: p.src, id: p.id }));
     return { region: id, license, file: `places-${id}-${version}.pmtiles`, bytes: writeArchive(features), blocks: blocksOf(mine), places: mine };
   });
 }

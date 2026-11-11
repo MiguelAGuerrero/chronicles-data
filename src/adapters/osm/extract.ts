@@ -68,3 +68,33 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+/** The parts one pass produced for filters its caller didn't ask for, kept for the adapter that does (by run). */
+const waiting = new Map<string, Map<string, [string, string][]>>();
+
+/**
+ * One download serves both OpenStreetMap adapters (RD7, the app's decision 0142): `filters` is every filter either one
+ * asks for; the first to ask runs the pass over all of them, stores its own filter's parts and keeps the others in memory; the second replays its parts without a
+ * download. When a pass fails, nothing is kept and the next adapter runs the whole pass itself.
+ */
+export async function sharedExtracts(ctx: FetchContext, filters: Filter[], mine: string) {
+  const kept = waiting.get(ctx.run)?.get(mine);
+  if (kept) {
+    for (const [part, body] of kept) ctx.put(part, body);
+    waiting.get(ctx.run)!.delete(mine);
+    return;
+  }
+  const others = new Map<string, [string, string][]>();
+  const collector: FetchContext = {
+    ...ctx,
+    put(part, body) {
+      const owner = filters.find((f) => part.startsWith(`${f.name}-`))?.name;
+      if (owner === mine || owner == null) ctx.put(part, body);
+      else others.set(owner, [...(others.get(owner) ?? []), [part, body]]);
+    },
+  };
+  await filterExtracts(collector, filters);
+  const byRun = waiting.get(ctx.run) ?? new Map();
+  for (const [k, v] of others) byRun.set(k, v);
+  waiting.set(ctx.run, byRun);
+}

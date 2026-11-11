@@ -21,7 +21,7 @@ const AT: [number, number] = [-76.8872, 40.2688];
 /** About `m` metres east of AT. */
 const east = (m: number): [number, number] => [AT[0] + m / 84_300, AT[1]];
 
-type Tags = Record<string, string>;
+type Tags = Record<string, string | undefined>;
 type El = { tags: Tags; at?: [number, number]; geometry?: unknown };
 
 /** The OSM-locating adapter, its fetch writing these elements as the shared extract step would. */
@@ -62,7 +62,7 @@ const classes = (ps: { class?: string }[]) => ps.map((p) => p.class).sort();
 test('OL1: a historic=monument element with no wikidata tag is in the pack as class monument, named or not', async () => {
   const ps = await only([{ tags: { historic: 'monument', name: 'Soldiers Monument' }, at: AT }, { tags: { historic: 'monument' }, at: east(500) }]);
   assert.deepEqual(classes(ps), ['monument', 'monument']);
-  assert.deepEqual(ps.map((p) => p.name).sort(), [undefined, 'Soldiers Monument']);
+  assert.deepEqual(ps.map((p) => p.name).sort(), ['Soldiers Monument', undefined]);
 });
 
 test('OL2: a historic=memorial with a pinned memorial or monument value is in the pack as that value class, and the table is pinned', async () => {
@@ -94,8 +94,9 @@ test('OL4: the same filter holds for named and unnamed places, and an unnamed pl
     { tags: { historic: 'monument' }, at: east(620) },
     { tags: { historic: 'monument' }, at: east(1000) },
     { tags: { historic: 'monument' }, at: east(1010) },
+    { tags: { historic: 'monument' }, at: east(2000) },
   ]);
-  assert.equal(ps.length, 3, 'the plaque and the private one are out; the unnamed beside a named one and the unnamed pair each merge');
+  assert.equal(ps.length, 3, 'the plaque and the private one are out; the unnamed beside a named one and the unnamed pair merge; one more stands alone');
   assert.equal(ps.filter((p) => p.name === 'Hessian Monument').length, 1);
   const bare = ps.filter((p) => p.name == null);
   assert.equal(bare.length, 2);
@@ -153,7 +154,8 @@ test('OL8: the build report lists what OpenStreetMap added, by area and class, b
   assert.deepEqual(mine.map((p) => p.class).sort(), ['monument', 'monument']);
   assert.ok(mine.some((p) => p.name === '(no name)'));
   assert.equal(r.report.summary?.['monument: openstreetmap'], 2);
-  assert.equal(r.report.summary?.['statue: class'], 1, 'Wikidata places keep their own reason');
+  assert.equal(r.report.summary?.['statue: shown open'], 1, 'a Wikidata place keeps its own reason, never openstreetmap');
+  assert.equal(r.report.summary?.['statue: openstreetmap'], undefined);
 });
 
 test('OL9: a place only OpenStreetMap knows enters with no second source, the pack is ODbL, and the confirming adapter still closes', async () => {

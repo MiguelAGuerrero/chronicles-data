@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Adapter, Box } from './adapter';
 import { osm } from './adapters/osm';
+import { osmPlaces } from './adapters/osm/places';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
@@ -24,7 +25,7 @@ import { createRawStore } from './rawStore';
 import { redistributable, run } from './runner';
 
 /** The adapters, in priority order: the first source's record is promoted whole when two name one place. */
-export const ADAPTERS: Adapter[] = [wikidata, osm];
+export const ADAPTERS: Adapter[] = [wikidata, osmPlaces, osm];
 
 export const REGIONS: Record<string, Box[]> = {
   // The conterminous US, Alaska and Hawaii, in boxes [west, south, east, north].

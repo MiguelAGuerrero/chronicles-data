@@ -76,7 +76,7 @@ function opts(o: Partial<RunOptions> & { store: RawStore }): RunOptions {
   };
 }
 
-const placesOf = (packs: Pack[]) => packs.flatMap((p) => p.places).map((p) => ({ name: p.name, at: p.at, class: p.class })).sort((a, b) => (a.name < b.name ? -1 : 1));
+const placesOf = (packs: Pack[]) => packs.flatMap((p) => p.places).map((p) => ({ name: p.name, at: p.at, class: p.class })).sort((a, b) => ((a.name ?? '') < (b.name ?? '') ? -1 : 1));
 
 /** An adapter whose raw answers are given candidates, for runs that need no network. */
 function listAdapter(decl: Partial<Declaration> & { name: string }, rows: unknown[], opt: { failFetch?: boolean } = {}): Adapter {
@@ -194,7 +194,7 @@ test('PP3: each source is held to its declared pace, waits a Retry-After and sen
 });
 
 test('PP4: a candidate that fails the schema is set aside with its reason and the run goes on', async () => {
-  const a = listAdapter({ name: 'mixed' }, [cand('mixed', '1', 'Good Folly', [-75, 41]), { source: 'mixed', sourceId: '2', at: [-75, 41], signals: {}, fetchedAt: '2026-11-09T07:17:00.000Z' }]);
+  const a = listAdapter({ name: 'mixed' }, [cand('mixed', '1', 'Good Folly', [-75, 41]), { source: 'mixed', sourceId: '2', name: '', at: [-75, 41], signals: {}, fetchedAt: '2026-11-09T07:17:00.000Z' }]);
   const r = await run(opts({ store: tmpStore(), adapters: [a] }));
   assert.deepEqual(r.packs[0].places.map((p) => p.name), ['Good Folly']);
   assert.equal(r.report.setAside.length, 1);
@@ -292,9 +292,9 @@ test('PP9: a pack feature holds exactly name, class, src and id, in ID order, on
   // A confirming source added to a place leaves its feature and its place in the order unchanged.
   const withConfirm = await run(opts({ store: tmpStore(), adapters: [listAdapter({ name: 'alpha' }, [cand('alpha', '1', 'B Folly', [-75.2, 40.7]), cand('alpha', '2', 'A Folly', [-75.2001, 40.7001])]), listAdapter({ name: 'register', role: 'confirms' }, [cand('register', 'x', 'A Folly', [-75.2001, 40.7001], { sameAs: ['alpha:2'] })])] }));
   assert.deepEqual(await featuresIn(withConfirm.packs[0]), tiles);
-  // An ODbL source and a CC0 source go to separate packs.
+  // A locating source of another family makes the region's one pack that family's (RD11, decision 0142): a separate pack would never be read.
   const mixed = await run(opts({ store: tmpStore(), adapters: [listAdapter({ name: 'alpha' }, [cand('alpha', '1', 'Open Folly', [-75.2, 40.7])]), listAdapter({ name: 'osm', licenseFamily: 'odbl', license: 'ODbL 1.0' }, [cand('osm', 'n1', 'Shared Folly', [-75.6, 41])])] }));
-  assert.deepEqual(mixed.packs.map((p) => [p.region, p.license, p.places.map((q) => q.name)]), [['us', 'cc0', ['Open Folly']], ['usodbl', 'odbl', ['Shared Folly']]]);
+  assert.deepEqual(mixed.packs.map((p) => [p.region, p.license, p.places.map((q) => q.name).sort()]), [['us', 'odbl', ['Open Folly', 'Shared Folly']]]);
 });
 
 test('PP10: the owner\'s edits remove and add places after the gate', async () => {
@@ -365,7 +365,7 @@ test('PP15: the weekly workflow runs the stages in order, keeps the state asset 
   const first = await cli('20261109', out1);
   assert.equal(first.publish, 'true');
   assert.equal(first.files, 'places-us-20261109.pmtiles');
-  assert.equal(first['state-sources'], 'wikidata osm', 'only redistributable sources go in the saved state (OSM since RD7: ODbL allows it, with attribution)');
+  assert.equal(first['state-sources'], 'wikidata osm-places osm', 'only redistributable sources go in the saved state (OSM since RD7: ODbL allows it, with attribution)');
   assert.deepEqual(raw.runs('wikidata'), ['20261019', '20261026', '20261102'], 'the state keeps three runs');
   const registry1 = readFileSync(join(state, 'registry-us.json'), 'utf8');
   const blocks = JSON.parse(readFileSync(join(out1, 'places-us-20261109.blocks.json'), 'utf8'));

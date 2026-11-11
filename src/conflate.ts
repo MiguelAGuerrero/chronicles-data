@@ -36,8 +36,9 @@ export function metres([lon1, lat1]: [number, number], [lon2, lat2]: [number, nu
   return Math.hypot(x, y) * 6371008.8;
 }
 
-const near = (a: { name: string; at: [number, number] }, b: { name: string; at: [number, number] }) =>
-  norm(a.name) === norm(b.name) && metres(a.at, b.at) <= SAME_PLACE_M;
+type Located = { name?: string; at: [number, number] };
+// An unnamed place has the empty name: two unnamed places within 50 m match (the same ID from build to build).
+const near = (a: Located, b: Located) => norm(a.name ?? '') === norm(b.name ?? '') && metres(a.at, b.at) <= SAME_PLACE_M;
 
 /** PP8: hands out IDs for one build against the last build's registry. */
 export function createIds(prev: Registry, newId: () => string) {
@@ -55,7 +56,7 @@ export function createIds(prev: Registry, newId: () => string) {
 
   return {
     /** The ID for a source's record: by its key, else a known place of the same name within 50 m, else a new one. */
-    forKey(key: string, name: string, at: [number, number]): string {
+    forKey(key: string, name: string | undefined, at: [number, number]): string {
       let id = crosswalk[key];
       if (!id || claimed.has(id)) {
         id = Object.keys(places)
@@ -64,7 +65,7 @@ export function createIds(prev: Registry, newId: () => string) {
       }
       claimed.add(id);
       crosswalk[key] = id;
-      places[id] = { name, at };
+      places[id] = { name: name ?? '', at };
       return id;
     },
     /** Records another key for a place already made (a second source naming it). */
@@ -89,8 +90,19 @@ export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Id
   const order = new Map(sources.map((s, i) => [s.name, i]));
   const info = new Map(sources.map((s) => [s.name, s]));
   const roleOf = (c: Candidate) => info.get(c.source)?.role;
+  // A named record comes before an unnamed one of its source, so a named place is never replaced by an unnamed one (OL4).
   const byKey = (a: Candidate, b: Candidate) =>
-    (order.get(a.source) ?? 99) - (order.get(b.source) ?? 99) || (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0);
+    (order.get(a.source) ?? 99) - (order.get(b.source) ?? 99) || Number(!a.name) - Number(!b.name) || (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0);
+
+  /** OL6: the place a locating record is already. By a source ID it names, else by position (names equal, or an unnamed one of the same class). */
+  const twinOf = (made: Place[], c: Candidate, at: [number, number]): Place | undefined => {
+    for (const k of c.sameAs ?? []) {
+      const id = ids.lookup(k);
+      const p = id ? made.find((x) => x.id === id) : undefined;
+      if (p) return p;
+    }
+    return made.find((p) => metres(p.at, at) <= SAME_PLACE_M && (p.name && c.name ? norm(p.name) === norm(c.name) : p.class === c.class));
+  };
 
   const made: Place[] = [];
   const seen = new Set<string>();
@@ -99,14 +111,16 @@ export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Id
     if (seen.has(key)) continue;
     seen.add(key);
     const at = c.at as [number, number];
-    const twin = made.find((p) => near(p, { name: c.name, at }));
+    const twin = twinOf(made, c, at);
     if (twin) {
       ids.alias(key, twin.id);
       continue;
     }
     const src = info.get(c.source)!;
+    // RD11: a place only a source of another license family made makes the region's pack that family's (OL9).
+    if (src.licenseFamily !== 'cc0') touched.add(src.licenseFamily);
     made.push({
-      id: ids.forKey(key, c.name, at), name: c.name, at, ...(c.class ? { class: c.class } : {}), gone: c.signals.gone === true,
+      id: ids.forKey(key, c.name, at), ...(c.name ? { name: c.name } : {}), at, ...(c.class ? { class: c.class } : {}), gone: c.signals.gone === true,
       ...(c.signals.needsOpen === true ? { needsOpen: true } : {}), src: src.code, license: src.licenseFamily,
     });
   }
@@ -116,7 +130,7 @@ export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Id
   // place it opened, closed or marked gone, so a region OSM only took places from is ODbL too.
   for (const c of candidates.filter((x) => roleOf(x) === 'confirms').sort(byKey)) {
     const id = (c.sameAs ?? []).map((k) => ids.lookup(k)).find((x) => x != null);
-    const place = (id ? made.find((p) => p.id === id) : undefined) ?? (c.at ? made.find((p) => near(p, { name: c.name, at: c.at as [number, number] })) : undefined);
+    const place = (id ? made.find((p) => p.id === id) : undefined) ?? (c.at && c.name ? made.find((p) => near(p, { name: c.name, at: c.at as [number, number] })) : undefined);
     if (!place) continue;
     ids.alias(`${c.source}:${c.sourceId}`, place.id);
     const family = info.get(c.source)!.licenseFamily;

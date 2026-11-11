@@ -13,7 +13,7 @@ export interface Report {
   sources: { name: string; run: string | null; fellBack?: string; error?: string }[];
   setAside: { source: string; part: string; reason: string }[];
   /** Nominations, for the owner to read: never in a pack, the registry or the crosswalk (PP7). */
-  review: { source: string; name: string; evidence?: string }[];
+  review: { source: string; name?: string; evidence?: string }[];
   /**
    * RD12: for each test area, every place the pack holds there, with its class and why it entered; and, for the whole
    * region, how many each class and reason add. For the owner: never in a release, the archive, the manifest or the
@@ -210,7 +210,8 @@ function review(report: Report, places: Place[], candidates: Candidate[], source
     const id = ids.lookup(`${c.source}:${c.sourceId}`);
     if (id && !byId.has(id)) byId.set(id, c);
   }
-  const reason = (p: Place) => (p.src === 'owner' ? 'owner' : reasonOf(byId.get(p.id)));
+  // OL8: what OpenStreetMap added is its own reason, so the owner can strike it by area and class.
+  const reason = (p: Place) => (p.src === 'owner' ? 'owner' : p.src === 'osmp' ? 'openstreetmap' : reasonOf(byId.get(p.id)));
   report.summary = {};
   for (const p of places) {
     const k = `${p.class}: ${reason(p)}`;
@@ -219,7 +220,7 @@ function review(report: Report, places: Place[], candidates: Candidate[], source
   const inside = ([w, s, e, n]: ReviewArea['bbox'], [x, y]: [number, number]) => x >= w && x <= e && y >= s && y <= n;
   report.added = areas.map((a) => ({
     area: a.name,
-    places: places.filter((p) => inside(a.bbox, p.at)).map((p) => ({ name: p.name, class: String(p.class), reason: reason(p), id: p.id, at: p.at })),
+    places: places.filter((p) => inside(a.bbox, p.at)).map((p) => ({ name: p.name ?? '(no name)', class: String(p.class), reason: reason(p), id: p.id, at: p.at })),
   }));
 }
 

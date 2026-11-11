@@ -36,7 +36,8 @@ function encodeTile(places, z, x, y) {
     const t = tileOf(p.lon, p.lat, z);
     const px = Math.round((t.fx - x) * EXTENT);
     const py = Math.round((t.fy - y) * EXTENT);
-    const tags = FIELDS.flatMap((k, i) => [i, index(String(p[k]))]);
+    // An unnamed place (contract v3) simply has no name property.
+    const tags = FIELDS.flatMap((k, i) => (p[k] == null ? [] : [i, index(String(p[k]))]));
     return { tags, geom: [1 | (1 << 3), zig(px), zig(py)] };
   });
   const pbf = new PbfWriter();
@@ -113,7 +114,7 @@ const e7 = (v) => Math.round(v * 1e7);
  * bytes follow the map.
  */
 export function writeArchive(places, { name = 'Chronicles places', firstRead = FIRST_READ } = {}) {
-  const sorted = [...places].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const sorted = [...places].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : (a.name ?? '') < (b.name ?? '') ? -1 : (a.name ?? '') > (b.name ?? '') ? 1 : 0));
   const byTile = new Map();
   for (const p of sorted) {
     const { x, y } = tileOf(p.lon, p.lat, ZOOM);

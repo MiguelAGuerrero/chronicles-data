@@ -3,7 +3,9 @@
 // through `contract/places.schema.json`. A new name is a contract change: bump CONTRACT_VERSION and tell the app.
 // v2 (Remarkable and public, RD13): the listed places' classes by type, and `heritage_building` renamed
 // `building_structure`, since no class name may name a register or significance (the data side of the app's RP18).
-export const CONTRACT_VERSION = 2;
+// v3 (OpenStreetMap locates places, the app's decision 0142): a place, candidate or feature may have no name (an
+// unnamed monument); everything else is as v2.
+export const CONTRACT_VERSION = 3;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
 export const CLASS_NAMES = [

@@ -5,7 +5,8 @@ import { metres, norm, SAME_PLACE_M, type Ids } from './conflate';
 import type { Place } from './schema';
 
 export interface Edits {
-  remove: { name: string; at: [number, number] }[];
+  /** A removal without a name strikes the unnamed places within 50 m of `at` (OL4). */
+  remove: { name?: string; at: [number, number] }[];
   add: { name: string; at: [number, number]; class: string }[];
 }
 
@@ -17,8 +18,8 @@ export function gate(places: Place[]): Place[] {
   return places.filter((p) => p.class != null && !p.gone && !p.closed && (!p.needsOpen || p.open === true));
 }
 
-const same = (p: { name: string; at: [number, number] }, q: { name: string; at: [number, number] }) =>
-  norm(p.name) === norm(q.name) && metres(p.at, q.at) <= SAME_PLACE_M;
+const same = (p: { name?: string; at: [number, number] }, q: { name?: string; at: [number, number] }) =>
+  norm(p.name ?? '') === norm(q.name ?? '') && metres(p.at, q.at) <= SAME_PLACE_M;
 
 /** PP10: the owner's removals, then additions (an addition replaces a gated place of the same name within 50 m). */
 export function applyEdits(places: Place[], edits: Edits, ids: Ids): Place[] {
