@@ -34,6 +34,16 @@ export const REGIONS: Record<string, Box[]> = {
 
 export const newId = () => `p_${randomBytes(8).toString('hex')}`;
 
+/** RB9: the sources a hand run names ("wikidata" or "wikidata,osm"), or null for every source; an unknown name stops the run. */
+export function sourcesArg(v: string | null, adapters: Adapter[] = ADAPTERS): string[] | null {
+  const names = (v ?? '').split(/[\s,]+/).filter(Boolean);
+  if (!names.length) return null;
+  const known = adapters.map((a) => a.declaration.name);
+  const unknown = names.filter((n) => !known.includes(n));
+  if (unknown.length) throw new Error(`--sources names no adapter: ${unknown.join(', ')} (known: ${known.join(', ')})`);
+  return names;
+}
+
 /** CF4: a box from "w,s,e,n", or null when absent or empty. */
 export function boxArg(v: string | null): Box | null {
   if (!v) return null;
@@ -54,7 +64,7 @@ async function main() {
   const out = arg('out') ?? 'out';
   const url = arg('manifest-url');
   if (!region || !REGIONS[region] || !version) {
-    console.error('usage: npm run build -- --region us --version YYYYMMDD[.n] --state dir --out dir --manifest-url URL [--edits edits.json] [--review-areas areas.json] [--no-fetch | --fetch-stale | --plan] [--box w,s,e,n]');
+    console.error('usage: npm run build -- --region us --version YYYYMMDD[.n] --state dir --out dir --manifest-url URL [--edits edits.json] [--review-areas areas.json] [--no-fetch | --fetch-stale | --plan | --sources a,b] [--box w,s,e,n]');
     process.exit(1);
   }
   const store = createRawStore(join(state, 'raw'));
@@ -63,7 +73,7 @@ async function main() {
     console.log(`stale=${staleSources(ADAPTERS, store, version, REGIONS[region]).join(' ')}`);
     return;
   }
-  const only = process.argv.includes('--fetch-stale') ? staleSources(ADAPTERS, store, version, REGIONS[region]) : null;
+  const only = process.argv.includes('--fetch-stale') ? staleSources(ADAPTERS, store, version, REGIONS[region]) : sourcesArg(arg('sources'));
   if (only) console.error(`fetching only: ${only.join(', ') || 'nothing'}`);
   mkdirSync(out, { recursive: true });
   const regFile = join(state, `registry-${region}.json`);

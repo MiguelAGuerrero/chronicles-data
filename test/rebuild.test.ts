@@ -10,6 +10,7 @@ import type { Adapter, Box, FetchContext } from '../src/adapter';
 import { FILTER, osm } from '../src/adapters/osm';
 import { DOWNLOAD_MS, filterExtracts } from '../src/adapters/osm/extract';
 import { wikidata } from '../src/adapters/wikidata';
+import { sourcesArg } from '../src/cli';
 import { emptyRegistry } from '../src/conflate';
 import { createRawStore, type RawStore } from '../src/rawStore';
 import { FETCH_KEY, run, staleSources, type RunOptions } from '../src/runner';
@@ -103,7 +104,7 @@ test('RB4: the plan names the stale sources, and osmium is installed only when O
   const plan = WORKFLOW.indexOf('--plan');
   const install = WORKFLOW.indexOf('Install osmium');
   assert.ok(plan > 0 && plan < install, 'the plan comes before the install');
-  assert.match(WORKFLOW.slice(install - 200, install + 200), /if: github\.event_name != 'push' \|\| contains\(format\(' \{0\} ', steps\.plan\.outputs\.stale\), ' osm '\)/);
+  assert.ok(WORKFLOW.slice(install - 200, install + 400).includes("(github.event_name == 'push' && contains(format(' {0} ', steps.plan.outputs.stale), ' osm '))"), 'a push installs it only when the plan names OSM');
 });
 
 test('RB5: an extract unchanged since the copy held is not downloaded, and its answers are carried', async () => {
@@ -200,4 +201,14 @@ test('RB8: a push never fetches a weekly source, whatever its fingerprint says',
   assert.equal(w.s.fetched, 2, 'the weekly run fetches it');
 });
 
-test('RB9: a hand run may name the sources it fetches; the rest are built from kept answers', { todo: 'test first' }, () => {});
+test('RB9: a hand run may name the sources it fetches; the rest are built from kept answers', () => {
+  assert.equal(sourcesArg(null), null, 'empty: every source');
+  assert.equal(sourcesArg(''), null);
+  assert.deepEqual(sourcesArg('wikidata'), ['wikidata']);
+  assert.deepEqual(sourcesArg('wikidata, osm'), ['wikidata', 'osm']);
+  assert.throws(() => sourcesArg('wikipedia'), /names no adapter: wikipedia/);
+  assert.match(WORKFLOW, /sources:\n\s+description: 'Fetch only these sources/);
+  assert.match(WORKFLOW, /if \[ -n "\$SOURCES" \]; then extra="\$extra --sources \$SOURCES"; fi/);
+  const install = WORKFLOW.indexOf('Install osmium');
+  assert.ok(WORKFLOW.slice(install - 200, install + 400).includes("(github.event_name != 'push' && (inputs.sources == '' || contains(inputs.sources, 'osm')))"), 'a hand run naming only wikidata installs no osmium');
+});

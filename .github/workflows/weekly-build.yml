@@ -16,6 +16,11 @@ on:
         description: 'Sweep only this box, w,s,e,n (empty: the weekly changes-first fetch)'
         required: false
         default: ''
+      # RB9: fetch only these sources (e.g. wikidata); the rest are built from their kept answers. Empty: every source.
+      sources:
+        description: 'Fetch only these sources, comma-separated (e.g. wikidata). Empty: every source, OpenStreetMap included (over an hour)'
+        required: false
+        default: ''
   # RB1: a push that changes the code, the owner's files or the dependencies rebuilds by itself, fetching only the
   # sources whose fetch changed (RB3); the edits alone fetch nothing.
   push:
@@ -62,13 +67,14 @@ jobs:
         run: npm run -s build -- --region us --version "$(date -u +%Y%m%d).${{ github.run_number }}" --state state --plan >> "$GITHUB_OUTPUT"
       # RD7: the OpenStreetMap adapter filters Geofabrik's extracts with osmium; a push installs it only to fetch OSM.
       - name: Install osmium
-        if: github.event_name != 'push' || contains(format(' {0} ', steps.plan.outputs.stale), ' osm ')
+        if: (github.event_name == 'push' && contains(format(' {0} ', steps.plan.outputs.stale), ' osm ')) || (github.event_name != 'push' && (inputs.sources == '' || contains(inputs.sources, 'osm')))
         timeout-minutes: 10 # a stalled apt mirror once held a run for the whole 300 minutes
         run: sudo apt-get update -qq && sudo apt-get install -y -qq osmium-tool
       - name: Run the pipeline (fetch, adapt, conflate, gate, package, decide)
         id: run
         env:
           BOX: ${{ inputs.box }}
+          SOURCES: ${{ inputs.sources }}
         run: |
           # The run number keeps a second run on the same day from colliding with the first's tag.
           version="$(date -u +%Y%m%d).${{ github.run_number }}"
@@ -77,6 +83,8 @@ jobs:
           extra=""
           if [ "${{ github.event_name == 'push' }}" = "true" ]; then extra="--fetch-stale"; fi
           if [ -n "$BOX" ]; then extra="$extra --box $BOX"; fi
+          # RB9: a hand run that names its sources fetches only those.
+          if [ -n "$SOURCES" ]; then extra="$extra --sources $SOURCES"; fi
           npm run -s build -- --region us --version "$version" --state state --out out --edits edits.json --review-areas review-areas.json $extra \
             --manifest-url https://miguelaguerrero.github.io/chronicles-data/manifest.json >> "$GITHUB_OUTPUT"
       # RD12: the owner's review stays a workflow artifact, never a release asset.
