@@ -148,6 +148,36 @@ todos committed first. The raw store keeps a run's start and notes (the classes 
 earlier answers with their time and hash; an adapter may `settle` all its answers at once; the Wikidata adapter's
 `settle` replays them in time order. Not yet run against the real query service: its first run sweeps every cell.
 
+## Rebuild on push, fetch only what's stale (RB)
+
+The owner, Nov 11: about ten changes to the rules went out by hand-run workflows, because a push to `main` rebuilt only
+for the edits or the classes (CF6), and every fetching run downloaded the four OpenStreetMap extracts again. The owner's
+calls: a push rebuilds by itself; a source is fetched on a push only when the change needs it, and then right away.
+The weekly and hand runs stay as they are.
+
+1. **RB1 A push rebuilds by itself, once its tests pass.** A push to `main` that changes the code (`src/`), the
+   owner's files (`edits.json`, `review-areas.json`) or the dependencies runs the build. The typecheck and tests run
+   first in the same job; a commit that fails them builds nothing.
+2. **RB2 Each source's fetch has a fingerprint.** An adapter may say what its fetch asks for (the Wikidata queries and
+   pinned classes; OpenStreetMap's filters and extracts) as a string; a run that fetched a source records that
+   string beside its answers.
+3. **RB3 A push fetches only what is stale.** A source is stale when it has no complete run or its fingerprint
+   differs from the one its last complete run recorded. A push fetches the stale sources (Wikidata changes first, so
+   a new class asks only for itself, CF3) and builds the others from their kept answers. A change to what happens
+   after fetching (adapt, conflate, gate, package, the edits) fetches nothing.
+4. **RB4 The plan says what a run will fetch.** Before it runs, a push's job asks the pipeline which sources are
+   stale (`--plan`), and installs osmium only when OpenStreetMap is among them.
+5. **RB5 An unchanged extract isn't downloaded.** OpenStreetMap's fetch asks Geofabrik for each extract only if it
+   changed since the copy its last complete run read (`If-None-Match` / `If-Modified-Since`); an extract that answers
+   304 is not downloaded, and that run's answers for it are carried (CF5), provided the fingerprint is the same.
+6. **RB6 The weekly and hand runs are unchanged.** The schedule and a hand run fetch every source (Wikidata changes
+   first); a hand run with a box sweeps only that box. Every run publishes only when a block changed (PP12).
+7. **RB7 Old runs count as stale once.** A complete run from before fingerprints (none recorded) is stale, so the
+   first push after this ships fetches each source once and records its fingerprint.
+
+CF6 is amended by RB3: a push that changes the edits rebuilds from the kept answers as before; one that changes the
+classes now fetches Wikidata's changes, which asks only for the new class.
+
 ## Carried from Places worth the stop
 
 The build-side criteria of the app's `specs/places-worth-the-stop` moved here with the code, tested in
