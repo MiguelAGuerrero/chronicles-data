@@ -136,6 +136,23 @@ test('CF3: a class the earlier run did not ask is asked once across the country;
   assert.ok(JSON.parse(store.meta('wikidata', '20261109').asked).includes(STATUE), 'recorded as asked');
 });
 
+test('CF3: an earlier run with no note of what it asked (from before the note existed) did not ask the National Register listings: they are asked whole', async () => {
+  // Found Nov 11 (Harrisburg's State Street Bridge): run 3 swept the cells before the listing target existed and left no
+  // `asked` note; run 5 took that as "every target", asked the listings only for changes (about 70 items) and never
+  // fetched the rest, so no Register-only place reached a pack. The target was added after the note, so a run with no
+  // note cannot have asked it.
+  const { store, first } = await firstRun();
+  store.setMeta('wikidata', '20261102', 'asked', '');
+  const { http, log } = service();
+  await run(opts({ store, http, registry: first.registry, week: 46 }));
+  const listing = log.filter((q) => isChanges(q) && /\?hl ps:P1435/.test(q));
+  assert.equal(listing.length, 1, 'the Register listings are asked once across the country');
+  assert.ok(!/xsd:dateTime/.test(listing[0]), 'asked whole, not for changes since the earlier run');
+  const others = log.filter((q) => isChanges(q) && !/\?hl ps:P1435/.test(q));
+  assert.ok(others.length > 0 && others.every((q) => /xsd:dateTime/.test(q)), 'every other target is asked only for changes');
+  assert.ok(JSON.parse(store.meta('wikidata', '20261109').asked).includes('NRHP'), 'recorded as asked');
+});
+
 test('CF4: no earlier run sweeps every cell; a box sweeps its cells only and keeps the clock; the weekly share is one in thirteen', async () => {
   const { sweepShare } = await adapterModule();
   const { http: h1, log: first } = service();

@@ -91,10 +91,17 @@ function carryRest(ctx: FetchContext, asked: Box[]) {
 
 const answersOf = (ctx: FetchContext): RawAnswer[] => ctx.previous!.parts.map((p) => ({ part: p.part, fetchedAt: p.fetchedAt, raw: ctx.previous!.read(p.part) }));
 
+/**
+ * CF3: what a run with no `asked` note had asked. It came from before the note existed: it asked every class pinned
+ * then, but not the National Register listings, a target added after the note (Nov 10). Taking it as having asked them
+ * fetched them only for changes (about 70 items), so no Register-only place ever reached a pack (found Nov 11). A
+ * target added after the note is never in this list.
+ */
+export const ASKED_WITHOUT_NOTE: string[] = ALL_TARGETS.filter((t) => t !== 'NRHP');
+
 function askedBefore(ctx: FetchContext): Set<string> {
   const prev = ctx.previous!;
-  // A run before this slice asked every class it then knew: taken as the current ones.
-  return new Set(prev.meta[ASKED] ? (JSON.parse(prev.meta[ASKED]) as string[]) : ALL_TARGETS);
+  return new Set(prev.meta[ASKED] ? (JSON.parse(prev.meta[ASKED]) as string[]) : ASKED_WITHOUT_NOTE);
 }
 
 type Held = { item: WikidataItem; fetchedAt: string };
