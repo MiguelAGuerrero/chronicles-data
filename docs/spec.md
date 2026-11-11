@@ -150,8 +150,9 @@ earlier answers with their time and hash; an adapter may `settle` all its answer
 
 ## Rebuild on push, fetch only what's stale (RB)
 
-The owner, Nov 11: about ten changes to the rules went out by hand-run workflows, because a push to `main` rebuilt only
-for the edits or the classes (CF6), and every fetching run downloaded the four OpenStreetMap extracts again. The owner's
+The owner, Nov 11: changes to the rules went out by hand-run workflows (runs 3, 5, 6 and 7, Nov 10-11; push run 4 hung
+installing osmium), because a push to `main` rebuilt only for the edits or the classes (CF6), and every fetching run
+downloaded the four OpenStreetMap extracts again. The owner's
 calls: a push rebuilds by itself; a source is fetched on a push only when the change needs it, and then right away.
 The weekly and hand runs stay as they are.
 
