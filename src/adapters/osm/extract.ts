@@ -41,8 +41,27 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
   try {
     for (const part of parts) {
       const pbf = join(dir, `${part}.osm.pbf`);
-      const res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`);
+      // RB5: ask only if the extract changed since the copy the earlier run read, when that run kept the same filters.
+      const prev = ctx.previous;
+      const held = ctx.sameFetch && prev != null && filters.every((f) => prev.parts.some((p) => p.part === `${f.name}-${part}.geojsonl`));
+      const etag = held ? prev.meta[`etag:${part}`] : undefined;
+      const modified = held ? prev.meta[`modified:${part}`] : undefined;
+      const headers: Record<string, string> = {};
+      if (etag) headers['if-none-match'] = etag;
+      if (modified) headers['if-modified-since'] = modified;
+      const res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers });
+      if (res.status === 304 && held) {
+        for (const f of filters) ctx.carry(`${f.name}-${part}.geojsonl`);
+        if (etag) ctx.setMeta(`etag:${part}`, etag);
+        if (modified) ctx.setMeta(`modified:${part}`, modified);
+        ctx.log(`osm: ${part} unchanged since ${prev.run}, its answers carried`);
+        continue;
+      }
       if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
+      const tag = res.headers.get('etag');
+      const mod = res.headers.get('last-modified');
+      if (tag) ctx.setMeta(`etag:${part}`, tag);
+      if (mod) ctx.setMeta(`modified:${part}`, mod);
       await pipeline(Readable.fromWeb(res.body as never), createWriteStream(pbf));
       ctx.log(`osm: ${part} downloaded`);
       for (const f of filters) {

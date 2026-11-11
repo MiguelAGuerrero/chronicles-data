@@ -56,7 +56,11 @@ npm run build -- --region us --version 20261116 --state state --out out --manife
 
 `.github/workflows/weekly-build.yml` runs on Mondays (and by hand): it restores the pipeline's state (raw answers and
 the place ID registry) from the `state-us` pre-release, runs the build, saves the state back (only sources whose terms
-allow redistribution), and publishes a release with the archive and its blocks only when a block changed. Publishing
+allow redistribution), and publishes a release with the archive and its blocks only when a block changed. A push to
+`main` that changes `src/`, `edits.json`, `review-areas.json` or the dependencies runs it too, after the typecheck and
+tests: it fetches only the sources whose fetch fingerprint changed (`--plan`, then `--fetch-stale`) and builds the
+rest from the kept answers, so a change to the rules or the edits rebuilds in minutes with no request to any source;
+OpenStreetMap's extracts are asked for only if they changed since the copy held (RB1-RB7 in `docs/spec.md`). Publishing
 (or deleting) a release, or a change to the workflow, `scripts/` or `contract/` on `main`, runs
 `.github/workflows/pages.yml`, which downloads the newest three releases' archives, writes `manifest.json`, copies
 `contract/` and deploys them to Pages. The three newest versions stay online so an app that read an older manifest

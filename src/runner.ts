@@ -85,6 +85,26 @@ export interface RunOptions {
   week?: number;
   /** CF4: a sweep by hand of this box. */
   box?: Box | null;
+  /** RB3: with `fetch`, fetch only these sources; the rest are built from their kept answers. Absent: all. */
+  only?: string[] | null;
+}
+
+/** RB2: the note a run keeps of the fingerprint it fetched with. */
+export const FETCH_KEY = 'fetchKey';
+
+/**
+ * RB3, RB7: the sources a push must fetch: those with no complete run, and those whose fingerprint differs from the
+ * one their last complete run recorded (a run from before fingerprints recorded none, so it is stale once).
+ */
+export function staleSources(adapters: Adapter[], store: RawStore, version: string, area: Box[]): string[] {
+  return adapters
+    .filter((a) => {
+      const prev = store.lastComplete(a.declaration.name, `${version}~`);
+      if (!prev) return true;
+      const key = a.fetchKey?.(area);
+      return key != null && store.meta(a.declaration.name, prev)[FETCH_KEY] !== key;
+    })
+    .map((a) => a.declaration.name);
 }
 
 /** CF4: the ISO week number of a time. */
@@ -112,9 +132,10 @@ export async function run(o: RunOptions): Promise<RunResult> {
     const d = a.declaration;
     let used: string | null = null;
     const entry: Report['sources'][number] = { name: d.name, run: null };
-    if (o.fetch) {
+    if (o.fetch && (!o.only || o.only.includes(d.name))) {
       try {
         const http = politeFetch(d, o.http, o.clock);
+        const key = a.fetchKey?.(o.area);
         // CF1: the earlier complete run, so the source can ask only what changed since it.
         const prev = o.store.lastComplete(d.name, o.version);
         o.store.start(d.name, o.version, new Date(o.clock.now()).toISOString());
@@ -143,7 +164,9 @@ export async function run(o: RunOptions): Promise<RunResult> {
             if (previous?.startedAt) o.store.setStart(d.name, o.version, previous.startedAt);
           },
           setMeta: (key, value) => o.store.setMeta(d.name, o.version, key, value),
+          sameFetch: key != null && previous?.meta[FETCH_KEY] === key,
         });
+        if (key != null) o.store.setMeta(d.name, o.version, FETCH_KEY, key);
         o.store.complete(d.name, o.version);
         used = o.version;
       } catch (e) {

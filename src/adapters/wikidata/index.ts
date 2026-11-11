@@ -9,6 +9,7 @@
 import { classify, gone, listing } from './classify.mjs';
 import type { Adapter, Box, FetchContext, RawAnswer } from '../../adapter';
 import { SourceTimeout } from '../../http';
+import { fingerprint } from '../../fingerprint';
 import { ALL_TARGETS, cellQuery, cellsFor, changesQuery, heldQuery, itemsFrom, parseAnswer, splitCell, type WikidataItem } from './query';
 
 export { ALL_TARGETS };
@@ -169,6 +170,9 @@ export const wikidata: Adapter = {
     allowed: { store: true, retentionDays: null, redistribute: true, reachPack: true },
     termsChecked: '2026-11-09',
   },
+
+  // RB2: the queries it asks (a sample of each), its targets, countries and cell size, over this area.
+  fetchKey: (area) => fingerprint([cellQuery([0, 0, 1, 1]), changesQuery('T', 'C', '2000-01-01T00:00:00Z'), heldQuery(['Q1'], '2000-01-01T00:00:00Z'), ALL_TARGETS, COUNTRIES, STEP_DEG, area]),
 
   async fetch(ctx) {
     const cells = cellsFor(ctx.area, STEP_DEG) as Box[];

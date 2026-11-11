@@ -3,7 +3,8 @@
 // each names, whether it is open to visitors, closed, or gone. It never makes a place (role `confirms`), never joins by
 // name or position, and nothing counts how many elements say a thing (PP7, amended by RD7).
 import type { Adapter } from '../../adapter';
-import { filterExtracts, type Filter } from './extract';
+import { fingerprint } from '../../fingerprint';
+import { filterExtracts, GEOFABRIK, US_PARTS, type Filter } from './extract';
 
 /** RD8: tags that show a place open to visitors; `historic=building` and the like are no sign. */
 export const OPEN_TAGS: Record<string, readonly string[]> = {
@@ -47,6 +48,9 @@ export const osm: Adapter = {
     allowed: { store: true, retentionDays: null, redistribute: true, reachPack: true },
     termsChecked: '2026-11-10',
   },
+
+  // RB2: the extracts it reads and the filter it keeps; the area is the four US parts, whatever the boxes.
+  fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER]),
 
   async fetch(ctx) {
     await filterExtracts(ctx, [FILTER]);

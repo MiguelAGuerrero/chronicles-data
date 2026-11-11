@@ -5,7 +5,8 @@
 //        --manifest-url https://…/manifest.json [--edits edits.json] [--no-fetch] [--box w,s,e,n]
 //
 // `--box` sweeps that box's cells by hand and asks no changes (CF4); `--no-fetch` builds from the raw store alone
-// (PP2), as a push of new edits does (CF6).
+// (PP2). A push runs `--plan` first, which only prints `stale=…` (the sources whose fetch changed, RB4), then
+// `--fetch-stale`, which fetches those and builds the others from their kept answers (RB3).
 //
 // `state` holds the raw store (state/raw) and the ID registry (state/registry-<region>.json) between runs; the job
 // restores it before and saves it after. Writes, per pack, out/<file>.pmtiles and out/<file>.blocks.json, and
@@ -21,7 +22,7 @@ import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
 import { decide } from './publish';
 import { createRawStore } from './rawStore';
-import { redistributable, run } from './runner';
+import { redistributable, run, staleSources } from './runner';
 
 /** The adapters, in priority order: the first source's record is promoted whole when two name one place. */
 export const ADAPTERS: Adapter[] = [wikidata, osm];
@@ -53,9 +54,17 @@ async function main() {
   const out = arg('out') ?? 'out';
   const url = arg('manifest-url');
   if (!region || !REGIONS[region] || !version) {
-    console.error('usage: npm run build -- --region us --version YYYYMMDD[.n] --state dir --out dir --manifest-url URL [--edits edits.json] [--review-areas areas.json] [--no-fetch]');
+    console.error('usage: npm run build -- --region us --version YYYYMMDD[.n] --state dir --out dir --manifest-url URL [--edits edits.json] [--review-areas areas.json] [--no-fetch | --fetch-stale | --plan] [--box w,s,e,n]');
     process.exit(1);
   }
+  const store = createRawStore(join(state, 'raw'));
+  // RB4: what a push would fetch, and nothing else.
+  if (process.argv.includes('--plan')) {
+    console.log(`stale=${staleSources(ADAPTERS, store, version, REGIONS[region]).join(' ')}`);
+    return;
+  }
+  const only = process.argv.includes('--fetch-stale') ? staleSources(ADAPTERS, store, version, REGIONS[region]) : null;
+  if (only) console.error(`fetching only: ${only.join(', ') || 'nothing'}`);
   mkdirSync(out, { recursive: true });
   const regFile = join(state, `registry-${region}.json`);
   const registry: Registry = existsSync(regFile) ? JSON.parse(readFileSync(regFile, 'utf8')) : emptyRegistry();
@@ -66,10 +75,11 @@ async function main() {
     region,
     area: REGIONS[region],
     version,
-    store: createRawStore(join(state, 'raw')),
+    store,
     registry,
     edits,
     fetch: !process.argv.includes('--no-fetch'),
+    only,
     box: boxArg(arg('box')),
     http: (u, init) => fetch(u, init),
     clock: realClock,

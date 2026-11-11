@@ -29,6 +29,8 @@ export interface FetchContext {
   keepClock(): void;
   /** CF3: records a note about this run beside its answers (never an answer itself). */
   setMeta(key: string, value: string): void;
+  /** RB5: whether the earlier complete run fetched with the same fingerprint, so its answers can stand for unchanged files. */
+  sameFetch: boolean;
 }
 
 /** CF1: what a fetch may read of its source's earlier complete run. */
@@ -53,6 +55,11 @@ export interface Adapter {
   declaration: Declaration;
   /** Writes raw answers for the area; throws when it can't finish (the run then falls back, PP14). */
   fetch(ctx: FetchContext): Promise<void>;
+  /**
+   * RB2: what this source's fetch asks for, as a string (its queries, its filters, its files). A run that fetched the
+   * source records it; when it changes, a push fetches the source again (RB3). Absent: stale only with no run.
+   */
+  fetchKey?(area: Box[]): string;
   /** One raw answer's candidates, unchecked: the runner checks each against the schema (PP4). */
   adapt(raw: string, part: string, fetchedAt: string): unknown[];
   /**

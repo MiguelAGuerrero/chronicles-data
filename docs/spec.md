@@ -178,6 +178,11 @@ The weekly and hand runs stay as they are.
 CF6 is amended by RB3: a push that changes the edits rebuilds from the kept answers as before; one that changes the
 classes now fetches Wikidata's changes, which asks only for the new class.
 
+Built (Nov 11, branch `claude/auto-rebuild`): RB1-RB7 each with its test in `test/rebuild.test.ts`, the todos committed
+first; CF6's test amended to RB3. Adapters may declare `fetchKey`; the runner records it as a run note and fetches only
+the sources `staleSources` names when given `only`; a 304 is an answer to `politeFetch`. Not yet run on GitHub: the
+first push after it ships fetches each source once (RB7).
+
 ## Carried from Places worth the stop
 
 The build-side criteria of the app's `specs/places-worth-the-stop` moved here with the code, tested in

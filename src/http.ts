@@ -34,7 +34,8 @@ export function politeFetch(decl: Pick<Declaration, 'pace'>, fetchImpl: Fetch, c
       const headers = new Headers(init.headers);
       headers.set('user-agent', decl.pace.userAgent);
       const res = await fetchImpl(url, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(timeoutMs) }).catch(() => null);
-      if (res?.ok) return res;
+      // RB5: a conditional request's 304 is an answer too: the caller keeps what it has.
+      if (res?.ok || res?.status === 304) return res;
       if (res && (res.status === 429 || res.status === 503)) {
         const s = Number(res.headers.get('retry-after'));
         await clock.sleep(Math.min(Number.isFinite(s) && s > 0 ? s : RETRY_DEFAULT_S, RETRY_CAP_S) * 1000);
