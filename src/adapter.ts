@@ -60,6 +60,8 @@ export interface Adapter {
    * source records it; when it changes, a push fetches the source again (RB3). Absent: stale only with no run.
    */
   fetchKey?(area: Box[]): string;
+  /** RB8: refreshed only by the weekly and hand runs; a push never fetches it and builds it from its kept answers. */
+  weekly?: boolean;
   /** One raw answer's candidates, unchecked: the runner checks each against the schema (PP4). */
   adapt(raw: string, part: string, fetchedAt: string): unknown[];
   /**

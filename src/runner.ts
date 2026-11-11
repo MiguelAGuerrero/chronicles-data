@@ -94,11 +94,14 @@ export const FETCH_KEY = 'fetchKey';
 
 /**
  * RB3, RB7: the sources a push must fetch: those with no complete run, and those whose fingerprint differs from the
- * one their last complete run recorded (a run from before fingerprints recorded none, so it is stale once).
+ * one their last complete run recorded (a run from before fingerprints recorded none, so it is stale once). A weekly
+ * source (RB8) never is.
  */
 export function staleSources(adapters: Adapter[], store: RawStore, version: string, area: Box[]): string[] {
   return adapters
     .filter((a) => {
+      // RB8: a weekly source is never fetched on a push.
+      if (a.weekly) return false;
       const prev = store.lastComplete(a.declaration.name, `${version}~`);
       if (!prev) return true;
       const key = a.fetchKey?.(area);

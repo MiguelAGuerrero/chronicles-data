@@ -99,7 +99,7 @@ test('RB4: the plan names the stale sources, and osmium is installed only when O
   const state = mkdtempSync(join(tmpdir(), 'rb-state-'));
   const out = await new Promise<string>((resolve, reject) =>
     execFile(process.execPath, ['--import', 'tsx', join(ROOT, 'src/cli.ts'), '--region', 'us', '--version', '20261111', '--state', state, '--plan'], { cwd: ROOT }, (err, stdout, stderr) => (err ? reject(new Error(stderr)) : resolve(stdout))));
-  assert.equal(out.trim(), 'stale=wikidata osm', 'with no runs held, every source is stale');
+  assert.equal(out.trim(), 'stale=wikidata', 'with no runs held, every source but a weekly one is stale (RB8)');
   const plan = WORKFLOW.indexOf('--plan');
   const install = WORKFLOW.indexOf('Install osmium');
   assert.ok(plan > 0 && plan < install, 'the plan comes before the install');
@@ -183,4 +183,19 @@ test('RD7: an extract\'s download has its own long limit, never the 75 s a query
   assert.ok(DOWNLOAD_MS >= 30 * 60_000, 'at least half an hour per extract');
 });
 
-test('RB8: a push never fetches a weekly source, whatever its fingerprint says', { todo: 'test first' }, () => {});
+test('RB8: a push never fetches a weekly source, whatever its fingerprint says', async () => {
+  assert.equal(osm.weekly, true, 'OpenStreetMap is weekly');
+  const store = tmpStore();
+  const a = source('alpha', 'Alpha Folly', [-75, 41]);
+  const w = source('weekly', 'Weekly Folly', [-74, 41]);
+  w.adapter.weekly = true;
+  assert.deepEqual(staleSources([a.adapter, w.adapter], store, '20261111', AREA), ['alpha'], 'with no run held, still not named');
+  await run(opts(store, [a.adapter, w.adapter], { version: '20261110' }));
+  w.s.key = 'k2';
+  assert.deepEqual(staleSources([a.adapter, w.adapter], store, '20261111', AREA), [], 'a changed fingerprint waits for the weekly run');
+  const r = await run(opts(store, [a.adapter, w.adapter], { only: [] }));
+  assert.equal(w.s.fetched, 1);
+  assert.deepEqual(names(r), ['Alpha Folly', 'Weekly Folly'], 'built from its kept answers');
+  await run(opts(store, [a.adapter, w.adapter]));
+  assert.equal(w.s.fetched, 2, 'the weekly run fetches it');
+});

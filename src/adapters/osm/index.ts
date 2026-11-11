@@ -49,6 +49,9 @@ export const osm: Adapter = {
     termsChecked: '2026-11-10',
   },
 
+  // RB8: four multi-GB extracts take over an hour on a runner, so only the weekly and hand runs fetch them.
+  weekly: true,
+
   // RB2: the extracts it reads and the filter it keeps; the area is the four US parts, whatever the boxes.
   fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER]),
 
