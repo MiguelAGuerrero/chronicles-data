@@ -182,6 +182,11 @@ The weekly and hand runs stay as they are.
    push. A change to its filter takes effect at the next weekly or hand run (the owner, Nov 11, after push run 10
    spent over two hours on OSM's first fetch).
 
+9. **RB9 A hand run may name its sources.** A hand run may list the sources to fetch (`sources: wikidata`); the others
+   are built from their kept answers, and osmium is installed only when OpenStreetMap is fetched. Empty fetches every
+   source, as before (RB6). An unknown name stops the run before it fetches anything. (Nov 11: a Wikidata fix needed a
+   fetch, and every hand run also fetched OpenStreetMap, over an hour.)
+
 CF6 is amended by RB3: a push that changes the edits rebuilds from the kept answers as before; one that changes the
 classes now fetches Wikidata's changes, which asks only for the new class.
 

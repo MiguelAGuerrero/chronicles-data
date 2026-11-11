@@ -199,3 +199,5 @@ test('RB8: a push never fetches a weekly source, whatever its fingerprint says',
   await run(opts(store, [a.adapter, w.adapter]));
   assert.equal(w.s.fetched, 2, 'the weekly run fetches it');
 });
+
+test('RB9: a hand run may name the sources it fetches; the rest are built from kept answers', { todo: 'test first' }, () => {});
