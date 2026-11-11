@@ -12,7 +12,8 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FetchContext } from '../../adapter';
 
-export const GEOFABRIK = 'https://download.geofabrik.de/north-america/us';
+/** Geofabrik's US regions sit beside the states' folder, not in it (`north-america/us/` holds states only). */
+export const GEOFABRIK = 'https://download.geofabrik.de/north-america';
 /** The US in four extracts, a few GB each (Geofabrik's sub-regions). */
 export const US_PARTS = ['us-northeast', 'us-midwest', 'us-south', 'us-west'];
 

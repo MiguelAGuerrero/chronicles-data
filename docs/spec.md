@@ -181,8 +181,10 @@ classes now fetches Wikidata's changes, which asks only for the new class.
 
 Built (Nov 11, branch `claude/auto-rebuild`): RB1-RB7 each with its test in `test/rebuild.test.ts`, the todos committed
 first; CF6's test amended to RB3. Adapters may declare `fetchKey`; the runner records it as a run note and fetches only
-the sources `staleSources` names when given `only`; a 304 is an answer to `politeFetch`. Not yet run on GitHub: the
-first push after it ships fetches each source once (RB7).
+the sources `staleSources` names when given `only`; a 304 is an answer to `politeFetch`. First run on GitHub (run 8,
+Nov 11): Wikidata fetched and recorded its fingerprint; OpenStreetMap failed as it had in every run before (5-8),
+because the extracts were asked at `north-america/us/<region>`, which Geofabrik answers 404, so no OSM answer had ever
+been kept or reached a pack. The address is now `north-america/<region>-latest.osm.pbf`, pinned by a test.
 
 ## Carried from Places worth the stop
 

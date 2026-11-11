@@ -157,3 +157,15 @@ test('RB7: a complete run from before fingerprints is stale once', async () => {
   await run(opts(store, [a.adapter], { only: ['alpha'] }));
   assert.deepEqual(staleSources([a.adapter], store, '20261112', AREA), []);
 });
+
+test('RD7: the extracts are asked at Geofabrik\'s US region addresses (north-america/<region>-latest.osm.pbf)', async () => {
+  // Runs 5-8 asked north-america/us/<region>-latest.osm.pbf, which Geofabrik answers 404, so no OSM answer was ever kept.
+  const urls: string[] = [];
+  const ctx: FetchContext = {
+    area: AREA, run: '20261111', week: 46, box: null, log: () => {}, put: () => {},
+    http: async (url) => { urls.push(url); return new Response(null, { status: 503 }); },
+    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
+  };
+  await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-northeast']));
+  assert.deepEqual(urls, ['https://download.geofabrik.de/north-america/us-northeast-latest.osm.pbf']);
+});
