@@ -176,6 +176,12 @@ The weekly and hand runs stay as they are.
 7. **RB7 Old runs count as stale once.** A complete run from before fingerprints (none recorded) is stale, so the
    first push after this ships fetches each source once and records its fingerprint.
 
+8. **RB8 A push never waits on a weekly source.** An adapter may say its source is refreshed only by the weekly and
+   hand runs (OpenStreetMap: four multi-GB extracts, over an hour on a runner). A push never fetches it, whatever its
+   fingerprint says, and builds it from its kept answers; the plan never names it, so osmium is never installed on a
+   push. A change to its filter takes effect at the next weekly or hand run (the owner, Nov 11, after push run 10
+   spent over two hours on OSM's first fetch).
+
 CF6 is amended by RB3: a push that changes the edits rebuilds from the kept answers as before; one that changes the
 classes now fetches Wikidata's changes, which asks only for the new class.
 

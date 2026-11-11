@@ -182,3 +182,5 @@ test('RD7: an extract\'s download has its own long limit, never the 75 s a query
   assert.ok(signals[0], 'the download carries its own signal, so politeFetch\'s 75 s one is not used');
   assert.ok(DOWNLOAD_MS >= 30 * 60_000, 'at least half an hour per extract');
 });
+
+test('RB8: a push never fetches a weekly source, whatever its fingerprint says', { todo: 'test first' }, () => {});
