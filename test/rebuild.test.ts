@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { Adapter, Box, FetchContext } from '../src/adapter';
 import { FILTER, osm } from '../src/adapters/osm';
-import { filterExtracts } from '../src/adapters/osm/extract';
+import { DOWNLOAD_MS, filterExtracts } from '../src/adapters/osm/extract';
 import { wikidata } from '../src/adapters/wikidata';
 import { emptyRegistry } from '../src/conflate';
 import { createRawStore, type RawStore } from '../src/rawStore';
@@ -168,4 +168,17 @@ test('RD7: the extracts are asked at Geofabrik\'s US region addresses (north-ame
   };
   await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-northeast']));
   assert.deepEqual(urls, ['https://download.geofabrik.de/north-america/us-northeast-latest.osm.pbf']);
+});
+
+test('RD7: an extract\'s download has its own long limit, never the 75 s a query gets', async () => {
+  // Run 9 (Nov 11): the polite fetch's 75 s signal also ends the body, so every multi-GB download was cut short.
+  const signals: (AbortSignal | null | undefined)[] = [];
+  const ctx: FetchContext = {
+    area: AREA, run: '20261111', week: 46, box: null, log: () => {}, put: () => {},
+    http: async (_url, init) => { signals.push(init?.signal); return new Response(null, { status: 503 }); },
+    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
+  };
+  await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west']));
+  assert.ok(signals[0], 'the download carries its own signal, so politeFetch\'s 75 s one is not used');
+  assert.ok(DOWNLOAD_MS >= 30 * 60_000, 'at least half an hour per extract');
 });

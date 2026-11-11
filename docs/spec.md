@@ -184,7 +184,9 @@ first; CF6's test amended to RB3. Adapters may declare `fetchKey`; the runner re
 the sources `staleSources` names when given `only`; a 304 is an answer to `politeFetch`. First run on GitHub (run 8,
 Nov 11): Wikidata fetched and recorded its fingerprint; OpenStreetMap failed as it had in every run before (5-8),
 because the extracts were asked at `north-america/us/<region>`, which Geofabrik answers 404, so no OSM answer had ever
-been kept or reached a pack. The address is now `north-america/<region>-latest.osm.pbf`, pinned by a test.
+been kept or reached a pack. The address is now `north-america/<region>-latest.osm.pbf`, pinned by a test. Run 9 then reached Geofabrik but cut each
+download short: the polite fetch's 75 s limit (for queries) also ends the body; an extract now has its own 45-minute
+limit, also pinned by a test.
 
 ## Carried from Places worth the stop
 

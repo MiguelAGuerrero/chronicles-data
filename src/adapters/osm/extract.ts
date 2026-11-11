@@ -16,6 +16,11 @@ import type { FetchContext } from '../../adapter';
 export const GEOFABRIK = 'https://download.geofabrik.de/north-america';
 /** The US in four extracts, a few GB each (Geofabrik's sub-regions). */
 export const US_PARTS = ['us-northeast', 'us-midwest', 'us-south', 'us-west'];
+/**
+ * How long one extract may take to download: the polite fetch's 75 s is for a query, and its signal also ends the body,
+ * which cut every multi-GB download short (run 9, Nov 11).
+ */
+export const DOWNLOAD_MS = 45 * 60_000;
 
 /**
  * One filter set: osmium tags-filter expressions (`nwr/wikidata`), an optional second pass over what the first kept
@@ -50,7 +55,7 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const headers: Record<string, string> = {};
       if (etag) headers['if-none-match'] = etag;
       if (modified) headers['if-modified-since'] = modified;
-      const res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers });
+      const res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers, signal: AbortSignal.timeout(DOWNLOAD_MS) });
       if (res.status === 304 && held) {
         for (const f of filters) ctx.carry(`${f.name}-${part}.geojsonl`);
         if (etag) ctx.setMeta(`etag:${part}`, etag);
