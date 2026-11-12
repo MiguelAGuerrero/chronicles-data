@@ -187,6 +187,12 @@ The weekly and hand runs stay as they are.
    source, as before (RB6). An unknown name stops the run before it fetches anything. (Nov 11: a Wikidata fix needed a
    fetch, and every hand run also fetched OpenStreetMap, over an hour.)
 
+Found after it shipped (Nov 12): run versions were compared as text, so `20261111.14` sorted before `20261111.8`.
+Keeping the newest three runs then deleted the run just fetched (run 10's first OpenStreetMap answers, run 14's
+Wikidata), and a fetch found no earlier run to ask changes since, so run 14 swept all 633 cells. Runs now compare by
+date and run number as numbers (`compareRuns`, RB audit 1). The sweep's 74 minutes after fetching were conflate
+scanning every place for each record; it now looks places up by name (RB audit 2).
+
 CF6 is amended by RB3: a push that changes the edits rebuilds from the kept answers as before; one that changes the
 classes now fetches Wikidata's changes, which asks only for the new class.
 

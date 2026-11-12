@@ -12,7 +12,7 @@ import { DOWNLOAD_MS, filterExtracts } from '../src/adapters/osm/extract';
 import { wikidata } from '../src/adapters/wikidata';
 import { sourcesArg } from '../src/cli';
 import { emptyRegistry } from '../src/conflate';
-import { createRawStore, type RawStore } from '../src/rawStore';
+import { compareRuns, createRawStore, type RawStore } from '../src/rawStore';
 import { FETCH_KEY, run, staleSources, type RunOptions } from '../src/runner';
 import type { Declaration } from '../src/schema';
 
@@ -211,4 +211,31 @@ test('RB9: a hand run may name the sources it fetches; the rest are built from k
   assert.match(WORKFLOW, /if \[ -n "\$SOURCES" \]; then extra="\$extra --sources \$SOURCES"; fi/);
   const install = WORKFLOW.indexOf('Install osmium');
   assert.ok(WORKFLOW.slice(install - 200, install + 400).includes("(github.event_name != 'push' && (inputs.sources == '' || contains(inputs.sources, 'osm')))"), 'a hand run naming only wikidata installs no osmium');
+});
+
+test('RB audit 1: run 20261111.14 is newer than 20261111.8, so keeping the newest runs never deletes the one just fetched', () => {
+  assert.ok(compareRuns('20261111.14', '20261111.8') > 0);
+  assert.ok(compareRuns('20261112.1', '20261111.14') > 0);
+  const store = tmpStore();
+  for (const r of ['20261111.6', '20261111.7', '20261111.8', '20261111.10', '20261111.14']) {
+    store.put('src', r, 'a.json', '[]', '2026-11-11T07:17:00.000Z');
+    store.complete('src', r);
+  }
+  assert.deepEqual(store.runs('src'), ['20261111.6', '20261111.7', '20261111.8', '20261111.10', '20261111.14']);
+  assert.equal(store.lastComplete('src', '20261111.15'), '20261111.14', 'the earlier run a fetch asks changes since');
+  assert.equal(store.lastComplete('src', '20261111.14'), '20261111.10');
+  assert.equal(store.lastComplete('src', '20261111.14~'), '20261111.14', 'with ~, the run itself');
+  store.keepNewest('src', 3);
+  assert.deepEqual(store.runs('src'), ['20261111.8', '20261111.10', '20261111.14'], 'the oldest go, the newest stay');
+});
+
+test('RB audit 2: conflating tens of thousands of places is a lookup, not a scan (a full sweep spent 74 minutes)', async () => {
+  const rows = Array.from({ length: 30_000 }, (_, i) => ({ source: 'alpha', sourceId: String(i), name: `Folly ${i}`, at: [-75 + (i % 300) * 0.01, 40 + Math.floor(i / 300) * 0.01], class: 'folly', signals: {}, fetchedAt: '2026-11-11T07:17:00.000Z' }));
+  const big: Adapter = { ...source('alpha', 'x', [0, 0]).adapter, fetch: async (ctx) => ctx.put('rows.json', JSON.stringify(rows)) };
+  const store = tmpStore();
+  const t0 = Date.now();
+  const first = await run(opts(store, [big], { version: '20261110' }));
+  const again = await run(opts(store, [big], { registry: first.registry }));
+  assert.equal(again.packs[0].places.length, 30_000);
+  assert.ok(Date.now() - t0 < 60_000, `two builds of 30,000 places took ${Date.now() - t0} ms`);
 });

@@ -27,6 +27,16 @@ interface RunIndex {
 const SAFE = /^[A-Za-z0-9._-]+$/;
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
+/**
+ * Run order (YYYYMMDD.n): by date, then run number, as numbers. Compared as text, `20261111.14` came before
+ * `20261111.8`, so keeping the newest three runs deleted the run just fetched (runs 10 and 14, Nov 11).
+ */
+export function compareRuns(a: string, b: string): number {
+  const [ad, an] = a.split('.');
+  const [bd, bn] = b.split('.');
+  return Number(ad) - Number(bd) || Number(an ?? 0) - Number(bn ?? 0) || (a < b ? -1 : a > b ? 1 : 0);
+}
+
 export function createRawStore(dir: string) {
   const runDir = (source: string, run: string) => {
     if (!SAFE.test(source) || !SAFE.test(run)) throw new Error(`bad raw store path: ${source}/${run}`);
@@ -43,7 +53,7 @@ export function createRawStore(dir: string) {
 
   const runs = (source: string): string[] => {
     const d = join(dir, source);
-    return existsSync(d) ? readdirSync(d).filter((r) => SAFE.test(r)).sort() : [];
+    return existsSync(d) ? readdirSync(d).filter((r) => SAFE.test(r)).sort(compareRuns) : [];
   };
 
   return {
@@ -114,9 +124,11 @@ export function createRawStore(dir: string) {
       return body;
     },
     runs,
-    /** The newest complete run before `before` (PP14), or null. */
+    /** The newest complete run before `before` (PP14), or null; `before` ending in `~` includes that run itself. */
     lastComplete(source: string, before: string): string | null {
-      return runs(source).filter((r) => r < before && indexOf(source, r).complete).at(-1) ?? null;
+      const upTo = before.endsWith('~');
+      const base = upTo ? before.slice(0, -1) : before;
+      return runs(source).filter((r) => (upTo ? compareRuns(r, base) <= 0 : compareRuns(r, base) < 0) && indexOf(source, r).complete).at(-1) ?? null;
     },
     /** PP1: deletes a source's runs whose newest answer is older than its retention. */
     prune(source: string, retentionDays: number | null, now: number) {

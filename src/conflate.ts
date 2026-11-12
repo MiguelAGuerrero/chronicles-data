@@ -44,6 +44,15 @@ export function createIds(prev: Registry, newId: () => string) {
   const places: Registry['places'] = structuredClone(prev.places);
   const crosswalk: Registry['crosswalk'] = { ...prev.crosswalk };
   const claimed = new Set<string>();
+  // Places by name, so matching a record is a lookup, not a scan of every place (a full sweep took 74 minutes, Nov 11).
+  const byName = new Map<string, Set<string>>();
+  const index = (id: string) => {
+    const k = norm(places[id].name);
+    if (!byName.has(k)) byName.set(k, new Set());
+    byName.get(k)!.add(id);
+  };
+  const unindex = (id: string) => byName.get(norm(places[id].name))?.delete(id);
+  for (const id of Object.keys(places)) index(id);
 
   const mint = () => {
     for (;;) {
@@ -58,13 +67,15 @@ export function createIds(prev: Registry, newId: () => string) {
     forKey(key: string, name: string, at: [number, number]): string {
       let id = crosswalk[key];
       if (!id || claimed.has(id)) {
-        id = Object.keys(places)
+        id = [...(byName.get(norm(name)) ?? [])]
           .sort()
           .find((k) => !places[k].retired && !claimed.has(k) && near(places[k], { name, at })) ?? mint();
       }
       claimed.add(id);
       crosswalk[key] = id;
+      if (places[id]) unindex(id);
       places[id] = { name, at };
+      index(id);
       return id;
     },
     /** Records another key for a place already made (a second source naming it). */
@@ -93,22 +104,28 @@ export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Id
     (order.get(a.source) ?? 99) - (order.get(b.source) ?? 99) || (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0);
 
   const made: Place[] = [];
+  const madeByName = new Map<string, Place[]>();
+  const madeById = new Map<string, Place>();
   const seen = new Set<string>();
   for (const c of candidates.filter((x) => roleOf(x) === 'locates' && x.at).sort(byKey)) {
     const key = `${c.source}:${c.sourceId}`;
     if (seen.has(key)) continue;
     seen.add(key);
     const at = c.at as [number, number];
-    const twin = made.find((p) => near(p, { name: c.name, at }));
+    const twin = (madeByName.get(norm(c.name)) ?? []).find((p) => near(p, { name: c.name, at }));
     if (twin) {
       ids.alias(key, twin.id);
       continue;
     }
     const src = info.get(c.source)!;
-    made.push({
+    const place: Place = {
       id: ids.forKey(key, c.name, at), name: c.name, at, ...(c.class ? { class: c.class } : {}), gone: c.signals.gone === true,
       ...(c.signals.needsOpen === true ? { needsOpen: true } : {}), src: src.code, license: src.licenseFamily,
-    });
+    };
+    made.push(place);
+    madeById.set(place.id, place);
+    const n = norm(place.name);
+    madeByName.set(n, [...(madeByName.get(n) ?? []), place]);
   }
 
   // A confirming source confirms a place, marks it gone, or says it is open or closed (PP7, RD7); nothing records how
@@ -116,7 +133,7 @@ export function conflate(candidates: Candidate[], sources: SourceInfo[], ids: Id
   // place it opened, closed or marked gone, so a region OSM only took places from is ODbL too.
   for (const c of candidates.filter((x) => roleOf(x) === 'confirms').sort(byKey)) {
     const id = (c.sameAs ?? []).map((k) => ids.lookup(k)).find((x) => x != null);
-    const place = (id ? made.find((p) => p.id === id) : undefined) ?? (c.at ? made.find((p) => near(p, { name: c.name, at: c.at as [number, number] })) : undefined);
+    const place = (id ? madeById.get(id) : undefined) ?? (c.at ? (madeByName.get(norm(c.name)) ?? []).find((p) => near(p, { name: c.name, at: c.at as [number, number] })) : undefined);
     if (!place) continue;
     ids.alias(`${c.source}:${c.sourceId}`, place.id);
     const family = info.get(c.source)!.licenseFamily;
