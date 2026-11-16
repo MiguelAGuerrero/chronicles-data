@@ -62,7 +62,7 @@ properties `name`, `id`, `src` and one property per emitted dimension holding it
    tags, however large, yields the same record as without them; no such key is in the adapter's reads or in its osmium filter.
    No Wikidata sitelink count is read.
 5. **ST5 Chains are out.** A name whose leading whole words are a chain's in `chains.json` is dropped (Half Price Books and
-   Half Price Books Outlet; not Half Price Bookshop Annex... a word is whole). Case, accents, `&` and punctuation do not matter.
+   Half Price Books Outlet; not Half Price Bookshop, since a word is whole). Case, accents, `&` and punctuation do not matter.
    The list is data in a JSON file.
 6. **ST6 Stores never reach the places pack.** With shop elements in the OSM raw store, the places packs (their bytes and
    blocks), the registry and the report's review are identical to a build without them; the OSM places adapter's `adapt` yields

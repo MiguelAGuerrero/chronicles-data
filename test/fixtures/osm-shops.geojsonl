@@ -1,0 +1,17 @@
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.37,40.61]},"properties":{"@type":"node","@id":1,"name":"Old Tin Antiques","shop":"antiques"}}
+{"type":"Feature","geometry":{"type":"Polygon","coordinates":[[[-75.371,40.612],[-75.37079999999999,40.612],[-75.37079999999999,40.6122],[-75.371,40.6122],[-75.371,40.612]]]},"properties":{"@type":"way","@id":2,"name":"Lehigh Books","shop":"books"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.372,40.613]},"properties":{"@type":"node","@id":3,"name":"Spin Records","shop":"music"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.373,40.614]},"properties":{"@type":"node","@id":4,"name":"Chartroom","shop":"maps"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.374,40.615]},"properties":{"@type":"node","@id":5,"name":"Easel & Brush","shop":"art_supplies"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.375,40.616]},"properties":{"@type":"node","@id":6,"name":"Clay Bench","shop":"gift","craft":"pottery"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.376,40.617]},"properties":{"@type":"node","@id":7,"name":"Thread Shed","shop":"craft"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.377,40.618]},"properties":{"@type":"node","@id":8,"name":"Second Time Clothes","shop":"clothes","second_hand":"only"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.378,40.619]},"properties":{"@type":"node","@id":9,"name":"Odd Lots","shop":"second_hand"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.379,40.62]},"properties":{"@type":"node","@id":10,"name":"Corner Bakery","shop":"bakery"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.38,40.621]},"properties":{"@type":"node","@id":11,"name":"Helping Hands","shop":"charity"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.381,40.622]},"properties":{"@type":"node","@id":12,"shop":"books"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.382,40.623]},"properties":{"@type":"node","@id":13,"name":"Half Price Books","shop":"books"}}
+{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[-75.383,40.624],[-75.3826,40.624],[-75.3826,40.6244],[-75.383,40.6244],[-75.383,40.624]]]]},"properties":{"@type":"relation","@id":14,"name":"Wide Antiques & Books","shop":"antiques;books"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.384,40.625]},"properties":{"@type":"node","@id":15,"name":"Starred Books","shop":"books","rating":"5","stars":"5","review:count":"9000","wikipedia":"en:Starred Books","wikidata":"Q1","popularity":"high","opening_hours":"24/7"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.385,40.626]},"properties":{"@type":"node","@id":16,"name":"Pottery Only","craft":"pottery"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.386,40.627]},"properties":{"@type":"node","@id":17,"name":"Goodwill Industries of the Valley","shop":"second_hand"}}
