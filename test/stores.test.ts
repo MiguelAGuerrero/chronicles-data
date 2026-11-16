@@ -87,10 +87,10 @@ test('ST1: a store holds exactly id, name, position, facets and src; every other
   assert.equal(numbers.length, 2, 'only the two of a position');
 });
 
-test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emitted, an unknown value fails, clients ignore the unknown', async () => {
+test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emitted, an unknown value fails, clients ignore the unknown', { todo: 'test first' }, async () => {
   const { DIMENSIONS, RESERVED_FIELDS } = await load('stores/dimensions');
   const { StoreSchema, storesJsonSchema } = await load('stores/schema');
-  assert.deepEqual(DIMENSIONS.what, { emitted: true, values: ['antiques', 'vintage', 'books', 'records', 'maps', 'art_supplies', 'crafts'] });
+  assert.deepEqual(DIMENSIONS.what, { emitted: true, values: ['antiques', 'vintage', 'books', 'records', 'maps', 'art_supplies', 'crafts', 'second_hand'] });
   assert.deepEqual(DIMENSIONS.how, { emitted: false, values: ['vintage', 'thrift', 'new'] });
   assert.deepEqual(RESERVED_FIELDS, ['hours']);
   assert.ok(!StoreSchema.safeParse({ ...good, facets: { what: ['antiques'], how: ['vintage'] } }).success, 'how is not emitted');
@@ -105,7 +105,7 @@ test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emit
   assert.deepEqual(c.reserved, ['hours']);
 });
 
-test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `what`, or no name, is dropped', async () => {
+test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `what`, or no name, is dropped', { todo: 'test first' }, async () => {
   const { adaptShops } = await load('stores/osmShops');
   const { StoreCandidateSchema } = await load('stores/schema');
   const rows: any[] = adaptShops(SHOPS, AT);
@@ -113,11 +113,11 @@ test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `wh
   const what = Object.fromEntries(rows.map((r) => [r.name, r.facets.what]));
   assert.deepEqual(what, {
     'Old Tin Antiques': ['antiques'], 'Lehigh Books': ['books'], 'Spin Records': ['records'], Chartroom: ['maps'], 'Easel & Brush': ['art_supplies'],
-    'Clay Bench': ['crafts'], 'Thread Shed': ['crafts'], 'Second Time Clothes': ['vintage'], 'Odd Lots': ['vintage'],
-    'Half Price Books': ['books'], 'Wide Antiques & Books': ['antiques', 'books'], 'Starred Books': ['books'], 'Goodwill Industries of the Valley': ['vintage'],
+    'Clay Bench': ['crafts'], 'Thread Shed': ['crafts'], 'Second Time Clothes': ['vintage'], 'Odd Lots': ['second_hand'], 'Helping Hands': ['second_hand'], 'Salvation Army Family Store': ['second_hand'],
+    'Half Price Books': ['books'], 'Wide Antiques & Books': ['antiques', 'books'], 'Starred Books': ['books'], 'Goodwill Industries of the Valley': ['second_hand'],
   });
-  for (const gone of ['Corner Bakery', 'Helping Hands', 'Pottery Only']) assert.ok(!(gone in what), `${gone} has no mapped what`);
-  assert.equal(rows.length, 13, 'the nameless shop is dropped too');
+  for (const gone of ['Corner Bakery', 'Pottery Only']) assert.ok(!(gone in what), `${gone} has no mapped what`);
+  assert.equal(rows.length, 15, 'the nameless shop is dropped too');
   const by = Object.fromEntries(rows.map((r) => [r.name, r]));
   assert.equal(by['Old Tin Antiques'].sourceId, 'node/1');
   assert.deepEqual(by['Old Tin Antiques'].at, [-75.37, 40.61]);
@@ -148,21 +148,20 @@ test('ST4: no rating, review, popularity, wikipedia or sitelink field is read', 
   assert.doesNotMatch(src, /wikipedia|sitelink|rating|review/i, 'the code names no such key');
 });
 
-test('ST5: a name whose leading whole words are a chain is out; chains are data', async () => {
-  const { isChain, CHAINS } = await load('stores/chains');
+test('ST5: chains are not dropped at the build; no chain list, flag or field exists', { todo: 'test first' }, async () => {
   const { gateStores } = await load('stores/gate');
   const { adaptShops } = await load('stores/osmShops');
-  const data = JSON.parse(readFileSync(join(ROOT, 'src/stores/chains.json'), 'utf8'));
-  assert.ok(Array.isArray(data) && data.every((c: unknown) => typeof c === 'string'));
-  assert.deepEqual(CHAINS, data);
-  for (const c of ['Barnes & Noble', 'Half Price Books', 'Goodwill', 'Salvation Army', 'Savers', 'Value Village', 'Books-A-Million']) assert.ok(data.includes(c), c);
-  for (const yes of ['Half Price Books', 'half price books outlet', 'HALF  PRICE BOOKS!', 'Barnes and Noble Booksellers', 'Barnes & Noble', 'Goodwill Industries of the Valley', 'Books-A-Million', 'Books A Million #12', 'Value Village Thrift', 'Salvation Army Family Store', 'Savers']) assert.ok(isChain(yes), yes);
-  for (const no of ['Half Price Bookshop', 'Goodwillie Books', 'Old Goodwill Antiques', 'Saversville Antiques', 'Lehigh Books', 'The Half Price Books Club', 'Noble Books']) assert.ok(!isChain(no), no);
-  assert.ok(isChain('Acme Books', ['acme']) && !isChain('Acme Books', []), 'the list is a parameter');
+  const { StoreSchema } = await load('stores/schema');
   const { kept, dropped } = gateStores(adaptShops(SHOPS, AT));
-  assert.ok(!kept.some((s: any) => /Half Price|Goodwill/.test(s.name)));
-  assert.deepEqual(dropped.map((d: any) => d.name).sort(), ['Goodwill Industries of the Valley', 'Half Price Books']);
-  assert.equal(kept.length, 11);
+  assert.deepEqual(dropped, []);
+  assert.equal(kept.length, 15);
+  const names = kept.map((s: any) => s.name);
+  for (const chain of ['Half Price Books', 'Goodwill Industries of the Valley', 'Salvation Army Family Store']) assert.ok(names.includes(chain), chain);
+  for (const s of kept) assert.deepEqual(Object.keys(s).sort(), ['at', 'facets', 'fetchedAt', 'name', 'source', 'sourceId']);
+  assert.ok(!StoreSchema.safeParse({ ...good, chain: true }).success, 'no chain flag on a record');
+  const { readdirSync } = await import('node:fs');
+  assert.ok(!readdirSync(join(ROOT, 'src/stores')).some((f) => /chain/i.test(f)), 'no chain list in the repo');
+  assert.doesNotMatch(readFileSync(join(ROOT, 'src/stores/gate.ts'), 'utf8').replace(/\/\/.*$/gm, ''), /chain|name/i, 'the gate filters by no name');
 });
 
 async function osmRaw(parts: Record<string, string>) {
@@ -172,7 +171,7 @@ async function osmRaw(parts: Record<string, string>) {
   return store;
 }
 
-test('ST6: stores never reach the places pack, its gate or its conflate', async () => {
+test('ST6: stores never reach the places pack, its gate or its conflate', { todo: 'test first' }, async () => {
   const { osm } = await load('adapters/osm');
   const locates: Adapter = {
     declaration: { ...osm.declaration, name: 'fake', code: 'fk', role: 'locates', hosts: ['example.org'], pace: { perMinute: 60, userAgent: 'test agent string' } },
@@ -202,12 +201,12 @@ test('ST6: stores never reach the places pack, its gate or its conflate', async 
   for (const f of ['gate.ts', 'conflate.ts', 'package.ts', 'runner.ts', 'schema.ts']) assert.doesNotMatch(readFileSync(join(ROOT, 'src', f), 'utf8'), /from '\.\/stores|stores\//, `${f} imports no stores code`);
   const { buildStores } = await load('stores/build');
   const r = buildStores({ store: await osmRaw({ 'shops-us-test.geojsonl': SHOPS }), run: '20261109', region: 'us', version: '20261109', registry: emptyRegistry(), newId: counter() });
-  assert.equal(r.pack.stores.length, 11);
+  assert.equal(r.pack.stores.length, 15);
   assert.ok(r.pack.stores.every((s: any) => /^s_[0-9a-f]{16}$/.test(s.id)));
   assert.equal(buildStores({ store: await osmRaw({ 'confirm-us-test.geojsonl': '' }), run: '20261109', region: 'us', version: '20261109', registry: emptyRegistry(), newId: counter() }).pack, null, 'no shops part, no pack');
 });
 
-test('ST7: the stores pack is written through the archive writer and listed in the manifest as `stores`; absent when there is none', async () => {
+test('ST7: the stores pack is written through the archive writer and listed in the manifest as `stores`; absent when there is none', { todo: 'test first' }, async () => {
   const { buildStores } = await load('stores/build');
   const { writeArchive } = await import(String('../src/archive.mjs'));
   const raw = await osmRaw({ 'shops-us-test.geojsonl': SHOPS });
@@ -217,7 +216,7 @@ test('ST7: the stores pack is written through the archive writer and listed in t
   assert.equal(pack.region, 'us');
   assert.ok(Object.keys(pack.blocks).every((k) => /^8\/\d+\/\d+$/.test(k)));
   const feats = await featuresOf(pack.bytes, 'stores');
-  assert.equal(feats.length, 11);
+  assert.equal(feats.length, 15);
   for (const f of feats) assert.deepEqual(Object.keys(f).sort(), ['id', 'name', 'src', 'what']);
   const wide = feats.find((f) => f.name === 'Wide Antiques & Books')!;
   assert.equal(wide.what, 'antiques,books');
@@ -254,7 +253,7 @@ test('ST7: the stores pack is written through the archive writer and listed in t
   assert.equal(stores.current.sha256.length, 64);
 });
 
-test('ST8: the example pack, its records and the stores schema are published; the contract is bumped', async () => {
+test('ST8: the example pack, its records and the stores schema are published; the contract is bumped', { todo: 'test first' }, async () => {
   const { contractFiles } = await load('contract');
   const { StoreSchema } = await load('stores/schema');
   assert.ok(CONTRACT_VERSION >= 3);
@@ -269,6 +268,8 @@ test('ST8: the example pack, its records and the stores schema are published; th
   assert.equal(JSON.parse(readFileSync(join(ROOT, 'contract/places.schema.json'), 'utf8')).contractVersion, CONTRACT_VERSION);
   const records = JSON.parse(readFileSync(join(ROOT, 'contract/example/stores-example.json'), 'utf8'));
   assert.ok(records.length >= 5);
+  for (const chain of ['Goodwill Industries of the Valley', 'Salvation Army Family Store']) assert.ok(records.some((s: any) => s.name === chain), `the example holds ${chain}`);
+  assert.ok(records.some((s: any) => s.facets.what.includes('second_hand')));
   for (const s of records) assert.ok(StoreSchema.safeParse(s).success, s.name);
   const feats = await featuresOf(new Uint8Array(readFileSync(join(ROOT, 'contract/example/stores-example-20261109.pmtiles'))), 'stores');
   assert.equal(feats.length, records.length);

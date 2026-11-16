@@ -59,7 +59,7 @@ properties `name`, `id`, `src` and one property per emitted dimension holding it
 3. **ST3 The shop adapter maps tags to facets.** From recorded OSM elements (node, way, relation): `shop=antiques` is
    antiques; `shop=books` books; `shop=music|records` records; `shop=maps|map` maps; `shop=art_supplies` art_supplies;
    `shop=craft|handicraft` crafts, and a `craft=` of a pinned set on an element that is also a shop; `shop=second_hand|charity`
-   is second_hand (never vintage or antiques); `second_hand=only` on a pinned set of shops (clothes, furniture...) is vintage. A shop with no mapped `what` (a bakery, a charity shop) and one with
+   is second_hand (never vintage or antiques); `second_hand=only` on a pinned set of shops (clothes, furniture...) is vintage. A shop with no mapped `what` (a bakery) and one with
    no name are dropped. A way or relation takes one representative position. Output is the same whatever the order of lines.
 4. **ST4 No crowd field is read.** The adapter reads only `name`, `shop`, `craft`, `second_hand` and the element's
    type and id. A shop carrying `rating`, `stars`, `reviews`, `popularity`, `wikipedia`, `wikidata` or `brand:wikipedia`

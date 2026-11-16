@@ -15,3 +15,4 @@
 {"type":"Feature","geometry":{"type":"Point","coordinates":[-75.384,40.625]},"properties":{"@type":"node","@id":15,"name":"Starred Books","shop":"books","rating":"5","stars":"5","review:count":"9000","wikipedia":"en:Starred Books","wikidata":"Q1","popularity":"high","opening_hours":"24/7"}}
 {"type":"Feature","geometry":{"type":"Point","coordinates":[-75.385,40.626]},"properties":{"@type":"node","@id":16,"name":"Pottery Only","craft":"pottery"}}
 {"type":"Feature","geometry":{"type":"Point","coordinates":[-75.386,40.627]},"properties":{"@type":"node","@id":17,"name":"Goodwill Industries of the Valley","shop":"second_hand"}}
+{"type":"Feature","geometry":{"type":"Point","coordinates":[-75.387,40.628]},"properties":{"@type":"node","@id":18,"name":"Salvation Army Family Store","shop":"charity"}}
