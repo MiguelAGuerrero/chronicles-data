@@ -14,7 +14,7 @@ import { createRawStore } from '../src/rawStore';
 import { declarationProblems, run, type RunOptions } from '../src/runner';
 import { CandidateSchema, FeatureSchema } from '../src/schema';
 
-// Small places, the data side (docs/small-places/spec.md, SL1-SL11; the app's decision 0182). Written before the code.
+// Small places, the data side (docs/small-places/spec.md, SL1-SL11; the app's decision 0183). Written before the code.
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const CELL: Box = [-76, 40, -74, 42];

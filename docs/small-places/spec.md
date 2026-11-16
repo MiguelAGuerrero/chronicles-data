@@ -1,6 +1,6 @@
 # Small places, the data side (SL)
 
-Nov 16, 2026 · the owner, from the app's Small places (the app's `specs/small-places`, decision 0182).
+Nov 16, 2026 · the owner, from the app's Small places (the app's `specs/small-places`, decision 0183).
 
 OpenStreetMap locates a pinned table of small places of its own: time capsules, plaques, public bookcases, small
 memorials, old stones, wayside shrines, artworks of a known type and community gardens. For every other class it still
@@ -14,12 +14,12 @@ but a place only OpenStreetMap knows never entered a pack (the app's 0110).
 
 ## Vision
 
-The app's gate (0182): aligned if reshaped. A pinned table, an unmapped tag left out, nothing counted; the repetitive
+The app's gate (0183): aligned if reshaped. A pinned table, an unmapped tag left out, nothing counted; the repetitive
 types start off in the app. Nothing here stores a count or a rank (PP5 holds).
 
 ## Decisions (the owner's calls)
 
-- Nov 14 (0182): OpenStreetMap contributes places of its own for the pinned table; unnamed ones are named by their type
+- Nov 14 (0183): OpenStreetMap contributes places of its own for the pinned table; unnamed ones are named by their type
   (in the app); `access=private|no` keeps a place out.
 - Nov 16: **one OSM adapter, its role by class** (over two adapters): it locates the table's classes and confirms the
   rest, so the week's extracts are still downloaded once.

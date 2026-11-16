@@ -3,7 +3,7 @@
 // each names, whether it is open to visitors, closed, or gone. It never makes a place (role `confirms`), never joins by
 // name or position, and nothing counts how many elements say a thing (PP7, amended by RD7).
 //
-// Small places (SL1-SL9, the app's decision 0182): it also locates a pinned table of small places from its own raw part
+// Small places (SL1-SL9, the app's decision 0183): it also locates a pinned table of small places from its own raw part
 // (`small-*`), read from the same download of each extract. Its role is `confirms`; `locates` names the classes it makes.
 import type { Adapter } from '../../adapter';
 import type { ClassName } from '../../classes';
@@ -140,7 +140,7 @@ export const osm: Adapter = {
     licenseFamily: 'odbl',
     attribution: '© OpenStreetMap contributors',
     role: 'confirms',
-    // SL1: and locates its small places (the app's decision 0182).
+    // SL1: and locates its small places (the app's decision 0183).
     locates: [...LOCATES],
     hosts: ['download.geofabrik.de'],
     // Four downloads a week, one at a time.
