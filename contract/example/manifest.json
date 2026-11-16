@@ -28,18 +28,18 @@
         "current": {
           "file": "stores-example-20261109.pmtiles",
           "version": "20261109",
-          "bytes": 796,
-          "sha256": "57b02321d9742ef7bbfcf3cd2838f7c20d59f62d977e2b45c042264b0eeac2ab",
+          "bytes": 943,
+          "sha256": "6eea305f36df3a16a863ad15b4f92f1493a5b098cadc8c92e73185b02ed75a3e",
           "minzoom": 12,
           "maxzoom": 12,
           "bounds": [
-            -75.384,
+            -75.387,
             40.61,
             -75.37,
-            40.625
+            40.628
           ],
           "blocks": {
-            "8/74/96": "20491e8d370f2527"
+            "8/74/96": "8d76a7d00153fc19"
           },
           "license": "odbl"
         },

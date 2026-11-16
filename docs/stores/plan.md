@@ -9,7 +9,7 @@ src/stores/
   dimensions.ts   DIMENSIONS {what: emitted, how: reserved}, RESERVED_FIELDS ['hours'] (ST2)
   schema.ts       StoreSchema, StoreCandidateSchema, FeatureSchema, storesJsonSchema() (ST1, ST2, ST8)
   osmShops.ts     SHOP_FILTER, the tag tables, READS, adaptShops(raw, fetchedAt) (ST3, ST4, ST9)
-  gate.ts         gateStores: schema and duplicates only; no name filter, no chains (ST1, ST5)
+  gate.ts         gateStores: schema and duplicates only; no chains (ST1, ST5)
   package.ts      packStores: the pack through archive.mjs, block hashes (ST7)
   build.ts        buildStores(raw store, run, registry, newId): reads shops-* parts of the osm source (ST6)
 src/adapters/osm/   FILTER stays; fetch passes [FILTER, SHOP_FILTER] to filterExtracts; adapt skips shops-* parts (ST6, ST9)

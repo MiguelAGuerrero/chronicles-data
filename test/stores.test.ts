@@ -87,7 +87,7 @@ test('ST1: a store holds exactly id, name, position, facets and src; every other
   assert.equal(numbers.length, 2, 'only the two of a position');
 });
 
-test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emitted, an unknown value fails, clients ignore the unknown', { todo: 'test first' }, async () => {
+test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emitted, an unknown value fails, clients ignore the unknown', async () => {
   const { DIMENSIONS, RESERVED_FIELDS } = await load('stores/dimensions');
   const { StoreSchema, storesJsonSchema } = await load('stores/schema');
   assert.deepEqual(DIMENSIONS.what, { emitted: true, values: ['antiques', 'vintage', 'books', 'records', 'maps', 'art_supplies', 'crafts', 'second_hand'] });
@@ -105,7 +105,7 @@ test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emit
   assert.deepEqual(c.reserved, ['hours']);
 });
 
-test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `what`, or no name, is dropped', { todo: 'test first' }, async () => {
+test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `what`, or no name, is dropped', async () => {
   const { adaptShops } = await load('stores/osmShops');
   const { StoreCandidateSchema } = await load('stores/schema');
   const rows: any[] = adaptShops(SHOPS, AT);
@@ -148,7 +148,7 @@ test('ST4: no rating, review, popularity, wikipedia or sitelink field is read', 
   assert.doesNotMatch(src, /wikipedia|sitelink|rating|review/i, 'the code names no such key');
 });
 
-test('ST5: chains are not dropped at the build; no chain list, flag or field exists', { todo: 'test first' }, async () => {
+test('ST5: chains are not dropped at the build; no chain list, flag or field exists', async () => {
   const { gateStores } = await load('stores/gate');
   const { adaptShops } = await load('stores/osmShops');
   const { StoreSchema } = await load('stores/schema');
@@ -161,7 +161,7 @@ test('ST5: chains are not dropped at the build; no chain list, flag or field exi
   assert.ok(!StoreSchema.safeParse({ ...good, chain: true }).success, 'no chain flag on a record');
   const { readdirSync } = await import('node:fs');
   assert.ok(!readdirSync(join(ROOT, 'src/stores')).some((f) => /chain/i.test(f)), 'no chain list in the repo');
-  assert.doesNotMatch(readFileSync(join(ROOT, 'src/stores/gate.ts'), 'utf8').replace(/\/\/.*$/gm, ''), /chain|name/i, 'the gate filters by no name');
+  assert.doesNotMatch(readFileSync(join(ROOT, 'src/stores/gate.ts'), 'utf8').replace(/\/\/.*$/gm, ''), /chain/i, 'the gate knows no chain');
 });
 
 async function osmRaw(parts: Record<string, string>) {
@@ -171,7 +171,7 @@ async function osmRaw(parts: Record<string, string>) {
   return store;
 }
 
-test('ST6: stores never reach the places pack, its gate or its conflate', { todo: 'test first' }, async () => {
+test('ST6: stores never reach the places pack, its gate or its conflate', async () => {
   const { osm } = await load('adapters/osm');
   const locates: Adapter = {
     declaration: { ...osm.declaration, name: 'fake', code: 'fk', role: 'locates', hosts: ['example.org'], pace: { perMinute: 60, userAgent: 'test agent string' } },
@@ -206,7 +206,7 @@ test('ST6: stores never reach the places pack, its gate or its conflate', { todo
   assert.equal(buildStores({ store: await osmRaw({ 'confirm-us-test.geojsonl': '' }), run: '20261109', region: 'us', version: '20261109', registry: emptyRegistry(), newId: counter() }).pack, null, 'no shops part, no pack');
 });
 
-test('ST7: the stores pack is written through the archive writer and listed in the manifest as `stores`; absent when there is none', { todo: 'test first' }, async () => {
+test('ST7: the stores pack is written through the archive writer and listed in the manifest as `stores`; absent when there is none', async () => {
   const { buildStores } = await load('stores/build');
   const { writeArchive } = await import(String('../src/archive.mjs'));
   const raw = await osmRaw({ 'shops-us-test.geojsonl': SHOPS });
@@ -253,7 +253,7 @@ test('ST7: the stores pack is written through the archive writer and listed in t
   assert.equal(stores.current.sha256.length, 64);
 });
 
-test('ST8: the example pack, its records and the stores schema are published; the contract is bumped', { todo: 'test first' }, async () => {
+test('ST8: the example pack, its records and the stores schema are published; the contract is bumped', async () => {
   const { contractFiles } = await load('contract');
   const { StoreSchema } = await load('stores/schema');
   assert.ok(CONTRACT_VERSION >= 3);

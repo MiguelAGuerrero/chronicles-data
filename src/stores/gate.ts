@@ -1,6 +1,5 @@
-// The stores gate (ST1, ST5): which candidates become stores. Each is checked against the closed schema, a chain's shop
-// is dropped, and one element is one store. It reads no count and no source name, and imports no adapter.
-import { isChain, CHAINS } from './chains';
+// The stores gate (ST1, ST5): which candidates become stores. Each is checked against the closed schema, and one element
+// is one store. A chain's shop stays (the app decides on chains, by its own list). It reads no count and imports no adapter.
 import { StoreCandidateSchema, type StoreCandidate } from './schema';
 
 export interface Dropped {
@@ -8,7 +7,7 @@ export interface Dropped {
   reason: string;
 }
 
-export function gateStores(candidates: unknown[], chains: string[] = CHAINS): { kept: StoreCandidate[]; dropped: Dropped[] } {
+export function gateStores(candidates: unknown[]): { kept: StoreCandidate[]; dropped: Dropped[] } {
   const kept: StoreCandidate[] = [];
   const dropped: Dropped[] = [];
   const seen = new Set<string>();
@@ -19,10 +18,6 @@ export function gateStores(candidates: unknown[], chains: string[] = CHAINS): { 
       continue;
     }
     const c = r.data;
-    if (isChain(c.name, chains)) {
-      dropped.push({ name: c.name, reason: 'chain' });
-      continue;
-    }
     const key = `${c.source}:${c.sourceId}`;
     if (seen.has(key)) continue;
     seen.add(key);

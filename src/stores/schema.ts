@@ -51,6 +51,7 @@ export function storesJsonSchema() {
     dimensions: DIMENSIONS,
     reserved: [...RESERVED_FIELDS],
     encoding: 'A pack feature (layer `stores`, zoom 12) carries flat string properties: name, id, src, and one per emitted dimension holding its values joined by a comma.',
+    chains: 'Chains are in the pack and carry no flag; a client identifies them by name from its own list.',
     clients: 'A client ignores a dimension or a value it does not know and reads the rest; an unknown dimension or value never fails a read and never shows. Dimensions are added by contract version only.',
   };
 }

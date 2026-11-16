@@ -17,13 +17,13 @@ export interface StoresResult {
   report: { setAside: Dropped[]; reason: string };
 }
 
-export function buildStores(o: { store: RawStore; run: string | null; region: string; version: string; registry: Registry; newId: () => string; chains?: string[] }): StoresResult {
+export function buildStores(o: { store: RawStore; run: string | null; region: string; version: string; registry: Registry; newId: () => string }): StoresResult {
   const none = (reason: string): StoresResult => ({ pack: null, registry: o.registry, report: { setAside: [], reason } });
   if (!o.run) return none('no OpenStreetMap run');
   const parts = o.store.parts('osm', o.run).filter((p) => SHOPS_PART.test(p.part));
   if (!parts.length) return none('no shops in the OpenStreetMap run');
   const candidates = parts.flatMap((p) => adaptShops(o.store.read('osm', o.run!, p.part), p.fetchedAt));
-  const { kept, dropped } = gateStores(candidates, o.chains);
+  const { kept, dropped } = gateStores(candidates);
   const ids = createIds(o.registry, o.newId, STORE_ID);
   const stores: Store[] = [];
   for (const c of kept) {

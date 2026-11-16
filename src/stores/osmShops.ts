@@ -11,7 +11,8 @@ export const READS = ['@id', '@type', 'craft', 'name', 'second_hand', 'shop'] as
 /** `shop=` values to what is sold. */
 export const SHOP_WHAT: Record<string, What[]> = {
   antiques: ['antiques'],
-  second_hand: ['vintage'],
+  second_hand: ['second_hand'],
+  charity: ['second_hand'],
   books: ['books'],
   music: ['records'],
   records: ['records'],
