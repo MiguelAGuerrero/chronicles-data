@@ -18,8 +18,8 @@ Touches: Never "ratings, reviews, popularity, foot traffic" (the record has none
   0103 (significance is a gate, never a measure: here, a closed list of what a shop sells); 0108 (this repo owns the
   pipeline and the contract; an adapter is a declaration plus fetch and adapt; phones never call a source); 0115
   ("ordinary shops stay out" of the places, kept: a shop is never a place; amended only for this layer, by 0182);
-  0182 (the outing's stores layer: enters by what it sells; chains out)
-Verdict: aligned, as the app's QC11-QC15 say
+  0182 (the outing's stores layer: enters by what it sells; the app, not the pack, decides on chains)
+Verdict: aligned, as the app's QC11-QC15 say (QC13 now lives in the app: chains are data here)
 Criteria: ST1-ST10
 Open: whether a general second-hand shop is `what=vintage` or waits for `how` (below)
 ```
@@ -34,7 +34,11 @@ Open: whether a general second-hand shop is `what=vintage` or waits for `how` (b
 - **Dimensions by contract version.** `what` is emitted in v1; `how` (`vintage`, `thrift`, `new`) is declared and reserved;
   `hours` is reserved. Adding a dimension, a value or a field is a contract version (CONTRACT_VERSION 2 to 3 here).
 - **The app ignores unknown dimensions and values** (QC40), so a pack of a later version never breaks an older app.
-- **Chains out by data**: `src/stores/chains.json`, whole-leading-word match on the name, as the app's chains list.
+- **Chains are in the pack** (the owner, Nov 16): a thrifting trip across several Goodwills is legitimate, so the build
+  excludes no chain and the record gains no chain flag. The app identifies chains by name from its own list and decides, by
+  a setting off by default, whether they may be stops.
+- **Second-hand is not antiques** (the owner, Nov 16): `second_hand` (thrift and charity shops) is its own value of `what`;
+  `antiques` stays antiques; `vintage` is for curated vintage dealers only.
 
 ## The record, and its tile encoding
 
@@ -48,22 +52,22 @@ properties `name`, `id`, `src` and one property per emitted dimension holding it
    a src. Every other field fails the schema, at any depth: `rating`, `reviewCount`, `priceLevel`, `popularity`,
    `footTraffic`, `photo`, `openNow`, `hours`, and any unknown one. The only numbers in the record are the two of the position.
    The JSON Schema export is closed at every object.
-2. **ST2 Dimensions have closed lists.** `what` is antiques, vintage, books, records, maps, art_supplies, crafts. `how`
+2. **ST2 Dimensions have closed lists.** `what` is antiques, vintage, books, records, maps, art_supplies, crafts, second_hand. `how`
    (vintage, thrift, new) is declared and reserved: a record carrying it fails the build's schema. A value outside a
    dimension's list fails the build. A dimension holds one or more values, each once. The contract says that a client ignores
    an unknown dimension or value and reads the rest.
 3. **ST3 The shop adapter maps tags to facets.** From recorded OSM elements (node, way, relation): `shop=antiques` is
    antiques; `shop=books` books; `shop=music|records` records; `shop=maps|map` maps; `shop=art_supplies` art_supplies;
-   `shop=craft|handicraft` crafts, and a `craft=` of a pinned set on an element that is also a shop; `shop=second_hand`, and
-   `second_hand=only` on a pinned set of shops, vintage. A shop with no mapped `what` (a bakery, a charity shop) and one with
+   `shop=craft|handicraft` crafts, and a `craft=` of a pinned set on an element that is also a shop; `shop=second_hand|charity`
+   is second_hand (never vintage or antiques); `second_hand=only` on a pinned set of shops (clothes, furniture...) is vintage. A shop with no mapped `what` (a bakery, a charity shop) and one with
    no name are dropped. A way or relation takes one representative position. Output is the same whatever the order of lines.
 4. **ST4 No crowd field is read.** The adapter reads only `name`, `shop`, `craft`, `second_hand` and the element's
    type and id. A shop carrying `rating`, `stars`, `reviews`, `popularity`, `wikipedia`, `wikidata` or `brand:wikipedia`
    tags, however large, yields the same record as without them; no such key is in the adapter's reads or in its osmium filter.
    No Wikidata sitelink count is read.
-5. **ST5 Chains are out.** A name whose leading whole words are a chain's in `chains.json` is dropped (Half Price Books and
-   Half Price Books Outlet; not Half Price Bookshop, since a word is whole). Case, accents, `&` and punctuation do not matter.
-   The list is data in a JSON file.
+5. **ST5 Chains are not dropped at the build.** A Goodwill, a Salvation Army or a Half Price Books store is a store like any
+   other: the build excludes no shop by its name, adds no chain flag, and the record stays id, name, position, facets and
+   src. No chain list exists in this repo; the app identifies chains by name from its own list.
 6. **ST6 Stores never reach the places pack.** With shop elements in the OSM raw store, the places packs (their bytes and
    blocks), the registry and the report's review are identical to a build without them; the OSM places adapter's `adapt` yields
    nothing from a stores part; `gate.ts`, `conflate.ts`, `package.ts` and `runner.ts` import nothing of `stores/`.
@@ -93,5 +97,5 @@ the fake `http` and the tests. The workflow edits are read, not executed.
 
 ## Open for the owner
 
-- Is `shop=second_hand` `what=vintage`, or should general second-hand shops wait for `how=thrift` and only
-  `second_hand=only` dealers in clothes and the like be vintage? v1 maps both to vintage.
+- None now: the owner's calls of Nov 16 settled second-hand (its own value), chains (in the pack) and craft workshops
+  (crafts only when also tagged as a shop). Wikidata shop instances are a later follow-up.
