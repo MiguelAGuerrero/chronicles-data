@@ -79,7 +79,7 @@ export async function contractFiles(): Promise<Map<string, string | Buffer>> {
   files.set('sources.json', json({
     contractVersion: CONTRACT_VERSION,
     classes: CLASS_NAMES,
-    sources: ADAPTERS.map(({ declaration: d }) => ({ name: d.name, code: d.code, license: d.license, licenseFamily: d.licenseFamily, attribution: d.attribution, role: d.role, hosts: d.hosts })),
+    sources: ADAPTERS.map(({ declaration: d }) => ({ name: d.name, code: d.code, license: d.license, licenseFamily: d.licenseFamily, attribution: d.attribution, role: d.role, ...(d.locates ? { locates: d.locates } : {}), hosts: d.hosts })),
   }));
 
   // The example pack: the test fixtures through the whole pipeline, with IDs from a counter so it is the same each time.

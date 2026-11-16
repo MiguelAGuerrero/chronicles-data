@@ -1,6 +1,6 @@
 {
   "$comment": "Generated from src/schema.ts by `npm run contract`; a test fails when they differ (PP5).",
-  "contractVersion": 2,
+  "contractVersion": 3,
   "candidate": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -14,8 +14,7 @@
         "minLength": 1
       },
       "name": {
-        "type": "string",
-        "minLength": 1
+        "type": "string"
       },
       "at": {
         "type": "array",
@@ -59,7 +58,13 @@
           "theatre",
           "museum",
           "historic_site",
-          "building_structure"
+          "building_structure",
+          "small_memorial",
+          "old_stone",
+          "wayside_shrine",
+          "time_capsule",
+          "public_bookcase",
+          "community_garden"
         ]
       },
       "signals": {
@@ -112,7 +117,42 @@
       "signals",
       "fetchedAt"
     ],
-    "additionalProperties": false
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "name": {
+              "const": ""
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "then": {
+          "properties": {
+            "class": {
+              "enum": [
+                "marker",
+                "mural",
+                "sculpture",
+                "statue",
+                "small_memorial",
+                "old_stone",
+                "wayside_shrine",
+                "time_capsule",
+                "public_bookcase",
+                "community_garden"
+              ]
+            }
+          },
+          "required": [
+            "class"
+          ]
+        }
+      }
+    ]
   },
   "place": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -123,8 +163,7 @@
         "pattern": "^p_[0-9a-f]{16}$"
       },
       "name": {
-        "type": "string",
-        "minLength": 1
+        "type": "string"
       },
       "at": {
         "type": "array",
@@ -168,7 +207,13 @@
           "theatre",
           "museum",
           "historic_site",
-          "building_structure"
+          "building_structure",
+          "small_memorial",
+          "old_stone",
+          "wayside_shrine",
+          "time_capsule",
+          "public_bookcase",
+          "community_garden"
         ]
       },
       "gone": {
@@ -205,15 +250,49 @@
       "src",
       "license"
     ],
-    "additionalProperties": false
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "name": {
+              "const": ""
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "then": {
+          "properties": {
+            "class": {
+              "enum": [
+                "marker",
+                "mural",
+                "sculpture",
+                "statue",
+                "small_memorial",
+                "old_stone",
+                "wayside_shrine",
+                "time_capsule",
+                "public_bookcase",
+                "community_garden"
+              ]
+            }
+          },
+          "required": [
+            "class"
+          ]
+        }
+      }
+    ]
   },
   "feature": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
       "name": {
-        "type": "string",
-        "minLength": 1
+        "type": "string"
       },
       "class": {
         "type": "string",
@@ -239,7 +318,13 @@
           "theatre",
           "museum",
           "historic_site",
-          "building_structure"
+          "building_structure",
+          "small_memorial",
+          "old_stone",
+          "wayside_shrine",
+          "time_capsule",
+          "public_bookcase",
+          "community_garden"
         ]
       },
       "src": {
@@ -255,6 +340,41 @@
       "src",
       "id"
     ],
-    "additionalProperties": false
+    "additionalProperties": false,
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "name": {
+              "const": ""
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "then": {
+          "properties": {
+            "class": {
+              "enum": [
+                "marker",
+                "mural",
+                "sculpture",
+                "statue",
+                "small_memorial",
+                "old_stone",
+                "wayside_shrine",
+                "time_capsule",
+                "public_bookcase",
+                "community_garden"
+              ]
+            }
+          },
+          "required": [
+            "class"
+          ]
+        }
+      }
+    ]
   }
 }

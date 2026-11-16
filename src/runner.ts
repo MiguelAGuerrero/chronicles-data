@@ -2,7 +2,7 @@
 // fetch into the raw store, adapts every raw answer and checks each candidate, then conflates, gates, applies the
 // owner's edits and packages. Only `fetch` touches the network; with `fetch: false` the run reads the raw store alone.
 import type { Adapter, Box } from './adapter';
-import { conflate, createIds, type Registry, type SourceInfo } from './conflate';
+import { conflate, createIds, roleFor, type Registry, type SourceInfo } from './conflate';
 import { applyEdits, gate, type Edits } from './gate';
 import { politeFetch, type Clock, type Fetch } from './http';
 import { packages, type Pack } from './package';
@@ -219,7 +219,10 @@ export async function run(o: RunOptions): Promise<RunResult> {
     o.store.keepNewest(d.name, o.keepRuns ?? 3);
   }
 
-  const sources: SourceInfo[] = o.adapters.map((a) => ({ name: a.declaration.name, code: a.declaration.code, role: a.declaration.role, licenseFamily: a.declaration.licenseFamily }));
+  const sources: SourceInfo[] = o.adapters.map((a) => ({
+    name: a.declaration.name, code: a.declaration.code, role: a.declaration.role, licenseFamily: a.declaration.licenseFamily,
+    ...(a.declaration.locates ? { locates: a.declaration.locates } : {}),
+  }));
   const ids = createIds(o.registry, o.newId);
   const touched = new Set<LicenseFamily>();
   const places = applyEdits(gate(conflate(candidates, sources, ids, touched)), o.edits, ids);
@@ -229,10 +232,11 @@ export async function run(o: RunOptions): Promise<RunResult> {
 
 /** RD12: the owner's review, worked out from the candidates; nothing of it is stored on a place. */
 function review(report: Report, places: Place[], candidates: Candidate[], sources: SourceInfo[], ids: ReturnType<typeof createIds>, areas: ReviewArea[]) {
-  const locating = new Set(sources.filter((s) => s.role === 'locates').map((s) => s.name));
+  // SL1, SL11: a candidate locates by its source's role, or its class where a confirming source locates that class.
+  const info = new Map(sources.map((s) => [s.name, s]));
   const byId = new Map<string, Candidate>();
   for (const c of candidates) {
-    if (!locating.has(c.source)) continue;
+    if (roleFor(c, info) !== 'locates') continue;
     const id = ids.lookup(`${c.source}:${c.sourceId}`);
     if (id && !byId.has(id)) byId.set(id, c);
   }

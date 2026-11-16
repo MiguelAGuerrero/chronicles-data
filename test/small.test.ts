@@ -39,7 +39,7 @@ async function osmOf(small: El[], confirm: Record<string, string>[] = []): Promi
   const { osm } = (await import(String('../src/adapters/osm'))) as { osm: Adapter };
   const line = (e: El, i: number) => JSON.stringify({
     type: 'Feature',
-    geometry: e.geometry ?? { type: 'Point', coordinates: e.at },
+    geometry: e.geometry !== undefined ? e.geometry : { type: 'Point', coordinates: e.at },
     properties: { '@id': e.id ?? `node/${i + 1}`, ...e.tags },
   });
   return {
@@ -68,9 +68,8 @@ async function build(adapters: Adapter[], extra: Partial<RunOptions> = {}) {
 const placesOf = (r: Awaited<ReturnType<typeof build>>) => r.packs.flatMap((p) => p.places);
 const classes = (r: Awaited<ReturnType<typeof build>>) => placesOf(r).map((p) => `${p.class}:${p.name}`).sort();
 
-const TODO = { todo: 'test first' };
 
-test('SL1: OSM locates its table\'s classes and confirms the rest; locates is refused beside another role', TODO, async () => {
+test('SL1: OSM locates its table\'s classes and confirms the rest; locates is refused beside another role', async () => {
   const { osm } = (await import(String('../src/adapters/osm'))) as { osm: Adapter };
   assert.equal(osm.declaration.role, 'confirms');
   assert.ok((osm.declaration as { locates?: string[] }).locates?.includes('time_capsule'));
@@ -80,7 +79,7 @@ test('SL1: OSM locates its table\'s classes and confirms the rest; locates is re
   assert.ok(declarationProblems(bad).some((p) => p.startsWith('locates')), 'locates only beside confirms');
 });
 
-test('SL2: the tag table, pinned; any other tag is no place', TODO, async () => {
+test('SL2: the tag table, pinned; any other tag is no place', async () => {
   const r = await build([await osmOf([
     el({ historic: 'memorial', memorial: 'plaque', name: 'Plaque A' }), el({ memorial: 'blue_plaque', name: 'Plaque B' }),
     el({ historic: 'memorial', memorial: 'bench', name: 'Bench' }), el({ memorial: 'ghost_bike', name: 'Ghost bike' }), el({ memorial: 'stolperstein', name: 'Anna Frei' }),
@@ -100,18 +99,18 @@ test('SL2: the tag table, pinned; any other tag is no place', TODO, async () => 
   ]);
 });
 
-test('SL3: access=private or access=no makes no place', TODO, async () => {
+test('SL3: access=private or access=no makes no place', async () => {
   const r = await build([await osmOf([el({ amenity: 'public_bookcase', name: 'Open books' }), el({ amenity: 'public_bookcase', name: 'Yard books', access: 'private' }), el({ historic: 'milestone', name: 'Fenced', access: 'no' })])]);
   assert.deepEqual(classes(r), ['public_bookcase:Open books']);
 });
 
-test('SL4: an element naming a Wikidata item the build made is that place, not a second', TODO, async () => {
+test('SL4: an element naming a Wikidata item the build made is that place, not a second', async () => {
   const at: [number, number] = [-75.38, 40.62];
   const r = await build([wikidataOf([{ id: 'Q4242', name: 'Soldiers Statue', at, p31: STATUE }]), await osmOf([el({ tourism: 'artwork', artwork_type: 'statue', name: 'Civil War Soldier', wikidata: 'Q4242' }, { at: [at[0] + 0.002, at[1]] })])]);
   assert.deepEqual(classes(r), ['statue:Soldiers Statue']);
 });
 
-test('SL5: a small place may be unnamed; every other class still needs a name', TODO, async () => {
+test('SL5: a small place may be unnamed; every other class still needs a name', async () => {
   const r = await build([await osmOf([el({ amenity: 'public_bookcase' }), el({ memorial: 'plaque' })])]);
   assert.deepEqual(classes(r), ['marker:', 'public_bookcase:']);
   assert.ok(FeatureSchema.safeParse({ name: '', class: 'public_bookcase', src: 'osm', id: 'p_0000000000000001' }).success);
@@ -119,7 +118,7 @@ test('SL5: a small place may be unnamed; every other class still needs a name', 
   assert.ok(!CandidateSchema.safeParse({ source: 'wikidata', sourceId: 'Q1', name: '', class: 'museum', signals: {}, fetchedAt: '2026-11-16T00:00:00Z' }).success);
 });
 
-test('SL6: unnamed twins of one class within 10 m are one place; never the same as a named one', TODO, async () => {
+test('SL6: unnamed twins of one class within 10 m are one place; never the same as a named one', async () => {
   const a: [number, number] = [-75.3, 40.6];
   const near: [number, number] = [a[0] + 0.00005, a[1]]; // about 4 m
   const far: [number, number] = [a[0] + 0.0004, a[1]]; // about 34 m
@@ -130,7 +129,7 @@ test('SL6: unnamed twins of one class within 10 m are one place; never the same 
   assert.deepEqual(classes(r), ['marker:', 'marker:Named plaque', 'public_bookcase:', 'public_bookcase:']);
 });
 
-test('SL7: a way or an area becomes one point inside its bounds; no geometry is no place', TODO, async () => {
+test('SL7: a way or an area becomes one point inside its bounds; no geometry is no place', async () => {
   const ring = [[-75.31, 40.61], [-75.30, 40.61], [-75.30, 40.62], [-75.31, 40.62], [-75.31, 40.61]];
   const r = await build([await osmOf([
     el({ leisure: 'garden', 'garden:type': 'community', name: 'Ring garden' }, { geometry: { type: 'Polygon', coordinates: [ring] }, id: 'way/7' }),
@@ -141,16 +140,17 @@ test('SL7: a way or an area becomes one point inside its bounds; no geometry is 
   assert.deepEqual(classes(r), ['community_garden:Ring garden']);
 });
 
-test('SL8: a pack with a place OpenStreetMap located is ODbL', TODO, async () => {
+test('SL8: a pack with a place OpenStreetMap located is ODbL', async () => {
   const r = await build([await osmOf([el({ historic: 'time_capsule', name: 'Capsule' })])]);
-  assert.deepEqual(r.packs.map((p) => [p.region, p.license]), [['us', 'odbl']]);
+  // PP9: its own family's pack; RD11: one ODbL pack for the region once OSM also confirmed a place there.
+  assert.deepEqual(r.packs.map((p) => [p.license, p.places.map((q) => q.name)]), [['odbl', ['Capsule']]]);
 });
 
-test('SL9: the small places come from their own raw part of the same download; the filter is part of the fetch key', TODO, async () => {
+test('SL9: the small places come from their own raw part of the same download; the filter is part of the fetch key', async () => {
   const { osm, SMALL_FILTER, FILTER } = (await import(String('../src/adapters/osm'))) as { osm: Adapter; SMALL_FILTER: { name: string; expressions: string[] }; FILTER: { name: string } };
   assert.equal(SMALL_FILTER.name, 'small');
   assert.notEqual(FILTER.name, SMALL_FILTER.name);
-  for (const e of ['nwr/historic=time_capsule', 'nwr/amenity=public_bookcase', 'nwr/tourism=artwork']) assert.ok(SMALL_FILTER.expressions.some((x) => x.startsWith(e.split('=')[0]) && x.includes(e.split('=')[1])), e);
+  for (const e of ['nwr/historic=time_capsule', 'nwr/amenity=public_bookcase', 'nwr/artwork_type=mural', 'nwr/garden:type=community']) assert.ok(SMALL_FILTER.expressions.some((x) => x.startsWith(e.split('=')[0]) && x.includes(e.split('=')[1])), e);
   const key = osm.fetchKey!([CELL]);
   assert.ok(key.length > 0);
   // The confirming part never locates, whatever its tags.
@@ -158,7 +158,7 @@ test('SL9: the small places come from their own raw part of the same download; t
   assert.deepEqual(classes(r), []);
 });
 
-test('SL10: contract v3: the new classes, locates in sources.json, an empty name only for the small classes', TODO, () => {
+test('SL10: contract v3: the new classes, locates in sources.json, an empty name only for the small classes', () => {
   assert.equal(CONTRACT_VERSION, 3);
   for (const c of ['small_memorial', 'old_stone', 'wayside_shrine', 'time_capsule', 'public_bookcase', 'community_garden']) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
@@ -166,7 +166,7 @@ test('SL10: contract v3: the new classes, locates in sources.json, an empty name
   assert.ok(sources.sources.find((s: { name: string }) => s.name === 'osm')?.locates?.includes('public_bookcase'));
 });
 
-test('SL11: the review report lists each area\'s small places with their class', TODO, async () => {
+test('SL11: the review report lists each area\'s small places with their class', async () => {
   const r = await build([await osmOf([el({ historic: 'time_capsule', name: 'Bethlehem capsule' }, { at: [-75.37, 40.615] })])], {
     reviewAreas: [{ name: 'Bethlehem', bbox: [-75.3918, 40.6020, -75.3522, 40.6320] }],
   });

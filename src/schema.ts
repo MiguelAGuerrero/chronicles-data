@@ -6,7 +6,7 @@
 // PP5: every object is closed, nested ones too, and the only numbers in a candidate, place or feature are the two of
 // a position. Nothing here can hold a count, rank, score or popularity, whatever a source offers.
 import { z } from 'zod';
-import { CLASS_NAMES as NAMES, CONTRACT_VERSION } from './classes';
+import { CLASS_NAMES as NAMES, CONTRACT_VERSION, UNNAMED_CLASSES } from './classes';
 
 /** The contract's class vocabulary (PP6, classes.ts): an adapter maps its source's types to these. */
 export const CLASS_NAMES = [...NAMES] as [string, ...string[]];
@@ -21,6 +21,12 @@ export type LicenseFamily = (typeof LICENSE_FAMILIES)[number];
 
 const position = z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]);
 const text = z.string().trim().min(1);
+/** SL5: a name, or `""` where the class may be unnamed (checked beside the class, `namedUnlessSmall`). */
+const nameText = z.string().trim();
+const unnamedOk = (cls: string | undefined) => cls != null && (UNNAMED_CLASSES as readonly string[]).includes(cls);
+/** SL5: only a small class may have an empty name. */
+const namedUnlessSmall = <T extends z.ZodType<{ name: string; class?: string }>>(s: T) =>
+  s.refine((o) => o.name.length > 0 || unnamedOk(o.class), { path: ['name'], message: 'a name is required except for the small classes' });
 
 /** PP1: everything an adapter must say about its source before it may run. */
 export const DeclarationSchema = z
@@ -46,16 +52,19 @@ export const DeclarationSchema = z
     termsChecked: z.iso.date(),
     /** The decision record that admitted it (`0108`); required of a nominating adapter (decision 0108). */
     decision: z.string().regex(/^\d{4}$/).optional(),
+    /** SL1: the classes a confirming source locates (its candidates of these classes make places). */
+    locates: z.array(z.enum(CLASS_NAMES)).min(1).optional(),
   })
   .refine((d) => d.role !== 'nominates' || d.decision != null, { path: ['decision'], message: 'a nominating adapter names the decision record that admitted it' })
-  .refine((d) => d.role !== 'nominates' || !d.allowed.reachPack, { path: ['allowed', 'reachPack'], message: 'a nomination never reaches a pack' });
+  .refine((d) => d.role !== 'nominates' || !d.allowed.reachPack, { path: ['allowed', 'reachPack'], message: 'a nomination never reaches a pack' })
+  .refine((d) => d.locates == null || d.role === 'confirms', { path: ['locates'], message: 'only a confirming source names classes it locates' });
 export type Declaration = z.infer<typeof DeclarationSchema>;
 
 /** PP4, PP5: what every adapter emits, whatever its source. */
-export const CandidateSchema = z.strictObject({
+export const CandidateSchema = namedUnlessSmall(z.strictObject({
   source: z.string().regex(/^[a-z][a-z0-9-]*$/),
   sourceId: text,
-  name: text,
+  name: nameText,
   at: position.optional(),
   class: z.enum(CLASS_NAMES).optional(),
   // RD14: yes-or-no signals only. `listed`: on the National Register; `publicType`: public by its type; `needsOpen`:
@@ -69,13 +78,13 @@ export const CandidateSchema = z.strictObject({
   /** A link a person can follow; dropped before conflate, never reaches a place (PP5). */
   evidence: z.string().optional(),
   fetchedAt: z.iso.datetime(),
-});
+}));
 export type Candidate = z.infer<typeof CandidateSchema>;
 
 /** A place as the gate sees it and a pack holds it (PP6, PP9). */
-export const PlaceSchema = z.strictObject({
+export const PlaceSchema = namedUnlessSmall(z.strictObject({
   id: z.string().regex(/^p_[0-9a-f]{16}$/),
-  name: text,
+  name: nameText,
   at: position,
   class: z.enum(CLASS_NAMES).optional(),
   gone: z.boolean(),
@@ -85,19 +94,25 @@ export const PlaceSchema = z.strictObject({
   closed: z.boolean().optional(),
   src: z.string().regex(/^[a-z]{2,8}$/),
   license: z.enum(LICENSE_FAMILIES),
-});
+}));
 export type Place = z.infer<typeof PlaceSchema>;
 
 /** PP9: a pack's tile feature, exactly these four properties (the app's `archivePois.ts` reads them). */
-export const FeatureSchema = z.strictObject({ name: text, class: z.enum(CLASS_NAMES), src: z.string(), id: z.string() });
+export const FeatureSchema = namedUnlessSmall(z.strictObject({ name: nameText, class: z.enum(CLASS_NAMES), src: z.string(), id: z.string() }));
+
+/** SL5 in JSON Schema terms (a refine has none): an empty name only with one of the small classes. */
+const unnamedRule = (doc: Record<string, unknown>) => ({
+  ...doc,
+  allOf: [{ if: { properties: { name: { const: '' } }, required: ['name'] }, then: { properties: { class: { enum: [...UNNAMED_CLASSES] } }, required: ['class'] } }],
+});
 
 /** The committed JSON Schema (PP5). */
 export function jsonSchema() {
   return {
     $comment: 'Generated from src/schema.ts by `npm run contract`; a test fails when they differ (PP5).',
     contractVersion: CONTRACT_VERSION,
-    candidate: z.toJSONSchema(CandidateSchema),
-    place: z.toJSONSchema(PlaceSchema),
-    feature: z.toJSONSchema(FeatureSchema),
+    candidate: unnamedRule(z.toJSONSchema(CandidateSchema)),
+    place: unnamedRule(z.toJSONSchema(PlaceSchema)),
+    feature: unnamedRule(z.toJSONSchema(FeatureSchema)),
   };
 }

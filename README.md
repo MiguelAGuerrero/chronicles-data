@@ -39,7 +39,10 @@ schema), conflate (opaque place IDs kept between builds), gate (the class names,
 owner's `edits.json`, package (PMTiles per region and license family, with block hashes), publish (only when a block
 changed). An adapter is a declaration (license, attribution, pace, allowed uses, role) plus `fetch` and `adapt`; the
 runner refuses one whose declaration is incomplete. Only a source whose role is `locates` puts a place on the map; a
-`nominates` source only reaches the run's review list.
+`nominates` source only reaches the run's review list. A `confirms` source may name classes it locates (`locates`):
+OpenStreetMap locates a pinned table of small places (time capsules, plaques, public bookcases, small memorials, old
+stones, wayside shrines, typed artworks, community gardens; `docs/small-places/spec.md`) and confirms the rest. A small
+place may have an empty name; the app names it by its type.
 
 `docs/spec.md` has the criteria (PP1-PP16, CT1-CT2, and those carried from the app's Places worth the stop), and
 `docs/plan.md` the plan as written before the code.

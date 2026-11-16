@@ -1,5 +1,5 @@
 {
-  "contractVersion": 2,
+  "contractVersion": 3,
   "classes": [
     "monument",
     "memorial",
@@ -22,7 +22,13 @@
     "theatre",
     "museum",
     "historic_site",
-    "building_structure"
+    "building_structure",
+    "small_memorial",
+    "old_stone",
+    "wayside_shrine",
+    "time_capsule",
+    "public_bookcase",
+    "community_garden"
   ],
   "sources": [
     {
@@ -43,6 +49,18 @@
       "licenseFamily": "odbl",
       "attribution": "© OpenStreetMap contributors",
       "role": "confirms",
+      "locates": [
+        "marker",
+        "small_memorial",
+        "old_stone",
+        "wayside_shrine",
+        "time_capsule",
+        "public_bookcase",
+        "community_garden",
+        "mural",
+        "sculpture",
+        "statue"
+      ],
       "hosts": [
         "download.geofabrik.de"
       ]

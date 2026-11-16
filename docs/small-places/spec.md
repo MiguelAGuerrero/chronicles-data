@@ -45,7 +45,7 @@ types start off in the app. Nothing here stores a count or a rank (PP5 holds).
 - **SL6** two unnamed places of the same class within 10 m are one place; an unnamed place is never the same as a named
   one; named places keep 0103's rule (same name within 50 m).
 - **SL7** a way or an area becomes one point inside its bounds (its vertices' mean); a relation without geometry is no place.
-- **SL8** a pack with a place OpenStreetMap located is ODbL (RD11).
+- **SL8** a place OpenStreetMap located is in an ODbL pack: its family's own (PP9), or the region's one ODbL pack once OSM also confirmed a place there (RD11, every weekly build).
 - **SL9** the fetch keeps the small places' elements in their own raw part beside the confirming one, from the same
   download of each extract; a changed filter fetches again (RB2).
 - **SL10** contract v3: the new classes; `locates` in `sources.json`; the feature's `name` may be empty only for the
