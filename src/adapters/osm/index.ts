@@ -4,6 +4,7 @@
 // name or position, and nothing counts how many elements say a thing (PP7, amended by RD7).
 import type { Adapter } from '../../adapter';
 import { fingerprint } from '../../fingerprint';
+import { SHOP_FILTER } from '../../stores/osmShops';
 import { filterExtracts, GEOFABRIK, US_PARTS, type Filter } from './extract';
 
 /** RD8: tags that show a place open to visitors; `historic=building` and the like are no sign. */
@@ -53,14 +54,17 @@ export const osm: Adapter = {
   weekly: true,
 
   // RB2: the extracts it reads and the filter it keeps; the area is the four US parts, whatever the boxes.
-  fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER]),
+  fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER, SHOP_FILTER]),
 
   async fetch(ctx) {
-    await filterExtracts(ctx, [FILTER]);
+    // ST9: the stores' shop filter rides the same pass, so the week's extracts are downloaded once.
+    await filterExtracts(ctx, [FILTER, SHOP_FILTER]);
   },
 
   /** RD7: one confirming candidate per Wikidata id an element carries (`wikidata=Q1;Q2` speaks for both). */
-  adapt(raw, _part, fetchedAt) {
+  adapt(raw, part, fetchedAt) {
+    // ST6: the shops' part belongs to the stores pack (src/stores), never to places.
+    if (part.startsWith(`${SHOP_FILTER.name}-`)) return [];
     const out: unknown[] = [];
     for (const line of raw.split('\n')) {
       if (!line.trim()) continue;

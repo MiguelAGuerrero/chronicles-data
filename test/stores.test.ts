@@ -17,7 +17,7 @@ import { createRawStore } from '../src/rawStore';
 import { run } from '../src/runner';
 
 // The stores pack (docs/stores/spec.md, ST1-ST10). Written before the code. The store modules are loaded by a path
-// TypeScript doesn't resolve, so this file is first committed while they don't exist.
+// TypeScript doesn't resolve (the file was first committed while they did not exist).
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const FIX = join(ROOT, 'test/fixtures');
 const SHOPS = readFileSync(join(FIX, 'osm-shops.geojsonl'), 'utf8');
@@ -65,7 +65,7 @@ const walk = (s: any, f: (o: any) => void) => {
   }
 };
 
-test('ST1: a store holds exactly id, name, position, facets and src; every other field fails, at any depth', { todo: 'test first' }, async () => {
+test('ST1: a store holds exactly id, name, position, facets and src; every other field fails, at any depth', async () => {
   const { StoreSchema, storesJsonSchema } = await load('stores/schema');
   assert.ok(StoreSchema.safeParse(good).success);
   for (const extra of ['rating', 'reviewCount', 'priceLevel', 'popularity', 'footTraffic', 'photo', 'openNow', 'hours', 'sitelinks', 'whatever']) {
@@ -87,7 +87,7 @@ test('ST1: a store holds exactly id, name, position, facets and src; every other
   assert.equal(numbers.length, 2, 'only the two of a position');
 });
 
-test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emitted, an unknown value fails, clients ignore the unknown', { todo: 'test first' }, async () => {
+test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emitted, an unknown value fails, clients ignore the unknown', async () => {
   const { DIMENSIONS, RESERVED_FIELDS } = await load('stores/dimensions');
   const { StoreSchema, storesJsonSchema } = await load('stores/schema');
   assert.deepEqual(DIMENSIONS.what, { emitted: true, values: ['antiques', 'vintage', 'books', 'records', 'maps', 'art_supplies', 'crafts'] });
@@ -105,7 +105,7 @@ test('ST2: `what` has a closed list, `how` and `hours` are reserved and not emit
   assert.deepEqual(c.reserved, ['hours']);
 });
 
-test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `what`, or no name, is dropped', { todo: 'test first' }, async () => {
+test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `what`, or no name, is dropped', async () => {
   const { adaptShops } = await load('stores/osmShops');
   const { StoreCandidateSchema } = await load('stores/schema');
   const rows: any[] = adaptShops(SHOPS, AT);
@@ -128,7 +128,7 @@ test('ST3: the shop adapter maps OSM tags to facets from fixtures; no mapped `wh
   assert.deepEqual(adaptShops('not json\n\n{"type":"Feature"}\n', AT), [], 'unreadable lines are skipped');
 });
 
-test('ST4: no rating, review, popularity, wikipedia or sitelink field is read', { todo: 'test first' }, async () => {
+test('ST4: no rating, review, popularity, wikipedia or sitelink field is read', async () => {
   const { adaptShops, READS, SHOP_FILTER } = await load('stores/osmShops');
   const crowd = /rating|stars|review|popular|traffic|wikipedia|wikidata|sitelink|views|likes|checkin|visitors|price/i;
   for (const k of READS) assert.doesNotMatch(k, crowd);
@@ -148,7 +148,7 @@ test('ST4: no rating, review, popularity, wikipedia or sitelink field is read', 
   assert.doesNotMatch(src, /wikipedia|sitelink|rating|review/i, 'the code names no such key');
 });
 
-test('ST5: a name whose leading whole words are a chain is out; chains are data', { todo: 'test first' }, async () => {
+test('ST5: a name whose leading whole words are a chain is out; chains are data', async () => {
   const { isChain, CHAINS } = await load('stores/chains');
   const { gateStores } = await load('stores/gate');
   const { adaptShops } = await load('stores/osmShops');
@@ -172,7 +172,7 @@ async function osmRaw(parts: Record<string, string>) {
   return store;
 }
 
-test('ST6: stores never reach the places pack, its gate or its conflate', { todo: 'test first' }, async () => {
+test('ST6: stores never reach the places pack, its gate or its conflate', async () => {
   const { osm } = await load('adapters/osm');
   const locates: Adapter = {
     declaration: { ...osm.declaration, name: 'fake', code: 'fk', role: 'locates', hosts: ['example.org'], pace: { perMinute: 60, userAgent: 'test agent string' } },
@@ -207,7 +207,7 @@ test('ST6: stores never reach the places pack, its gate or its conflate', { todo
   assert.equal(buildStores({ store: await osmRaw({ 'confirm-us-test.geojsonl': '' }), run: '20261109', region: 'us', version: '20261109', registry: emptyRegistry(), newId: counter() }).pack, null, 'no shops part, no pack');
 });
 
-test('ST7: the stores pack is written through the archive writer and listed in the manifest as `stores`; absent when there is none', { todo: 'test first' }, async () => {
+test('ST7: the stores pack is written through the archive writer and listed in the manifest as `stores`; absent when there is none', async () => {
   const { buildStores } = await load('stores/build');
   const { writeArchive } = await import(String('../src/archive.mjs'));
   const raw = await osmRaw({ 'shops-us-test.geojsonl': SHOPS });
@@ -254,7 +254,7 @@ test('ST7: the stores pack is written through the archive writer and listed in t
   assert.equal(stores.current.sha256.length, 64);
 });
 
-test('ST8: the example pack, its records and the stores schema are published; the contract is bumped', { todo: 'test first' }, async () => {
+test('ST8: the example pack, its records and the stores schema are published; the contract is bumped', async () => {
   const { contractFiles } = await load('contract');
   const { StoreSchema } = await load('stores/schema');
   assert.ok(CONTRACT_VERSION >= 3);
@@ -279,13 +279,16 @@ test('ST8: the example pack, its records and the stores schema are published; th
   assert.ok(!ms.properties.regions.items.required.includes('stores'), 'stores is optional');
 });
 
-test('ST9: the shops filter shares the OSM pass: no second download, no new host', { todo: 'test first' }, async () => {
+test('ST9: the shops filter shares the OSM pass: no second download, no new host', async () => {
   const { osm, FILTER } = await load('adapters/osm');
   const { SHOP_FILTER } = await load('stores/osmShops');
   const { US_PARTS } = await load('adapters/osm/extract');
   assert.notEqual(SHOP_FILTER.name, FILTER.name);
   assert.deepEqual(osm.declaration.hosts, ['download.geofabrik.de']);
-  assert.match(osm.fetchKey([]), /shops/, 'the fingerprint covers the shops filter');
+  const { fingerprint } = await load('fingerprint');
+  const { GEOFABRIK } = await load('adapters/osm/extract');
+  assert.equal(osm.fetchKey([]), fingerprint([GEOFABRIK, US_PARTS, FILTER, SHOP_FILTER]), 'the fingerprint covers the shops filter');
+  assert.notEqual(osm.fetchKey([]), fingerprint([GEOFABRIK, US_PARTS, FILTER]));
   const urls: string[] = [];
   const carried: string[] = [];
   const metas: Record<string, string> = {};
@@ -306,7 +309,7 @@ test('ST9: the shops filter shares the OSM pass: no second download, no new host
   for (const r of RULES.shop) assert.ok(expr.includes(r), `the filter asks for shop=${r}`);
 });
 
-test('ST10: the stores pack is published only when a block of it changed; the workflows carry it', { todo: 'test first' }, async () => {
+test('ST10: the stores pack is published only when a block of it changed; the workflows carry it', async () => {
   const { decideStores } = await load('publish');
   const blocks = { '8/75/95': '0123456789abcdef' };
   const m = (stores?: unknown) => ({ schema: 1, regions: [{ id: 'us', current: { file: 'places-us-1.pmtiles', version: '1', bounds: [0, 0, 0, 0] }, previous: [], ...(stores ? { stores } : {}) }] });

@@ -3,7 +3,9 @@
 // through `contract/places.schema.json`. A new name is a contract change: bump CONTRACT_VERSION and tell the app.
 // v2 (Remarkable and public, RD13): the listed places' classes by type, and `heritage_building` renamed
 // `building_structure`, since no class name may name a register or significance (the data side of the app's RP18).
-export const CONTRACT_VERSION = 2;
+// v3 (the stores pack, docs/stores/spec.md): a separate stores layer with its own schema, dimensions (`what` emitted, `how`
+// reserved) and manifest key `stores`; the places classes are unchanged.
+export const CONTRACT_VERSION = 3;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
 export const CLASS_NAMES = [

@@ -2,6 +2,8 @@
 // Each archive is places-<region>-<version>.pmtiles; the newest version of a region is current. An archive the places
 // pipeline built has places-<region>-<version>.blocks.json beside it, a hash per z8 block of its places, copied into
 // its entry as `blocks` (PP11), so the app rebuilds an area only when its block changed.
+// A stores pack (ST7), stores-<region>-<version>.pmtiles with the same sidecars, is listed under its region's
+// `stores` ({current, previous}) beside `current`; a region with none has no `stores` key, as in older manifests.
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,7 +13,7 @@ if (!dir) {
   console.error('usage: manifest.mjs <dir>');
   process.exit(1);
 }
-const NAME = /^places-([a-z0-9]+)-(\d{8}(?:\.\d+)?)\.pmtiles$/;
+const NAME = /^(places|stores)-([a-z0-9]+)-(\d{8}(?:\.\d+)?)\.pmtiles$/;
 
 /** Bounds and zooms from the PMTiles v3 header (127 bytes). */
 function header(buf) {
@@ -21,23 +23,31 @@ function header(buf) {
 }
 
 const byRegion = new Map();
+const storesByRegion = new Map();
 for (const file of readdirSync(dir)) {
   const m = NAME.exec(file);
   if (!m) continue;
   const path = join(dir, file);
   const buf = readFileSync(path);
-  const entry = { file, version: m[2], bytes: statSync(path).size, sha256: createHash('sha256').update(buf).digest('hex'), ...header(buf) };
+  const entry = { file, version: m[3], bytes: statSync(path).size, sha256: createHash('sha256').update(buf).digest('hex'), ...header(buf) };
   const blocks = path.replace(/\.pmtiles$/, '.blocks.json');
   if (existsSync(blocks)) entry.blocks = JSON.parse(readFileSync(blocks, 'utf8'));
   // RD11: the pack's license family, from its sidecar (`odbl` when OpenStreetMap changed it); none means CC0.
   const license = path.replace(/\.pmtiles$/, '.license');
   if (existsSync(license)) entry.license = readFileSync(license, 'utf8').trim();
-  if (!byRegion.has(m[1])) byRegion.set(m[1], []);
-  byRegion.get(m[1]).push(entry);
+  const into = m[1] === 'stores' ? storesByRegion : byRegion;
+  if (!into.has(m[2])) into.set(m[2], []);
+  into.get(m[2]).push(entry);
 }
 
 const regions = [...byRegion].sort(([a], [b]) => a.localeCompare(b)).map(([id, list]) => {
   list.sort((a, b) => b.version.localeCompare(a.version, 'en', { numeric: true }));
-  return { id, current: list[0], previous: list.slice(1) };
+  const region = { id, current: list[0], previous: list.slice(1) };
+  const stores = storesByRegion.get(id);
+  if (stores) {
+    stores.sort((a, b) => b.version.localeCompare(a.version, 'en', { numeric: true }));
+    region.stores = { current: stores[0], previous: stores.slice(1) };
+  }
+  return region;
 });
 process.stdout.write(JSON.stringify({ schema: 1, regions }, null, 2) + '\n');

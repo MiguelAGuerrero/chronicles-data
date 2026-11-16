@@ -10,6 +10,7 @@ export const ZOOM = 12;
 const EXTENT = 4096;
 const LAYER = 'places';
 const FIELDS = ['name', 'class', 'src', 'id'];
+const ATTRIBUTION = 'Wikidata (CC0); National Register of Historic Places (public domain); © OpenStreetMap contributors (ODbL)';
 /** What the reader fetches first: the header and the root directory must fit in it. */
 const FIRST_READ = 16384;
 const HEADER = 127;
@@ -24,8 +25,8 @@ function tileOf(lon, lat, z) {
   return { x: Math.floor(fx), y: Math.floor(fy), fx, fy };
 }
 
-function encodeTile(places, z, x, y) {
-  const keys = FIELDS;
+function encodeTile(places, z, x, y, layer, fields) {
+  const keys = fields;
   const values = [];
   const index = (v) => {
     let i = values.indexOf(v);
@@ -36,13 +37,14 @@ function encodeTile(places, z, x, y) {
     const t = tileOf(p.lon, p.lat, z);
     const px = Math.round((t.fx - x) * EXTENT);
     const py = Math.round((t.fy - y) * EXTENT);
-    const tags = FIELDS.flatMap((k, i) => [i, index(String(p[k]))]);
+    // A field a feature lacks is left out of its tags (every place has all four, so the places pack is as before).
+    const tags = fields.flatMap((k, i) => (p[k] == null ? [] : [i, index(String(p[k]))]));
     return { tags, geom: [1 | (1 << 3), zig(px), zig(py)] };
   });
   const pbf = new PbfWriter();
   pbf.writeMessage(3, (_, w) => {
     w.writeVarintField(15, 2);
-    w.writeStringField(1, LAYER);
+    w.writeStringField(1, layer);
     for (const f of features)
       w.writeMessage(2, (__, q) => {
         q.writePackedVarint(2, f.tags);
@@ -110,9 +112,11 @@ const e7 = (v) => Math.round(v * 1e7);
 
 /**
  * PW14: places [{name, lon, lat, class, src, id}] to one archive. Tiles are clustered by tile id, so the file's
- * bytes follow the map.
+ * bytes follow the map. The options default to the places pack's; the stores pack (ST7) passes its own `layer`,
+ * `fields` (flat string properties), `attribution` and `extra` (more keys for the metadata), and no option changes
+ * the places pack's bytes.
  */
-export function writeArchive(places, { name = 'Chronicles places', firstRead = FIRST_READ } = {}) {
+export function writeArchive(places, { name = 'Chronicles places', firstRead = FIRST_READ, layer = LAYER, fields = FIELDS, attribution = ATTRIBUTION, extra = {} } = {}) {
   const sorted = [...places].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   const byTile = new Map();
   for (const p of sorted) {
@@ -127,7 +131,7 @@ export function writeArchive(places, { name = 'Chronicles places', firstRead = F
   let offset = 0;
   for (const id of ids) {
     const t = byTile.get(id);
-    const data = gzipSync(Buffer.from(encodeTile(t.places, ZOOM, t.x, t.y)), { level: 9 });
+    const data = gzipSync(Buffer.from(encodeTile(t.places, ZOOM, t.x, t.y, layer, fields)), { level: 9 });
     entries.push({ id, offset, length: data.length, run: 1 });
     datas.push(data);
     offset += data.length;
@@ -135,8 +139,9 @@ export function writeArchive(places, { name = 'Chronicles places', firstRead = F
   const tileData = Buffer.concat(datas);
   const metadata = gzipSync(Buffer.from(JSON.stringify({
     name,
-    attribution: 'Wikidata (CC0); National Register of Historic Places (public domain); © OpenStreetMap contributors (ODbL)',
-    vector_layers: [{ id: LAYER, minzoom: ZOOM, maxzoom: ZOOM, fields: Object.fromEntries(FIELDS.map((f) => [f, 'String'])) }],
+    attribution,
+    vector_layers: [{ id: layer, minzoom: ZOOM, maxzoom: ZOOM, fields: Object.fromEntries(fields.map((f) => [f, 'String'])) }],
+    ...extra,
   })), { level: 9 });
   const { root, leaves } = directories(entries, firstRead);
 

@@ -72,3 +72,9 @@ still finds its file.
 - Data from Wikidata: CC0.
 - National Register of Historic Places data: public domain.
 - Data from OpenStreetMap: © OpenStreetMap contributors, under the [Open Database License 1.0](https://opendatacommons.org/licenses/odbl/1-0/). An archive OpenStreetMap changed (a place it showed open, closed or gone, docs/remarkable-and-public RD11) is a derived database, published under the ODbL: the region's one pack, its CC0 and public-domain places inside it. The pipeline's state pre-release holds OpenStreetMap's filtered answers under the same license.
+
+## Stores pack
+
+A second, separate layer for the app's outings: shops by what they sell (`what`: antiques, vintage, books, records, maps,
+art_supplies, crafts), never by a rating or a crowd. `stores-<region>-<version>.pmtiles` is listed in the manifest under a
+region's `stores`; it never touches the places pack. See `docs/stores/spec.md` (ST1-ST10) and `contract/stores.schema.json`.

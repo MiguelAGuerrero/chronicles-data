@@ -1,0 +1,157 @@
+[
+  {
+    "id": "s_0000000000000001",
+    "name": "Old Tin Antiques",
+    "at": [
+      -75.37,
+      40.61
+    ],
+    "facets": {
+      "what": [
+        "antiques"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000002",
+    "name": "Starred Books",
+    "at": [
+      -75.384,
+      40.625
+    ],
+    "facets": {
+      "what": [
+        "books"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000003",
+    "name": "Spin Records",
+    "at": [
+      -75.372,
+      40.613
+    ],
+    "facets": {
+      "what": [
+        "records"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000004",
+    "name": "Chartroom",
+    "at": [
+      -75.373,
+      40.614
+    ],
+    "facets": {
+      "what": [
+        "maps"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000005",
+    "name": "Easel & Brush",
+    "at": [
+      -75.374,
+      40.615
+    ],
+    "facets": {
+      "what": [
+        "art_supplies"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000006",
+    "name": "Clay Bench",
+    "at": [
+      -75.375,
+      40.616
+    ],
+    "facets": {
+      "what": [
+        "crafts"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000007",
+    "name": "Thread Shed",
+    "at": [
+      -75.376,
+      40.617
+    ],
+    "facets": {
+      "what": [
+        "crafts"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000008",
+    "name": "Second Time Clothes",
+    "at": [
+      -75.377,
+      40.618
+    ],
+    "facets": {
+      "what": [
+        "vintage"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_0000000000000009",
+    "name": "Odd Lots",
+    "at": [
+      -75.378,
+      40.619
+    ],
+    "facets": {
+      "what": [
+        "vintage"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_000000000000000a",
+    "name": "Wide Antiques & Books",
+    "at": [
+      -75.3828,
+      40.6242
+    ],
+    "facets": {
+      "what": [
+        "antiques",
+        "books"
+      ]
+    },
+    "src": "osm"
+  },
+  {
+    "id": "s_000000000000000b",
+    "name": "Lehigh Books",
+    "at": [
+      -75.3709,
+      40.6121
+    ],
+    "facets": {
+      "what": [
+        "books"
+      ]
+    },
+    "src": "osm"
+  }
+]

@@ -1,6 +1,6 @@
 {
   "$comment": "Generated from src/schema.ts by `npm run contract`; a test fails when they differ (PP5).",
-  "contractVersion": 2,
+  "contractVersion": 3,
   "candidate": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

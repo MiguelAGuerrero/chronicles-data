@@ -36,9 +36,24 @@ jobs:
         run: |
           mkdir -p site
           gh release list --repo "$GITHUB_REPOSITORY" --limit 50 --json tagName,isDraft,isPrerelease,publishedAt \
-            --jq '[.[] | select((.isDraft or .isPrerelease) | not)] | sort_by(.publishedAt) | reverse | .[:'"$KEEP"'] | .[].tagName' > tags.txt
+            --jq '[.[] | select((.isDraft or .isPrerelease) | not)] | sort_by(.publishedAt) | reverse | .[].tagName' > all.txt
+          # ST10: a release may carry only the places pack or only the stores pack, so the newest KEEP releases are
+          # chosen for each kind apart; a stores-only week must not push the places pack off the site, nor the reverse.
+          : > tags.txt
+          for kind in places stores; do
+            n=0
+            while read -r tag; do
+              [ "$n" -ge "$KEEP" ] && break
+              if gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -q "^$kind-.*\.pmtiles$"; then
+                echo "$tag" >> tags.txt
+                n=$((n + 1))
+              fi
+            done < all.txt
+          done
+          sort -u tags.txt -o tags.txt
           while read -r tag; do
-            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'places-*.pmtiles' --pattern 'places-*.blocks.json' --pattern 'places-*.license' --dir site --skip-existing
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern 'places-*.pmtiles' --pattern 'places-*.blocks.json' --pattern 'places-*.license' \
+              --pattern 'stores-*.pmtiles' --pattern 'stores-*.blocks.json' --pattern 'stores-*.license' --dir site --skip-existing
           done < tags.txt
       - name: Write the manifest, and serve the contract beside it
         run: |

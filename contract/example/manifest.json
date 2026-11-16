@@ -23,7 +23,28 @@
           "8/76/96": "6e49ab212503056f"
         }
       },
-      "previous": []
+      "previous": [],
+      "stores": {
+        "current": {
+          "file": "stores-example-20261109.pmtiles",
+          "version": "20261109",
+          "bytes": 796,
+          "sha256": "57b02321d9742ef7bbfcf3cd2838f7c20d59f62d977e2b45c042264b0eeac2ab",
+          "minzoom": 12,
+          "maxzoom": 12,
+          "bounds": [
+            -75.384,
+            40.61,
+            -75.37,
+            40.625
+          ],
+          "blocks": {
+            "8/74/96": "20491e8d370f2527"
+          },
+          "license": "odbl"
+        },
+        "previous": []
+      }
     }
   ]
 }

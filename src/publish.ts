@@ -29,3 +29,12 @@ export function decide({ region, blocks, manifest, unreachable = false, license 
   if (license && (current.license ?? 'cc0') !== license) return { publish: true, reason: `license now ${license}` };
   return sameBlocks(current.blocks, blocks) ? { publish: false, reason: 'unchanged' } : { publish: true, reason: 'changed' };
 }
+
+/**
+ * ST10: whether to publish a region's stores pack, from its blocks and the live manifest's `stores.current.blocks`; the
+ * same rule as the places pack's, so a week in which no block of the stores changed publishes nothing.
+ */
+export function decideStores({ region, blocks, manifest, unreachable = false }: { region: string; blocks: Record<string, string> | null; manifest: Manifest | null; unreachable?: boolean }) {
+  const view: Manifest | null = manifest && { ...manifest, regions: (manifest.regions ?? []).map((r) => ({ id: r.id, current: (r as { stores?: { current?: ManifestFile } }).stores?.current })) };
+  return decide({ region, blocks, manifest: view, unreachable });
+}
