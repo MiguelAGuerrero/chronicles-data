@@ -17,7 +17,7 @@ unremarkable".
 
 ## Vision
 
-The app's gate (0187): aligned if reshaped. Subtypes filter what is shown and are never counted (PP5 holds: nothing in
+The app's gate (0191): aligned if reshaped. Subtypes filter what is shown and are never counted (PP5 holds: nothing in
 the contract can hold a count, rank or score); a class comes from a type, tag or name; the truly unremarkable stays out.
 
 ## Decisions (the owner's calls, Nov 17)
