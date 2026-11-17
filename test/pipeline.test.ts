@@ -227,7 +227,7 @@ test('PP5: every object in the schema is closed and the only numbers are a posit
 test('PP6: from the same Wikidata items the pipeline yields the same places, through a gate blind to sources', async () => {
   const expected = JSON.parse(readFileSync(join(FIX, 'expected-places.json'), 'utf8'));
   const r = await run(opts({ store: tmpStore() }));
-  assert.deepEqual(placesOf(r.packs), expected, 'the places the places archive built from these items (frozen Nov 9; heritage_building renamed building_structure in contract v2, RD13; a ghost town is ghost_town in v4, ST2)');
+  assert.deepEqual(placesOf(r.packs), expected, 'the places the places archive built from these items (frozen Nov 9; heritage_building renamed building_structure in contract v2, RD13)');
   const gateSrc = readFileSync(join(ROOT, 'src/gate.ts'), 'utf8');
   assert.doesNotMatch(gateSrc, /from '\.\/adapters|from '\.\/runner/, 'the gate imports no adapter');
   const gateFn = gateSrc.slice(gateSrc.indexOf('export function gate('), gateSrc.indexOf('\n}\n', gateSrc.indexOf('export function gate(')));

@@ -41,12 +41,8 @@ changed). An adapter is a declaration (license, attribution, pace, allowed uses,
 runner refuses one whose declaration is incomplete. Only a source whose role is `locates` puts a place on the map; a
 `nominates` source only reaches the run's review list. A `confirms` source may name classes it locates (`locates`):
 OpenStreetMap locates a pinned table of small places (time capsules, plaques, public bookcases, small memorials, old
-stones, wayside shrines, typed artworks, community gardens; `docs/small-places/spec.md`; since contract v4 also
-fountains, war memorials, mills, lighthouses, water towers, old machines, botanical gardens, waterfalls, caves, hot
-springs, old trees, carousels and bandstands, `docs/subtypes/spec.md`) and confirms the rest. A place of the classes
-that may be unnamed may have an empty name; the app names it by its type. Contract v4 also splits classes by what a
-place is: a listed place takes its type root's class (a bridge, a mill, a station, a courthouse), and ghost towns,
-war memorials and historical markers have classes of their own.
+stones, wayside shrines, typed artworks, community gardens; `docs/small-places/spec.md`) and confirms the rest. A small
+place may have an empty name; the app names it by its type.
 
 `docs/spec.md` has the criteria (PP1-PP16, CT1-CT2, and those carried from the app's Places worth the stop), and
 `docs/plan.md` the plan as written before the code.
