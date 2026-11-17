@@ -1,5 +1,5 @@
 {
-  "contractVersion": 5,
+  "contractVersion": 6,
   "classes": [
     "monument",
     "memorial",
@@ -56,7 +56,11 @@
     "carousel",
     "zoo",
     "fire_tower",
-    "ghost_town"
+    "ghost_town",
+    "museum_by_type",
+    "nature_reserve",
+    "amusement_park",
+    "pier"
   ],
   "sources": [
     {

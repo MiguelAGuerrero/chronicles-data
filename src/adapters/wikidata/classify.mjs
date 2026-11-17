@@ -15,14 +15,14 @@ export const ORDER = [
   // What it is, by type (ST1): structures, nature, culture.
   'bridge', 'lighthouse', 'mill', 'water_tower', 'clock_tower', 'fort', 'historic_machine', 'mausoleum',
   'waterfall', 'cave', 'hot_spring', 'old_tree', 'garden', 'community_garden',
-  'concert_hall', 'observatory', 'carousel', 'zoo', 'archaeological_site',
+  'concert_hall', 'observatory', 'carousel', 'zoo', 'amusement_park', 'museum_by_type', 'archaeological_site', 'nature_reserve', 'pier',
   // It is one of the odd classes: a curiosity; a milestone is an old stone before it marks a fact; a ghost town before a ruin.
   'folly', 'novelty_building', 'roadside_giant', 'natural_oddity', 'odd_engineering', 'old_stone', 'marks_a_fact', 'art_environment', 'ghost_town', 'ruin',
 ];
 
 /** Wikidata classes per archive class (usage counts on 2026-11-06 in the comments). */
 export const CLASSES = {
-  monument: ['Q4989906', 'Q170980'], // monument 48,814; obelisk 1,134
+  monument: ['Q4989906', 'Q170980', 'Q893745'], // monument 48,814; obelisk 1,134; national monument 76 (AT5)
   // ST2: war memorial moved to its own class (Nov 17).
   war_memorial: ['Q575759'], // war memorial 66,515
   memorial: ['Q5003624'], // memorial 20,074
@@ -36,7 +36,7 @@ export const CLASSES = {
   overlook: ['Q6017969', 'Q177305'], // scenic viewpoint 1,510; observation deck 165
   tower: ['Q1440300'], // observation tower 1,891
   fire_tower: ['Q748998'], // fire lookout tower 277 (from tower)
-  bridge: ['Q1825472'], // covered bridge 896 (from odd_engineering)
+  bridge: ['Q1825472', 'Q12570'], // covered bridge 896 (from odd_engineering); suspension bridge 122 (AT5)
   lighthouse: ['Q39715'], // lighthouse 888 (from odd_engineering)
   mill: ['Q185187', 'Q38720'], // watermill 142; windmill 56
   water_tower: ['Q274153'], // water tower 146
@@ -48,12 +48,27 @@ export const CLASSES = {
   cave: ['Q2232001'], // show cave 112
   hot_spring: ['Q177380', 'Q83471'], // hot spring 170; geyser 106
   old_tree: ['Q811534'], // remarkable tree 120
-  garden: ['Q167346', 'Q272231', 'Q15835', 'Q291177'], // botanical garden 704; arboretum 82; Japanese garden 27; rose garden 14
+  garden: ['Q167346', 'Q272231', 'Q15835', 'Q291177', 'Q1107656', 'Q1759852', 'Q84343482', 'Q55177716', 'Q47692', 'Q140470772', 'Q11507581'],
+  // botanical garden 704; arboretum 82; Japanese garden 27; rose garden 14; AT3: garden 73, sculpture garden 73, memorial
+  // garden 12, public garden 9, Chinese garden 4, peace garden 3, Japanese garden outside Japan 7 (US, Nov 17)
   community_garden: ['Q251958'], // community garden 114
   concert_hall: ['Q1060829', 'Q153562'], // concert hall 190; opera house 218
   observatory: ['Q62832', 'Q148319'], // observatory 76; planetarium 43
   carousel: ['Q208322', 'Q3126170'], // carousel 70; bandstand 30
   zoo: ['Q43501', 'Q2281788'], // zoo 337; public aquarium 74
+  // AT5: amusement park 366, water park 108, theme park 35, animal theme park 8, marine mammal park 6, indoor water park 3.
+  amusement_park: ['Q194195', 'Q740326', 'Q2416723', 'Q3363974', 'Q15060435', 'Q15411990'],
+  // AT2: the museum types that hold the US's museums with coordinates (5,866 in all, Nov 17); a listed museum stays `museum`.
+  museum_by_type: [
+    'Q33506', 'Q207694', 'Q16735822', 'Q54934129', 'Q4828724', 'Q2772772', 'Q1595639', 'Q16761700', 'Q18704634', 'Q842478',
+    'Q1863818', 'Q588140', 'Q1970365', 'Q787934', 'Q756102', 'Q866133', 'Q17455058', 'Q10624527', 'Q11786880', 'Q111889841',
+    'Q78458396', 'Q18411786', 'Q2087181', 'Q3499307',
+  ],
+  // AT4: nature reserve 390, National Wildlife Refuge 577, wildlife refuge 109, Washington State Wildlife Area 208, national
+  // preserve 17, ecological reserve 6, state wildlife refuge 8.
+  nature_reserve: ['Q179049', 'Q1410668', 'Q1377575', 'Q104905143', 'Q841646', 'Q5333253', 'Q140963225'],
+  // AT5: pier 87, boardwalk 24 and 5.
+  pier: ['Q863454', 'Q11111030', 'Q93338609'],
   archaeological_site: ['Q42195'], // petroglyph 17
   folly: ['Q180174'], // folly 359
   novelty_building: ['Q548879'], // novelty architecture 1
@@ -121,7 +136,12 @@ export function listing(item) {
 export function classify(item) {
   const p31 = new Set(item.p31 ?? []);
   if (p31.has(DISTRICT)) return null;
-  for (const cls of ORDER) if (CLASSES[cls].some((q) => p31.has(q))) return cls;
+  for (const cls of ORDER) {
+    if (!CLASSES[cls].some((q) => p31.has(q))) continue;
+    // AT2: a museum that enters by its listing keeps `museum` (the app reads History from it); by type alone, museum_by_type.
+    if (cls === 'museum_by_type' && listing(item)?.cls === 'museum') return 'museum';
+    return cls;
+  }
   return listing(item)?.cls ?? null;
 }
 

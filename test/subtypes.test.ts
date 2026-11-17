@@ -176,14 +176,14 @@ test('ST10: no class name names significance', () => {
 });
 
 // More attractions (docs/attractions/spec.md, AT1-AT6; the owner's calls of Nov 17). Written before the code.
-test('AT1: contract v5: museum_by_type, nature_reserve, amusement_park, pier', { todo: 'test first' }, () => {
-  assert.equal(CONTRACT_VERSION, 5);
+test('AT1: contract v6: museum_by_type, nature_reserve, amusement_park, pier', () => {
+  assert.equal(CONTRACT_VERSION, 6);
   for (const c of ['museum_by_type', 'nature_reserve', 'amusement_park', 'pier']) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
-  assert.equal(sources.contractVersion, 5);
+  assert.equal(sources.contractVersion, 6);
 });
 
-test('AT2: a museum by type is museum_by_type; a listed or Landmark museum stays museum', { todo: 'test first' }, async () => {
+test('AT2: a museum by type is museum_by_type; a listed or Landmark museum stays museum', async () => {
   const { classify } = await wd();
   for (const q of ['Q33506', 'Q207694', 'Q16735822', 'Q4828724', 'Q842478', 'Q588140', 'Q78458396', 'Q2087181']) assert.equal(classify({ p31: [q] }), 'museum_by_type', q);
   assert.equal(classify({ p31: ['Q33506'], listed: true }), 'museum');
@@ -192,19 +192,19 @@ test('AT2: a museum by type is museum_by_type; a listed or Landmark museum stays
   assert.equal(classify({ p31: ['Q575727', 'Q33506'] }), 'historic_machine');
 });
 
-test('AT3: every pinned garden type is a garden; an urban park, an orchard or a garden square is not', { todo: 'test first' }, async () => {
+test('AT3: every pinned garden type is a garden; an urban park, an orchard or a garden square is not', async () => {
   const { classify } = await wd();
   for (const q of ['Q1107656', 'Q1759852', 'Q84343482', 'Q55177716', 'Q47692', 'Q140470772', 'Q11507581', 'Q167346']) assert.equal(classify({ p31: [q] }), 'garden', q);
   for (const q of ['Q22746', 'Q236371', 'Q2026833']) assert.equal(classify({ p31: [q] }), null, q);
 });
 
-test('AT4: reserves and refuges are nature_reserve; research areas, biosphere reserves and marine sanctuaries are not asked', { todo: 'test first' }, async () => {
+test('AT4: reserves and refuges are nature_reserve; research areas, biosphere reserves and marine sanctuaries are not asked', async () => {
   const { classify, ALL_CLASS_IDS } = (await wd()) as Awaited<ReturnType<typeof wd>> & { ALL_CLASS_IDS: string[] };
   for (const q of ['Q179049', 'Q1410668', 'Q1377575', 'Q104905143', 'Q841646', 'Q5333253', 'Q140963225']) assert.equal(classify({ p31: [q] }), 'nature_reserve', q);
   for (const q of ['Q7315119', 'Q158454', 'Q1701122']) assert.ok(!ALL_CLASS_IDS.includes(q), q);
 });
 
-test('AT5: amusement parks, piers, suspension bridges and national monuments', { todo: 'test first' }, async () => {
+test('AT5: amusement parks, piers, suspension bridges and national monuments', async () => {
   const { classify } = await wd();
   for (const q of ['Q194195', 'Q740326', 'Q2416723', 'Q3363974', 'Q15060435', 'Q15411990']) assert.equal(classify({ p31: [q] }), 'amusement_park', q);
   for (const q of ['Q863454', 'Q11111030', 'Q93338609']) assert.equal(classify({ p31: [q] }), 'pier', q);
@@ -212,7 +212,7 @@ test('AT5: amusement parks, piers, suspension bridges and national monuments', {
   assert.equal(classify({ p31: ['Q893745'] }), 'monument');
 });
 
-test('AT6: the new types are among the targets a run asks, so a first run asks them whole', { todo: 'test first' }, async () => {
+test('AT6: the new types are among the targets a run asks, so a first run asks them whole', async () => {
   const { ALL_TARGETS } = await import(String('../src/adapters/wikidata/query'));
   for (const q of ['Q33506', 'Q1410668', 'Q194195', 'Q863454']) assert.ok((ALL_TARGETS as string[]).includes(q), q);
 });

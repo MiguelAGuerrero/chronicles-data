@@ -2,7 +2,7 @@
 
 Nov 17, 2026 · the owner, from the app's `specs/more-attractions` (its decision on the same day).
 
-Contract v5 asks Wikidata for conventional attractions it measured on Nov 17 and the archive left out: every museum by
+Contract v6 asks Wikidata for conventional attractions it measured on Nov 17 and the archive left out: every museum by
 type (5,866 US museums with coordinates; 942 reached the pack, only through a listing), every kind of garden, nature
 reserves and wildlife refuges, amusement and water parks, suspension bridges, piers and boardwalks, national monuments.
 Source and licence unchanged (Wikidata, CC0). Type decides (0103); nothing is fetched only to sort a place (the app's 0117).
@@ -18,7 +18,7 @@ Source and licence unchanged (Wikidata, CC0). Type decides (0103); nothing is fe
 
 ## Criteria
 
-- **AT1** contract v5: the classes `museum_by_type`, `nature_reserve`, `amusement_park`, `pier`; `CONTRACT_VERSION` 5.
+- **AT1** contract v6: the classes `museum_by_type`, `nature_reserve`, `amusement_park`, `pier`; `CONTRACT_VERSION` 6 (v5 went to the stores pack).
 - **AT2** a museum of any of the pinned museum types enters as `museum_by_type`; a listed or Landmark museum stays
   `museum`, whatever else it is typed.
 - **AT3** a garden of the pinned garden types (garden, sculpture, memorial, public, Chinese, peace and Japanese gardens
