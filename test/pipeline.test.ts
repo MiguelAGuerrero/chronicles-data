@@ -396,3 +396,62 @@ test('PP15: the weekly workflow runs the stages in order, keeps the state asset 
     server.close();
   }
 });
+
+// Nov 17: three failed Wikidata runs in a day pushed the last complete one out of the saved state, leaving no answers
+// to fall back on; and a pack built with a locating source's answers missing would have been published as changed.
+test('PP15, Nov 17: keeping the newest runs never drops the newest complete one', () => {
+  const store = tmpStore();
+  const at = '2026-11-16T07:17:00Z';
+  store.start('wikidata', '20261116.17', at);
+  store.put('wikidata', '20261116.17', 'a.json', '{}', at);
+  store.complete('wikidata', '20261116.17');
+  for (const v of ['20261117.19', '20261117.23', '20261117.24']) {
+    store.start('wikidata', v, at);
+    store.put('wikidata', v, 'a.json', '{}', at);
+  }
+  store.keepNewest('wikidata', 3);
+  assert.equal(store.lastComplete('wikidata', '20261117.25'), '20261116.17', 'the last complete run stays to fall back on');
+});
+
+test('PP12, Nov 17: no pack is published while a source that locates places has no answers at all', () => {
+  const blocks = { '8/1/1': 'aaaaaaaaaaaaaaaa' };
+  const manifest = { schema: 1, regions: [{ id: 'us', current: { file: 'places-us-1.pmtiles', version: '1', blocks: { '8/1/1': 'bbbbbbbbbbbbbbbb' } }, previous: [] }] } as never;
+  const d = decide({ region: 'us', blocks, manifest, missing: ['wikidata'] } as never);
+  assert.equal(d.publish, false);
+  assert.match(d.reason, /wikidata/);
+  assert.equal(decide({ region: 'us', blocks, manifest } as never).publish, true, 'with every source answered, a changed block publishes');
+});
+
+test('PP12, Nov 17: a source whose fetch fails with nothing complete to fall back on is missing; one never run is not', async () => {
+  const store = tmpStore();
+  const failing = { ...listAdapter({ name: 'alpha' }, []), async fetch() { throw new Error('answered 502'); } };
+  // Its first run fails: it has never answered, so it is missing nothing yet.
+  const first = await run(opts({ store, adapters: [failing], version: '20261117.1' }));
+  assert.equal(first.report.sources[0].missing, undefined);
+  // A later run fails too: it has run before and has no answers, so the build is missing it.
+  const second = await run(opts({ store, adapters: [failing], version: '20261117.2' }));
+  assert.equal(second.report.sources[0].missing, true);
+});
+
+test('CF2, Nov 17: a held-items check that times out is asked again in halves, never lost whole', async () => {
+  const { fetchHeld } = (await import(String('../src/adapters/wikidata/index'))) as { fetchHeld: (ctx: unknown, ids: string[], since: string, name: string) => Promise<void> };
+  const { SourceTimeout } = await import('../src/http');
+  const put: Record<string, string> = {};
+  const asked: number[] = [];
+  const ctx = {
+    put: (part: string, body: string) => { put[part] = body; },
+    http: async (_u: string, init: { body: string }) => {
+      const n = (decodeURIComponent(init.body).match(/wd:Q/g) ?? []).length;
+      asked.push(n);
+      // A batch over 100 ids times out, as batch 189 of 400 did on Nov 17.
+      if (n > 100) throw new SourceTimeout('timed out');
+      return new Response(JSON.stringify({ results: { bindings: [] } }));
+    },
+  };
+  const ids = Array.from({ length: 400 }, (_, i) => `Q${i + 1}`);
+  await fetchHeld(ctx, ids, '2026-11-15T00:00:00Z', 'held_r_1_189');
+  assert.ok(asked.filter((n) => n <= 100).reduce((a, b) => a + b, 0) === 400, `every id asked once in a part that answered (${asked})`);
+  assert.ok(Object.keys(put).every((p) => /^held_r_1_189(-[0-9]+)*\.json$/.test(p)), Object.keys(put).join(' '));
+  // Settling reads the halves as it reads a whole check: the run and its time from the name.
+  for (const p of Object.keys(put)) assert.deepEqual(p.replace(/\.json$/, '').split('_').slice(1, 3), ['r', '1']);
+});

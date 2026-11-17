@@ -10,7 +10,7 @@ import type { RawStore } from './rawStore';
 import { CandidateSchema, DeclarationSchema, type Candidate, type LicenseFamily, type Place } from './schema';
 
 export interface Report {
-  sources: { name: string; run: string | null; fellBack?: string; error?: string }[];
+  sources: { name: string; run: string | null; fellBack?: string; error?: string; missing?: boolean }[];
   setAside: { source: string; part: string; reason: string }[];
   /** Nominations, for the owner to read: never in a pack, the registry or the crosswalk (PP7). */
   review: { source: string; name: string; evidence?: string }[];
@@ -183,6 +183,9 @@ export async function run(o: RunOptions): Promise<RunResult> {
       used = o.store.parts(d.name, o.version).length ? o.version : o.store.lastComplete(d.name, `${o.version}~`);
     }
     entry.run = used;
+    // PP12, Nov 17: a source that has run before but has no answers now (its fetch failed with nothing complete to fall
+    // back on) is missing; a source that has never run is not (it has contributed nothing yet).
+    if (!used && o.store.runs(d.name).some((r) => r !== o.version)) entry.missing = true;
     report.sources.push(entry);
     if (!used) continue;
 

@@ -139,9 +139,14 @@ export function createRawStore(dir: string) {
         if (now - newest > retentionDays * 86_400_000) rmSync(runDir(source, r), { recursive: true, force: true });
       }
     },
-    /** PP15: keeps a source's newest `n` runs, so the saved state stays a few weeks long. */
+    /**
+     * PP15: keeps a source's newest `n` runs, so the saved state stays a few weeks long, and always its newest complete one
+     * (Nov 17: three failed runs in a day pushed the last complete run out, leaving nothing to fall back on).
+     */
     keepNewest(source: string, n: number) {
-      for (const r of runs(source).slice(0, Math.max(0, runs(source).length - n))) rmSync(runDir(source, r), { recursive: true, force: true });
+      const all = runs(source);
+      const lastDone = all.filter((r) => indexOf(source, r).complete).at(-1);
+      for (const r of all.slice(0, Math.max(0, all.length - n))) if (r !== lastDone) rmSync(runDir(source, r), { recursive: true, force: true });
     },
     sources(): string[] {
       return existsSync(dir) ? readdirSync(dir).filter((s) => SAFE.test(s)).sort() : [];

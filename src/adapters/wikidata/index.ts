@@ -69,6 +69,25 @@ async function fetchCell(ctx: FetchContext, cell: Box, depth: number, targets?: 
   ctx.put(name(cell), body);
 }
 
+/**
+ * CF2, Nov 17: one held-items check, asked again in halves while it times out (batch 189 of about 190 timed out and lost
+ * the whole fetch). Each half is kept under the check's name with `-1` or `-2` added, which settling reads alike.
+ */
+export async function fetchHeld(ctx: Pick<FetchContext, 'http' | 'put'>, ids: string[], since: string, name: string, depth = 0): Promise<void> {
+  let body: string;
+  try {
+    body = await ask(ctx as FetchContext, heldQuery(ids, since));
+    if (parseAnswer(body) == null) throw new SourceTimeout(`${name}: the answer was cut off`);
+  } catch (e) {
+    if (!(e instanceof SourceTimeout) || ids.length < 2 || depth >= MAX_SPLITS) throw e;
+    const half = Math.ceil(ids.length / 2);
+    await fetchHeld(ctx, ids.slice(0, half), since, `${name}-1`, depth + 1);
+    await fetchHeld(ctx, ids.slice(half), since, `${name}-2`, depth + 1);
+    return;
+  }
+  ctx.put(`${name}.json`, body);
+}
+
 async function sweep(ctx: FetchContext, cells: Box[], indices: number[]) {
   for (const [n, i] of indices.entries()) {
     await fetchCell(ctx, cells[i], 0);
@@ -221,7 +240,7 @@ export const wikidata: Adapter = {
     const held = settleItems(answersOf(ctx), ctx.area).map((h) => h.item.id);
     const sinceS = Math.floor(Date.parse(since) / 1000);
     for (let i = 0; i < held.length; i += IDS_PER_QUERY) {
-      ctx.put(`held_${ctx.run}_${sinceS}_${i / IDS_PER_QUERY}.json`, await ask(ctx, heldQuery(held.slice(i, i + IDS_PER_QUERY), since)));
+      await fetchHeld(ctx, held.slice(i, i + IDS_PER_QUERY), since, `held_${ctx.run}_${sinceS}_${i / IDS_PER_QUERY}`);
     }
     // CF4: this week's share of the safety sweep; CF5: the rest carried.
     const share = sweepShare(cells.length, ctx.week);

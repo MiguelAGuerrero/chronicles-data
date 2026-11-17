@@ -17,7 +17,10 @@ const sameBlocks = (a: Record<string, string>, b: Record<string, string>) => {
 };
 
 /** PP12: whether to publish a region's pack, from its blocks (null when the build made none) and the live manifest. */
-export function decide({ region, blocks, manifest, unreachable = false, license }: { region: string; blocks: Record<string, string> | null; manifest: Manifest | null; unreachable?: boolean; license?: string }) {
+export function decide({ region, blocks, manifest, unreachable = false, license, missing = [] }: { region: string; blocks: Record<string, string> | null; manifest: Manifest | null; unreachable?: boolean; license?: string; missing?: string[] }) {
+  // PP12, Nov 17: a source that locates places with no answers at all (fetch failed, nothing complete to fall back on)
+  // would publish a pack without its places: nothing is published until it answers again.
+  if (missing.length) return { publish: false, reason: `no answers from ${missing.join(', ')}` };
   if (!blocks) return { publish: false, reason: 'no archive built' };
   // One network error must not publish a duplicate (places-worth-the-stop audit 7): only a real 404 is no manifest.
   if (unreachable) return { publish: false, reason: 'manifest unreachable' };
