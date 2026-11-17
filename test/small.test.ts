@@ -93,9 +93,10 @@ test('SL2: the tag table, pinned; any other tag is no place', async () => {
     el({ tourism: 'artwork', name: 'Untyped' }), el({ historic: 'memorial', memorial: 'war_memorial', name: 'War memorial' }),
   ])]);
   assert.deepEqual(classes(r), [
-    'community_garden:Garden', 'marker:Plaque A', 'marker:Plaque B', 'mural:Mosaic', 'mural:Mural', 'old_stone:Mile 12', 'old_stone:Stone',
-    'public_bookcase:Books', 'sculpture:Relief', 'sculpture:Sculpture', 'small_memorial:Anna Frei', 'small_memorial:Bench', 'small_memorial:Ghost bike',
-    'statue:Statue', 'time_capsule:Capsule', 'wayside_shrine:Cross', 'wayside_shrine:Shrine',
+    'community_garden:Garden', 'mural:Mosaic', 'mural:Mural', 'old_stone:Mile 12', 'old_stone:Stone',
+    // ST1 (the owner, Nov 17): OSM's plaques are `plaque`, apart from Wikidata's historical markers; a war memorial is a place.
+    'plaque:Plaque A', 'plaque:Plaque B', 'public_bookcase:Books', 'sculpture:Relief', 'sculpture:Sculpture', 'small_memorial:Anna Frei', 'small_memorial:Bench', 'small_memorial:Ghost bike',
+    'statue:Statue', 'time_capsule:Capsule', 'war_memorial:War memorial', 'wayside_shrine:Cross', 'wayside_shrine:Shrine',
   ]);
 });
 
@@ -112,7 +113,7 @@ test('SL4: an element naming a Wikidata item the build made is that place, not a
 
 test('SL5: a small place may be unnamed; every other class still needs a name', async () => {
   const r = await build([await osmOf([el({ amenity: 'public_bookcase' }), el({ memorial: 'plaque' })])]);
-  assert.deepEqual(classes(r), ['marker:', 'public_bookcase:']);
+  assert.deepEqual(classes(r), ['plaque:', 'public_bookcase:']);
   assert.ok(FeatureSchema.safeParse({ name: '', class: 'public_bookcase', src: 'osm', id: 'p_0000000000000001' }).success);
   assert.ok(!FeatureSchema.safeParse({ name: '', class: 'church', src: 'osm', id: 'p_0000000000000001' }).success, 'a church needs a name');
   assert.ok(!CandidateSchema.safeParse({ source: 'wikidata', sourceId: 'Q1', name: '', class: 'museum', signals: {}, fetchedAt: '2026-11-16T00:00:00Z' }).success);
@@ -126,7 +127,7 @@ test('SL6: unnamed twins of one class within 10 m are one place; never the same 
     el({ amenity: 'public_bookcase' }, { at: a }), el({ amenity: 'public_bookcase' }, { at: near }), el({ amenity: 'public_bookcase' }, { at: far }),
     el({ memorial: 'plaque' }, { at: near }), el({ memorial: 'plaque', name: 'Named plaque' }, { at: a }),
   ])]);
-  assert.deepEqual(classes(r), ['marker:', 'marker:Named plaque', 'public_bookcase:', 'public_bookcase:']);
+  assert.deepEqual(classes(r), ['plaque:', 'plaque:Named plaque', 'public_bookcase:', 'public_bookcase:']);
 });
 
 test('SL7: a way or an area becomes one point inside its bounds; no geometry is no place', async () => {
@@ -158,11 +159,11 @@ test('SL9: the small places come from their own raw part of the same download; t
   assert.deepEqual(classes(r), []);
 });
 
-test('SL10: contract v3: the new classes, locates in sources.json, an empty name only for the small classes', () => {
-  assert.equal(CONTRACT_VERSION, 3);
+test('SL10: contract v3 (v4 since Subtypes, ST1): the new classes, locates in sources.json, an empty name only for the small classes', () => {
+  assert.ok(CONTRACT_VERSION >= 3);
   for (const c of ['small_memorial', 'old_stone', 'wayside_shrine', 'time_capsule', 'public_bookcase', 'community_garden']) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
-  assert.equal(sources.contractVersion, 3);
+  assert.ok(sources.contractVersion >= 3);
   assert.ok(sources.sources.find((s: { name: string }) => s.name === 'osm')?.locates?.includes('public_bookcase'));
 });
 

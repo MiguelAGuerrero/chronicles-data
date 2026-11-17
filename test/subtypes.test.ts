@@ -60,7 +60,7 @@ const NEW = [
   'hot_spring', 'old_tree', 'concert_hall', 'observatory', 'carousel', 'zoo', 'fire_tower', 'ghost_town',
 ];
 
-test('ST1: contract v4: the new classes, OSM locates the extended table', { todo: 'test first' }, () => {
+test('ST1: contract v4: the new classes, OSM locates the extended table', () => {
   assert.equal(CONTRACT_VERSION, 4);
   for (const c of NEW) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
@@ -69,7 +69,7 @@ test('ST1: contract v4: the new classes, OSM locates the extended table', { todo
   for (const c of ['fountain', 'plaque', 'war_memorial', 'mill', 'lighthouse', 'water_tower', 'historic_machine', 'garden', 'waterfall', 'cave', 'hot_spring', 'old_tree', 'carousel']) assert.ok(locates.includes(c), c);
 });
 
-test('ST2: a Wikidata item takes the first class in the order; the moved types land in their new classes', { todo: 'test first' }, async () => {
+test('ST2: a Wikidata item takes the first class in the order; the moved types land in their new classes', async () => {
   const { classify } = await wd();
   const is = (q: string) => classify({ p31: [q] });
   assert.equal(is('Q575759'), 'war_memorial');
@@ -93,7 +93,7 @@ test('ST2: a Wikidata item takes the first class in the order; the moved types l
   assert.equal(classify({ p31: ['Q483453', 'Q860861'] }), 'sculpture');
 });
 
-test('ST3: a listed place takes its type root\'s class; entry is unchanged', { todo: 'test first' }, async () => {
+test('ST3: a listed place takes its type root\'s class; entry is unchanged', async () => {
   const { listing } = await wd();
   assert.deepEqual(listing({ p31: ['Q12280'], listed: true }), { cls: 'bridge', publicType: true, needsOpen: false });
   assert.equal(listing({ p31: ['Q1137809'], listed: true })?.cls, 'civic_building');
@@ -110,7 +110,7 @@ test('ST3: a listed place takes its type root\'s class; entry is unchanged', { t
   assert.equal(listing({ p31: ['Q1081138'], listed: true })?.cls, 'historic_site');
 });
 
-test('ST4: the OSM table, pinned; any other tag is no place; access keeps a place out', { todo: 'test first' }, async () => {
+test('ST4: the OSM table, pinned; any other tag is no place; access keeps a place out', async () => {
   const r = await build([await osmOf([
     el({ amenity: 'fountain', name: 'Fountain' }), el({ memorial: 'plaque', name: 'Plaque' }), el({ memorial: 'war_memorial', name: 'War' }),
     el({ man_made: 'windmill', name: 'Windmill' }), el({ man_made: 'watermill', name: 'Watermill' }), el({ man_made: 'lighthouse', name: 'Light' }),
@@ -128,7 +128,7 @@ test('ST4: the OSM table, pinned; any other tag is no place; access keeps a plac
   ].sort());
 });
 
-test('ST5: a drinking fountain is never a fountain; an artistic one is a sculpture', { todo: 'test first' }, async () => {
+test('ST5: a drinking fountain is never a fountain; an artistic one is a sculpture', async () => {
   const { smallClass } = await osmMod();
   assert.equal(smallClass({ amenity: 'fountain', fountain: 'drinking' }), null);
   assert.equal(smallClass({ amenity: 'fountain', fountain: 'bubbler' }), null);
@@ -138,7 +138,7 @@ test('ST5: a drinking fountain is never a fountain; an artistic one is a sculptu
   assert.equal(smallClass({ amenity: 'fountain', tourism: 'artwork' }), 'sculpture');
 });
 
-test('ST6: the classes that may come unnamed; an unnamed cave or water tower is no place', { todo: 'test first' }, async () => {
+test('ST6: the classes that may come unnamed; an unnamed cave or water tower is no place', async () => {
   for (const c of ['fountain', 'plaque', 'war_memorial', 'mill', 'lighthouse', 'historic_machine', 'waterfall', 'hot_spring', 'old_tree', 'carousel']) assert.ok((UNNAMED_CLASSES as readonly string[]).includes(c), c);
   for (const c of ['water_tower', 'cave', 'garden', 'zoo', 'bridge']) assert.ok(!(UNNAMED_CLASSES as readonly string[]).includes(c), c);
   const r = await build([await osmOf([
@@ -148,29 +148,29 @@ test('ST6: the classes that may come unnamed; an unnamed cave or water tower is 
   assert.deepEqual(classes(r), ['fountain:', 'waterfall:']);
 });
 
-test('ST7: nothing truly unremarkable: springs, dams, benches, give boxes and wrecks are no class', { todo: 'test first' }, async () => {
+test('ST7: nothing truly unremarkable: springs, dams, benches, give boxes and wrecks are no class', async () => {
   const { smallClass } = await osmMod();
-  for (const t of [{ natural: 'spring' }, { waterway: 'dam' }, { amenity: 'bench' }, { amenity: 'give_box' }, { historic: 'wreck' }, { amenity: 'drinking_water' }]) assert.equal(smallClass(t), null, JSON.stringify(t));
+  for (const t of <Record<string, string>[]>[{ natural: 'spring' }, { waterway: 'dam' }, { amenity: 'bench' }, { amenity: 'give_box' }, { historic: 'wreck' }, { amenity: 'drinking_water' }]) assert.equal(smallClass(t), null, JSON.stringify(t));
   const { classify } = await wd();
   // GNIS's springs (Q124714) and dams (Q12323) are never asked for by type.
   assert.equal(classify({ p31: ['Q124714'] }), null);
   assert.equal(classify({ p31: ['Q12323'] }), null);
 });
 
-test('ST8: the review report lists each area\'s places of the new classes with their class', { todo: 'test first' }, async () => {
+test('ST8: the review report lists each area\'s places of the new classes with their class', async () => {
   const r = await build([await osmOf([el({ waterway: 'waterfall', name: 'Bethlehem falls' }, { at: [-75.37, 40.615] })])], {
     reviewAreas: [{ name: 'Bethlehem', bbox: [-75.3918, 40.602, -75.3522, 40.632] }],
   });
   assert.deepEqual(r.report.added?.[0].places.map((p) => [p.name, p.class]), [['Bethlehem falls', 'waterfall']]);
 });
 
-test('ST9: the OSM fetch filter asks for the new tags, so its fetch key changes', { todo: 'test first' }, async () => {
+test('ST9: the OSM fetch filter asks for the new tags, so its fetch key changes', async () => {
   const { SMALL_FILTER } = await osmMod();
   for (const e of ['amenity=fountain', 'man_made=lighthouse', 'man_made=water_tower', 'waterway=waterfall', 'natural=hot_spring', 'historic=cannon', 'attraction=carousel'])
     assert.ok(SMALL_FILTER.expressions.some((x) => x.startsWith(`nwr/${e.split('=')[0]}=`) && x.split('=')[1].split(',').includes(e.split('=')[1])), e);
 });
 
-test('ST10: no class name names significance', { todo: 'test first' }, () => {
+test('ST10: no class name names significance', () => {
   for (const c of CLASS_NAMES) assert.doesNotMatch(c, /notable|remarkable|landmark|listed|champion|wonder|heritage|famous/, c);
   assert.ok((CLASS_NAMES as readonly string[]).includes('old_tree'));
 });
