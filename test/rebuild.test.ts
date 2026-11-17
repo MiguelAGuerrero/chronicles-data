@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { Adapter, Box, FetchContext } from '../src/adapter';
 import { FILTER, osm } from '../src/adapters/osm';
-import { DOWNLOAD_MS, filterExtracts } from '../src/adapters/osm/extract';
+import { DOWNLOAD_MAX_MS, filterExtracts, saveStream, STALL_MS } from '../src/adapters/osm/extract';
 import { wikidata } from '../src/adapters/wikidata';
 import { sourcesArg } from '../src/cli';
 import { emptyRegistry } from '../src/conflate';
@@ -168,7 +168,8 @@ test('RD7: the extracts are asked at Geofabrik\'s US region addresses (north-ame
     previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
   };
   await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-northeast']));
-  assert.deepEqual(urls, ['https://download.geofabrik.de/north-america/us-northeast-latest.osm.pbf']);
+  // Asked twice since Nov 17 (one more try before giving up), always at that address.
+  assert.ok(urls.length > 0 && urls.every((u) => u === 'https://download.geofabrik.de/north-america/us-northeast-latest.osm.pbf'), urls.join(' '));
 });
 
 test('RD7: an extract\'s download has its own long limit, never the 75 s a query gets', async () => {
@@ -181,7 +182,35 @@ test('RD7: an extract\'s download has its own long limit, never the 75 s a query
   };
   await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west']));
   assert.ok(signals[0], 'the download carries its own signal, so politeFetch\'s 75 s one is not used');
-  assert.ok(DOWNLOAD_MS >= 30 * 60_000, 'at least half an hour per extract');
+  // Nov 16: us-west was still arriving when 45 minutes ran out, and the three extracts already read were lost with it.
+  assert.ok(DOWNLOAD_MAX_MS >= 120 * 60_000, 'a slow extract has hours, not 45 minutes');
+  assert.ok(STALL_MS <= 10 * 60_000, 'a download that stops is cut off within minutes');
+});
+
+test('RD7, Nov 17: a download that keeps arriving is saved however long it takes; one that stops arriving is cut off', async () => {
+  const { Readable } = await import('node:stream');
+  const dir = mkdtempSync(join(tmpdir(), 'osm-dl-'));
+  const tick = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  // Twelve chunks 20 ms apart (240 ms in all) with a 60 ms stall limit: slow but steady, so saved whole.
+  const steady = Readable.from((async function* () { for (let i = 0; i < 12; i++) { await tick(20); yield Buffer.from('x'); } })());
+  await saveStream(steady, join(dir, 'a.pbf'), new AbortController(), 60);
+  assert.equal(readFileSync(join(dir, 'a.pbf'), 'utf8'), 'x'.repeat(12));
+  // One chunk, then nothing: cut off once 60 ms pass with no data.
+  const stalled = Readable.from((async function* () { yield Buffer.from('x'); await tick(5_000); yield Buffer.from('y'); })());
+  const c = new AbortController();
+  await assert.rejects(saveStream(stalled, join(dir, 'b.pbf'), c, 60), /stalled/);
+  assert.ok(c.signal.aborted, 'the request is aborted with it');
+});
+
+test('RD7, Nov 17: an extract that fails is asked once more before the run gives up', async () => {
+  const urls: string[] = [];
+  const ctx: FetchContext = {
+    area: AREA, run: '20261117', week: 47, box: null, log: () => {}, put: () => {},
+    http: async (url) => { urls.push(url); return new Response(null, { status: 503 }); },
+    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
+  };
+  await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west']));
+  assert.equal(urls.length, 2);
 });
 
 test('RB8: a push never fetches a weekly source, whatever its fingerprint says', async () => {

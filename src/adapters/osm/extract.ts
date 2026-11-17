@@ -17,10 +17,42 @@ export const GEOFABRIK = 'https://download.geofabrik.de/north-america';
 /** The US in four extracts, a few GB each (Geofabrik's sub-regions). */
 export const US_PARTS = ['us-northeast', 'us-midwest', 'us-south', 'us-west'];
 /**
- * How long one extract may take to download: the polite fetch's 75 s is for a query, and its signal also ends the body,
- * which cut every multi-GB download short (run 9, Nov 11).
+ * How long one extract may take to download at most: the polite fetch's 75 s is for a query, and its signal also ends
+ * the body, which cut every multi-GB download short (run 9, Nov 11). 45 minutes cut us-west short while it was still
+ * arriving (Nov 16), losing the three extracts already read: the limit that matters is a stall, this only a ceiling
+ * inside the job's 300 minutes.
  */
-export const DOWNLOAD_MS = 45 * 60_000;
+export const DOWNLOAD_MAX_MS = 150 * 60_000;
+/** A download that receives nothing for this long has stalled and is cut off (and asked once more). */
+export const STALL_MS = 5 * 60_000;
+/** Tries per extract: a stalled or refused download is asked once more before the run gives up. */
+const TRIES = 2;
+
+/**
+ * Nov 17: writes a download's body to `file`, aborting `controller` (the request) when no data arrives for `stallMs`;
+ * a steady download takes as long as it needs.
+ */
+export async function saveStream(body: NodeJS.ReadableStream, file: string, controller: AbortController, stallMs = STALL_MS): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  const stall = new Promise<never>((_, reject) => {
+    const arm = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const e = new Error(`download stalled: nothing for ${Math.round(stallMs / 1000)} s`);
+        controller.abort(e);
+        (body as unknown as { destroy?: (e: Error) => void }).destroy?.(e);
+        reject(e);
+      }, stallMs);
+    };
+    arm();
+    body.on('data', arm);
+  });
+  try {
+    await Promise.race([pipeline(body as never, createWriteStream(file)), stall]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * One filter set: osmium tags-filter expressions (`nwr/wikidata`), an optional second pass over what the first kept
@@ -55,7 +87,22 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const headers: Record<string, string> = {};
       if (etag) headers['if-none-match'] = etag;
       if (modified) headers['if-modified-since'] = modified;
-      const res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers, signal: AbortSignal.timeout(DOWNLOAD_MS) });
+      let res: Response | null = null;
+      let saved = false;
+      for (let attempt = 1; attempt <= TRIES && !saved; attempt++) {
+        const controller = new AbortController();
+        try {
+          res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(DOWNLOAD_MAX_MS)]) });
+          if (res.status === 304 && held) break;
+          if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
+          await saveStream(Readable.fromWeb(res.body as never), pbf, controller);
+          saved = true;
+        } catch (e) {
+          if (attempt === TRIES) throw e;
+          ctx.log(`osm: ${part} failed (${String((e as Error)?.message ?? e)}); asking once more`);
+        }
+      }
+      if (!res) throw new Error(`${part}: no answer`);
       if (res.status === 304 && held) {
         for (const f of filters) ctx.carry(`${f.name}-${part}.geojsonl`);
         if (etag) ctx.setMeta(`etag:${part}`, etag);
@@ -63,12 +110,10 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         ctx.log(`osm: ${part} unchanged since ${prev.run}, its answers carried`);
         continue;
       }
-      if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
       const tag = res.headers.get('etag');
       const mod = res.headers.get('last-modified');
       if (tag) ctx.setMeta(`etag:${part}`, tag);
       if (mod) ctx.setMeta(`modified:${part}`, mod);
-      await pipeline(Readable.fromWeb(res.body as never), createWriteStream(pbf));
       ctx.log(`osm: ${part} downloaded`);
       for (const f of filters) {
         const kept = join(dir, `${f.name}-${part}.osm.pbf`);
