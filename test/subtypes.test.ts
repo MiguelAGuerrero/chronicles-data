@@ -150,7 +150,7 @@ test('ST6: the classes that may come unnamed; an unnamed cave or water tower is 
 
 test('ST7: nothing truly unremarkable: springs, dams, benches, give boxes and wrecks are no class', { todo: 'test first' }, async () => {
   const { smallClass } = await osmMod();
-  for (const t of [{ natural: 'spring' }, { waterway: 'dam' }, { amenity: 'bench' }, { amenity: 'give_box' }, { historic: 'wreck' }, { amenity: 'drinking_water' }]) assert.equal(smallClass(t), null, JSON.stringify(t));
+  for (const t of <Record<string, string>[]>[{ natural: 'spring' }, { waterway: 'dam' }, { amenity: 'bench' }, { amenity: 'give_box' }, { historic: 'wreck' }, { amenity: 'drinking_water' }]) assert.equal(smallClass(t), null, JSON.stringify(t));
   const { classify } = await wd();
   // GNIS's springs (Q124714) and dams (Q12323) are never asked for by type.
   assert.equal(classify({ p31: ['Q124714'] }), null);
