@@ -413,24 +413,16 @@ test('PP15, Nov 17: keeping the newest runs never drops the newest complete one'
   assert.equal(store.lastComplete('wikidata', '20261117.25'), '20261116.17', 'the last complete run stays to fall back on');
 });
 
-test('PP12, Nov 17: no pack is published while a source that locates places has no answers at all', () => {
-  const blocks = { '8/1/1': 'aaaaaaaaaaaaaaaa' };
-  const manifest = { schema: 1, regions: [{ id: 'us', current: { file: 'places-us-1.pmtiles', version: '1', blocks: { '8/1/1': 'bbbbbbbbbbbbbbbb' } }, previous: [] }] } as never;
-  const d = decide({ region: 'us', blocks, manifest, missing: ['wikidata'] } as never);
-  assert.equal(d.publish, false);
-  assert.match(d.reason, /wikidata/);
-  assert.equal(decide({ region: 'us', blocks, manifest } as never).publish, true, 'with every source answered, a changed block publishes');
-});
-
-test('PP12, Nov 17: a source whose fetch fails with nothing complete to fall back on is missing; one never run is not', async () => {
-  const store = tmpStore();
-  const failing = { ...listAdapter({ name: 'alpha' }, []), async fetch() { throw new Error('answered 502'); } };
-  // Its first run fails: it has never answered, so it is missing nothing yet.
-  const first = await run(opts({ store, adapters: [failing], version: '20261117.1' }));
-  assert.equal(first.report.sources[0].missing, undefined);
-  // A later run fails too: it has run before and has no answers, so the build is missing it.
-  const second = await run(opts({ store, adapters: [failing], version: '20261117.2' }));
-  assert.equal(second.report.sources[0].missing, true);
+test('PP12, Nov 17: a pack that covers under half the live pack\'s blocks is not published', () => {
+  const blocksOf = (n: number, h: string) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`8/${i}/1`, h.repeat(16)]));
+  const manifest = { schema: 1, regions: [{ id: 'us', current: { file: 'places-us-1.pmtiles', version: '1', blocks: blocksOf(10, 'b') }, previous: [] }] } as never;
+  // A build that lost a source's answers (Wikidata's, most of the archive) keeps only a few blocks: never published.
+  const gutted = decide({ region: 'us', blocks: blocksOf(4, 'a'), manifest });
+  assert.equal(gutted.publish, false);
+  assert.match(gutted.reason, /blocks/);
+  // An ordinary week's change, or growth, publishes.
+  assert.equal(decide({ region: 'us', blocks: blocksOf(9, 'a'), manifest }).publish, true);
+  assert.equal(decide({ region: 'us', blocks: blocksOf(14, 'a'), manifest }).publish, true);
 });
 
 test('CF2, Nov 17: a held-items check that times out is asked again in halves, never lost whole', async () => {

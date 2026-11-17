@@ -112,10 +112,8 @@ async function main() {
   }
   const files: string[] = [];
   const reasons: string[] = [];
-  // PP12, Nov 17: every source that puts places on the map must have answers behind this build.
-  const missing = r.report.sources.filter((s) => s.missing && ADAPTERS.find((a) => a.declaration.name === s.name)?.declaration.role !== 'nominates').map((s) => s.name);
   for (const p of r.packs) {
-    const d = decide({ region: p.region, blocks: p.blocks, manifest, unreachable, license: p.license, missing });
+    const d = decide({ region: p.region, blocks: p.blocks, manifest, unreachable, license: p.license });
     reasons.push(`${p.region}: ${d.reason}`);
     if (!d.publish) continue;
     writeFileSync(join(out, p.file), p.bytes);

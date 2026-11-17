@@ -17,10 +17,7 @@ const sameBlocks = (a: Record<string, string>, b: Record<string, string>) => {
 };
 
 /** PP12: whether to publish a region's pack, from its blocks (null when the build made none) and the live manifest. */
-export function decide({ region, blocks, manifest, unreachable = false, license, missing = [] }: { region: string; blocks: Record<string, string> | null; manifest: Manifest | null; unreachable?: boolean; license?: string; missing?: string[] }) {
-  // PP12, Nov 17: a source that locates places with no answers at all (fetch failed, nothing complete to fall back on)
-  // would publish a pack without its places: nothing is published until it answers again.
-  if (missing.length) return { publish: false, reason: `no answers from ${missing.join(', ')}` };
+export function decide({ region, blocks, manifest, unreachable = false, license }: { region: string; blocks: Record<string, string> | null; manifest: Manifest | null; unreachable?: boolean; license?: string }) {
   if (!blocks) return { publish: false, reason: 'no archive built' };
   // One network error must not publish a duplicate (places-worth-the-stop audit 7): only a real 404 is no manifest.
   if (unreachable) return { publish: false, reason: 'manifest unreachable' };
@@ -28,6 +25,11 @@ export function decide({ region, blocks, manifest, unreachable = false, license,
   const current = (manifest.regions ?? []).find((r) => r.id === region)?.current;
   if (!current) return { publish: true, reason: 'new region' };
   if (!current.blocks) return { publish: true, reason: 'no blocks yet' };
+  // PP12, Nov 17: a pack covering under half the live one's blocks has lost a source's answers (all of Wikidata's would
+  // leave a few small places), never a week's change: it is not published, whatever else changed.
+  const was = Object.keys(current.blocks).length;
+  const now = Object.keys(blocks).length;
+  if (now * 2 < was) return { publish: false, reason: `the pack covers ${now} of the live pack's ${was} blocks` };
   // RD11: a region whose license changed is published, its places unchanged or not (a manifest without one is CC0).
   if (license && (current.license ?? 'cc0') !== license) return { publish: true, reason: `license now ${license}` };
   return sameBlocks(current.blocks, blocks) ? { publish: false, reason: 'unchanged' } : { publish: true, reason: 'changed' };
