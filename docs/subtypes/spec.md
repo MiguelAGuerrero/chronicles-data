@@ -1,6 +1,6 @@
 # Subtypes, the data side (ST)
 
-Nov 17, 2026 · the owner, from the app's Explore subtypes (the app's `specs/explore-subtypes`, decision 0187).
+Nov 17, 2026 · the owner, from the app's Explore subtypes (the app's `specs/explore-subtypes`, decision 0191).
 
 The archive's classes split by what a place is, so the app can give each kind its subtypes; new Wikidata types and an
 extended OpenStreetMap table add the places the app could not show at all. Type decides, never a judgment (0103); a
@@ -17,7 +17,7 @@ unremarkable".
 
 ## Vision
 
-The app's gate (0187): aligned if reshaped. Subtypes filter what is shown and are never counted (PP5 holds: nothing in
+The app's gate (0191): aligned if reshaped. Subtypes filter what is shown and are never counted (PP5 holds: nothing in
 the contract can hold a count, rank or score); a class comes from a type, tag or name; the truly unremarkable stays out.
 
 ## Decisions (the owner's calls, Nov 17)

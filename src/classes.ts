@@ -4,7 +4,7 @@
 // v2 (Remarkable and public, RD13): the listed places' classes by type, and `heritage_building` renamed
 // `building_structure`, since no class name may name a register or significance (the data side of the app's RP18).
 // v3 (Small places, SL10; the app's decision 0183): OpenStreetMap's small places, and an empty name for them.
-// v4 (Subtypes, ST1; the app's decision 0187): classes by what a place is, new Wikidata types, OSM's wider table.
+// v4 (Subtypes, ST1; the app's decision 0191): classes by what a place is, new Wikidata types, OSM's wider table.
 export const CONTRACT_VERSION = 4;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
@@ -17,7 +17,7 @@ export const CLASS_NAMES = [
   'building_structure',
   // SL2: small places OpenStreetMap locates (a plaque is a `marker`, an artwork a `mural`, `sculpture` or `statue`).
   'small_memorial', 'old_stone', 'wayside_shrine', 'time_capsule', 'public_bookcase', 'community_garden',
-  // ST1: subtypes (the app's decision 0187): what a place is, from its type, its listed type's root or its tags.
+  // ST1: subtypes (the app's decision 0191): what a place is, from its type, its listed type's root or its tags.
   'fountain', 'sign', 'plaque', 'war_memorial', 'battlefield', 'archaeological_site', 'bridge', 'mill', 'station', 'lighthouse',
   'civic_building', 'fort', 'water_tower', 'clock_tower', 'tavern', 'historic_machine', 'mausoleum', 'garden', 'waterfall', 'cave',
   'hot_spring', 'old_tree', 'concert_hall', 'observatory', 'carousel', 'zoo', 'fire_tower', 'ghost_town',

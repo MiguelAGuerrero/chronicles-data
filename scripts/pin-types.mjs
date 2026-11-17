@@ -44,7 +44,7 @@ export const ROOTS = {
 };
 
 /**
- * ST3 (Subtypes, the app's decision 0187): a listed place's class by its type's root, within the broad class its entry
+ * ST3 (Subtypes, the app's decision 0191): a listed place's class by its type's root, within the broad class its entry
  * decided (`listing` in classify.mjs). Pinned Nov 17 with `--classes`, which leaves the entry groups above as they were.
  */
 export const CLASS_ROOTS = {

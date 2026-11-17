@@ -12,7 +12,7 @@ import type { Clock } from '../src/http';
 import { createRawStore } from '../src/rawStore';
 import { run, type RunOptions } from '../src/runner';
 
-// Subtypes, the data side (docs/subtypes/spec.md, ST1-ST10; the app's decision 0187). Written before the code.
+// Subtypes, the data side (docs/subtypes/spec.md, ST1-ST10; the app's decision 0191). Written before the code.
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const CELL: Box = [-76, 40, -74, 42];

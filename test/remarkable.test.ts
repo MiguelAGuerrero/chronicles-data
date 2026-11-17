@@ -78,7 +78,7 @@ test('RD1: a listed church, cemetery, bridge, mill and station enter by type', a
   ])]);
   assert.deepEqual(names(r), ['Bushkill Gristmill', 'Central Moravian Church', 'Mauch Chunk Station', 'Nisky Hill Cemetery', 'Northampton Street Bridge']);
   assert.equal(classOf(r, 'Central Moravian Church'), 'church');
-  // ST3 (the app's decision 0187): a listed bridge takes its root's class.
+  // ST3 (the app's decision 0191): a listed bridge takes its root's class.
   assert.equal(classOf(r, 'Northampton Street Bridge'), 'bridge');
 });
 

@@ -51,7 +51,7 @@ export const SMALL_TABLE: readonly {
   not?: readonly [string, readonly string[]][];
 }[] = [
   { key: 'memorial', values: ['plaque', 'blue_plaque'], cls: 'plaque' },
-  // ST1: a war memorial before the small memorials (the app's decision 0187).
+  // ST1: a war memorial before the small memorials (the app's decision 0191).
   { key: 'memorial', values: ['war_memorial'], cls: 'war_memorial' },
   { key: 'memorial', values: ['bench', 'ghost_bike', 'stolperstein'], cls: 'small_memorial' },
   { key: 'historic', values: ['milestone', 'boundary_stone'], cls: 'old_stone' },
