@@ -8,6 +8,7 @@
 import type { Adapter } from '../../adapter';
 import type { ClassName } from '../../classes';
 import { fingerprint } from '../../fingerprint';
+import { SHOP_FILTER } from '../../stores/osmShops';
 import { filterExtracts, GEOFABRIK, US_PARTS, type Filter } from './extract';
 
 /** RD8: tags that show a place open to visitors; `historic=building` and the like are no sign. */
@@ -177,15 +178,18 @@ export const osm: Adapter = {
   weekly: true,
 
   // RB2: the extracts it reads and the filter it keeps; the area is the four US parts, whatever the boxes.
-  fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER, SMALL_FILTER]),
+  fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER, SMALL_FILTER, SHOP_FILTER]),
 
   // SL9: both filters from the same download of each extract.
   async fetch(ctx) {
-    await filterExtracts(ctx, [FILTER, SMALL_FILTER]);
+    // ST9: the stores' shop filter rides the same pass, so the week's extracts are downloaded once.
+    await filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER]);
   },
 
   /** RD7: one confirming candidate per Wikidata id an element carries (`wikidata=Q1;Q2` speaks for both); SL9: the small part locates. */
   adapt(raw, part, fetchedAt) {
+    // ST6: the shops' part belongs to the stores pack (src/stores), never to places.
+    if (part.startsWith(`${SHOP_FILTER.name}-`)) return [];
     if (part.startsWith(`${SMALL_FILTER.name}-`)) return adaptSmall(raw, fetchedAt);
     const out: unknown[] = [];
     for (const line of raw.split('\n')) {

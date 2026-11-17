@@ -55,7 +55,7 @@ const near = (a: { name: string; at: [number, number] }, b: { name: string; at: 
   norm(a.name) === norm(b.name) && metres(a.at, b.at) <= (a.name.startsWith('#') ? SAME_UNNAMED_M : SAME_PLACE_M);
 
 /** PP8: hands out IDs for one build against the last build's registry. */
-export function createIds(prev: Registry, newId: () => string) {
+export function createIds(prev: Registry, newId: () => string, idPattern: RegExp = /^p_[0-9a-f]{16}$/) {
   const places: Registry['places'] = structuredClone(prev.places);
   const crosswalk: Registry['crosswalk'] = { ...prev.crosswalk };
   const claimed = new Set<string>();
@@ -72,7 +72,7 @@ export function createIds(prev: Registry, newId: () => string) {
   const mint = () => {
     for (;;) {
       const id = newId();
-      if (!/^p_[0-9a-f]{16}$/.test(id)) throw new Error(`newId gave ${id}`);
+      if (!idPattern.test(id)) throw new Error(`newId gave ${id}`);
       if (!(id in places) && !claimed.has(id)) return id;
     }
   };

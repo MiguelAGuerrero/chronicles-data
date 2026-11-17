@@ -20,9 +20,10 @@ import { osm } from './adapters/osm';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
-import { decide } from './publish';
+import { decide, decideStores } from './publish';
 import { createRawStore } from './rawStore';
 import { redistributable, run, staleSources } from './runner';
+import { buildStores } from './stores/build';
 
 /** The adapters, in priority order: the first source's record is promoted whole when two name one place. */
 export const ADAPTERS: Adapter[] = [wikidata, osm];
@@ -99,6 +100,11 @@ async function main() {
     reviewAreas: arg('review-areas') ? JSON.parse(readFileSync(arg('review-areas')!, 'utf8')) : undefined,
   });
 
+  // ST6, ST9: the stores are built from the OSM run's shops parts, apart from the places; their own registry of ids.
+  const storesRegFile = join(state, `registry-stores-${region}.json`);
+  const storesRegistry: Registry = existsSync(storesRegFile) ? JSON.parse(readFileSync(storesRegFile, 'utf8')) : emptyRegistry();
+  const stores = buildStores({ store, run: r.report.sources.find((x) => x.name === 'osm')?.run ?? null, region, version, registry: storesRegistry, newId: () => `s_${randomBytes(8).toString('hex')}` });
+
   let manifest = null;
   let unreachable = false;
   if (url) {
@@ -123,8 +129,21 @@ async function main() {
     files.push(p.file);
   }
   if (!r.packs.length) reasons.push('no archive built');
+  // ST10: the stores pack is published only when a block of it changed, read against the live manifest's `stores`.
+  if (stores.pack) {
+    const p = stores.pack;
+    const d = decideStores({ region: p.region, blocks: p.blocks, manifest, unreachable });
+    reasons.push(`stores ${p.region}: ${d.reason}`);
+    if (d.publish) {
+      writeFileSync(join(out, p.file), p.bytes);
+      writeFileSync(join(out, p.file.replace(/\.pmtiles$/, '.blocks.json')), `${JSON.stringify(p.blocks)}\n`);
+      writeFileSync(join(out, p.file.replace(/\.pmtiles$/, '.license')), 'odbl\n');
+      files.push(p.file);
+    }
+    writeFileSync(storesRegFile, `${JSON.stringify(stores.registry)}\n`);
+  }
   writeFileSync(regFile, `${JSON.stringify(r.registry)}\n`);
-  writeFileSync(join(out, 'report.json'), `${JSON.stringify(r.report, null, 1)}\n`);
+  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, stores: stores.report }, null, 1)}\n`);
   console.log(`publish=${files.length > 0}`);
   console.log(`reason=${reasons.join('; ')}`);
   console.log(`files=${files.join(' ')}`);

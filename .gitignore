@@ -2,6 +2,7 @@
 *.pmtiles
 site/
 tags.txt
+all.txt
 node_modules/
 !contract/example/*.pmtiles
 state/

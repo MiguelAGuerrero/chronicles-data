@@ -6,7 +6,9 @@
 // v3 (Small places, SL10; the app's decision 0183): OpenStreetMap's small places, and an empty name for them.
 // v4 (Subtypes, ST1; the app's decision 0191): classes by what a place is, new Wikidata types, OSM's wider table;
 // published once the app that reads it shipped (Nov 17).
-export const CONTRACT_VERSION = 4;
+// v5 (the stores pack, docs/stores/spec.md; written as v3 on its branch, before v3 and v4 landed): a separate stores layer with
+// its own schema, dimensions (`what` emitted, `how` reserved) and manifest key `stores`; the places classes are unchanged.
+export const CONTRACT_VERSION = 5;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
 export const CLASS_NAMES = [

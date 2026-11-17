@@ -1,0 +1,129 @@
+{
+  "$comment": "Generated from src/stores/schema.ts by `npm run contract`; a test fails when they differ.",
+  "contractVersion": 5,
+  "record": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^s_[0-9a-f]{16}$"
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "at": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "facets": {
+        "type": "object",
+        "properties": {
+          "what": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "antiques",
+                "vintage",
+                "books",
+                "records",
+                "maps",
+                "art_supplies",
+                "crafts",
+                "second_hand"
+              ]
+            }
+          }
+        },
+        "required": [
+          "what"
+        ],
+        "additionalProperties": false
+      },
+      "src": {
+        "type": "string",
+        "pattern": "^[a-z]{2,8}$"
+      }
+    },
+    "required": [
+      "id",
+      "name",
+      "at",
+      "facets",
+      "src"
+    ],
+    "additionalProperties": false
+  },
+  "feature": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "id": {
+        "type": "string"
+      },
+      "src": {
+        "type": "string"
+      },
+      "what": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "id",
+      "src",
+      "what"
+    ],
+    "additionalProperties": false
+  },
+  "dimensions": {
+    "what": {
+      "emitted": true,
+      "values": [
+        "antiques",
+        "vintage",
+        "books",
+        "records",
+        "maps",
+        "art_supplies",
+        "crafts",
+        "second_hand"
+      ]
+    },
+    "how": {
+      "emitted": false,
+      "values": [
+        "vintage",
+        "thrift",
+        "new"
+      ]
+    }
+  },
+  "reserved": [
+    "hours"
+  ],
+  "encoding": "A pack feature (layer `stores`, zoom 12) carries flat string properties: name, id, src, and one per emitted dimension holding its values joined by a comma.",
+  "chains": "Chains are in the pack and carry no flag; a client identifies them by name from its own list.",
+  "clients": "A client ignores a dimension or a value it does not know and reads the rest; an unknown dimension or value never fails a read and never shows. Dimensions are added by contract version only."
+}

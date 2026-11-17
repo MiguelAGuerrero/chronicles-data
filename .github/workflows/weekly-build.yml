@@ -99,7 +99,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # ST6: the stores have their own registry of ids, beside the places'.
           paths="registry-us.json"
+          [ -f state/registry-stores-us.json ] && paths="$paths registry-stores-us.json"
           for s in ${{ steps.run.outputs.state-sources }}; do [ -d "state/raw/$s" ] && paths="$paths raw/$s"; done
           tar -czf state-us.tar.gz -C state $paths
           gh release view state-us --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
@@ -113,7 +115,7 @@ jobs:
           v="${{ steps.run.outputs.version }}"
           assets=""
           for f in ${{ steps.run.outputs.files }}; do assets="$assets out/$f out/${f%.pmtiles}.blocks.json out/${f%.pmtiles}.license"; done
-          gh release create "v$v" $assets --repo "$GITHUB_REPOSITORY" --title "US places $v" --notes "Weekly build: ${{ steps.run.outputs.reason }}."
+          gh release create "v$v" $assets --repo "$GITHUB_REPOSITORY" --title "US places and stores $v" --notes "Weekly build: ${{ steps.run.outputs.reason }}."
           gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
       - name: Nothing changed
         if: steps.run.outputs.publish != 'true'

@@ -61,10 +61,10 @@ const NEW = [
 ];
 
 test('ST1: contract v4: the new classes, OSM locates the extended table', () => {
-  assert.equal(CONTRACT_VERSION, 4);
+  assert.ok(CONTRACT_VERSION >= 4, 'v4 or later (v5: the stores pack)');
   for (const c of NEW) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
-  assert.equal(sources.contractVersion, 4);
+  assert.equal(sources.contractVersion, CONTRACT_VERSION);
   const locates: string[] = sources.sources.find((s: { name: string }) => s.name === 'osm')?.locates ?? [];
   for (const c of ['fountain', 'plaque', 'war_memorial', 'mill', 'lighthouse', 'water_tower', 'historic_machine', 'garden', 'waterfall', 'cave', 'hot_spring', 'old_tree', 'carousel']) assert.ok(locates.includes(c), c);
 });

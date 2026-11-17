@@ -21,6 +21,8 @@ import { partOf } from './adapters/wikidata';
 import { createRawStore } from './rawStore';
 import { run } from './runner';
 import { jsonSchema } from './schema';
+import { buildStores } from './stores/build';
+import { storesJsonSchema } from './stores/schema';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const FIX = join(ROOT, 'test/fixtures');
@@ -42,11 +44,24 @@ const MANIFEST_SCHEMA = {
           id: { type: 'string', pattern: '^[a-z0-9]+$' },
           current: { $ref: '#/$defs/file' },
           previous: { type: 'array', items: { $ref: '#/$defs/file' }, description: 'Older versions still served, newest first' },
+          stores: {
+            type: 'object',
+            required: ['current', 'previous'],
+            description: 'ST7: the region\'s stores pack, beside `current`; absent in older manifests and where there is none',
+            properties: {
+              current: { $ref: '#/$defs/storesFile' },
+              previous: { type: 'array', items: { $ref: '#/$defs/storesFile' }, description: 'Older versions still served, newest first' },
+            },
+          },
         },
       },
     },
   },
   $defs: {
+    storesFile: {
+      allOf: [{ $ref: '#/$defs/file' }],
+      properties: { file: { type: 'string', pattern: '^stores-[a-z0-9]+-\\d{8}(?:\\.\\d+)?\\.pmtiles$' } },
+    },
     file: {
       type: 'object',
       required: ['file', 'version', 'bounds'],
@@ -58,6 +73,7 @@ const MANIFEST_SCHEMA = {
         minzoom: { type: 'integer' },
         maxzoom: { type: 'integer' },
         bounds: { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4, description: '[west, south, east, north]' },
+        license: { type: 'string', description: 'RD11: the pack\'s license family (a stores pack is `odbl`); absent means cc0' },
         blocks: {
           type: 'object',
           description: 'PP11: a hash of the places in each z8 block; a client rebuilds an area only when its block changes',
@@ -76,6 +92,7 @@ export async function contractFiles(): Promise<Map<string, string | Buffer>> {
   const files = new Map<string, string | Buffer>();
   files.set('places.schema.json', json(jsonSchema()));
   files.set('manifest.schema.json', json(MANIFEST_SCHEMA));
+  files.set('stores.schema.json', json(storesJsonSchema()));
   files.set('sources.json', json({
     contractVersion: CONTRACT_VERSION,
     classes: CLASS_NAMES,
@@ -98,6 +115,18 @@ export async function contractFiles(): Promise<Map<string, string | Buffer>> {
     writeFileSync(join(dir, p.file.replace(/\.pmtiles$/, '.blocks.json')), `${JSON.stringify(p.blocks)}\n`);
     files.set(`example/${p.file}`, Buffer.from(p.bytes));
   }
+  // ST8: the example stores pack, from the shops fixture, and the records it holds.
+  const shops = createRawStore(mkdtempSync(join(tmpdir(), 'contract-shops-')));
+  shops.put('osm', '20261109', 'shops-example.geojsonl', readFileSync(join(FIX, 'osm-shops.geojsonl'), 'utf8'), '2026-11-09T07:17:00.000Z');
+  shops.complete('osm', '20261109');
+  let sn = 0;
+  const sr = buildStores({ store: shops, run: '20261109', region: 'example', version: '20261109', registry: emptyRegistry(), newId: () => `s_${(++sn).toString(16).padStart(16, '0')}` });
+  const sp = sr.pack!;
+  writeFileSync(join(dir, sp.file), sp.bytes);
+  writeFileSync(join(dir, sp.file.replace(/\.pmtiles$/, '.blocks.json')), `${JSON.stringify(sp.blocks)}\n`);
+  writeFileSync(join(dir, sp.file.replace(/\.pmtiles$/, '.license')), 'odbl\n');
+  files.set(`example/${sp.file}`, Buffer.from(sp.bytes));
+  files.set('example/stores-example.json', json([...sp.stores].sort((a, b) => (a.id < b.id ? -1 : 1))));
   files.set('example/manifest.json', execFileSync(process.execPath, [join(ROOT, 'scripts/manifest.mjs'), dir], { encoding: 'utf8' }));
   return files;
 }
