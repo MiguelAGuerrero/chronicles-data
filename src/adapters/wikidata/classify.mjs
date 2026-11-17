@@ -6,34 +6,65 @@ import { createRequire } from 'node:module';
 
 /** PW6: the order a place is classified in: it commemorates; it was made as art; you look out from it; it is odd. */
 export const ORDER = [
-  // It commemorates: a monument.
-  'monument', 'memorial', 'statue', 'marker',
-  // It was made as art: public art.
-  'mural', 'sculpture',
-  // You go there to look out: a viewpoint.
-  'overlook', 'tower',
-  // It is one of the odd classes: a curiosity.
-  'folly', 'novelty_building', 'roadside_giant', 'natural_oddity', 'odd_engineering', 'marks_a_fact', 'art_environment', 'ruin',
+  // It commemorates: a war memorial before a memorial or a statue (ST2).
+  'war_memorial', 'monument', 'memorial', 'statue', 'marker',
+  // It was made as art: a sculpture before a fountain, so a fountain that is art is art (ST5; the owner, Nov 17).
+  'mural', 'sculpture', 'fountain', 'sign',
+  // You go there to look out: a fire lookout tower before an observation tower.
+  'fire_tower', 'overlook', 'tower',
+  // What it is, by type (ST1): structures, nature, culture.
+  'bridge', 'lighthouse', 'mill', 'water_tower', 'clock_tower', 'fort', 'historic_machine', 'mausoleum',
+  'waterfall', 'cave', 'hot_spring', 'old_tree', 'garden', 'community_garden',
+  'concert_hall', 'observatory', 'carousel', 'zoo', 'archaeological_site',
+  // It is one of the odd classes: a curiosity; a milestone is an old stone before it marks a fact; a ghost town before a ruin.
+  'folly', 'novelty_building', 'roadside_giant', 'natural_oddity', 'odd_engineering', 'old_stone', 'marks_a_fact', 'art_environment', 'ghost_town', 'ruin',
 ];
 
 /** Wikidata classes per archive class (usage counts on 2026-11-06 in the comments). */
 export const CLASSES = {
   monument: ['Q4989906', 'Q170980'], // monument 48,814; obelisk 1,134
-  memorial: ['Q5003624', 'Q575759'], // memorial 20,074; war memorial 66,515
-  statue: ['Q179700'], // statue 60,852
+  // ST2: war memorial moved to its own class (Nov 17).
+  war_memorial: ['Q575759'], // war memorial 66,515
+  memorial: ['Q5003624'], // memorial 20,074
+  statue: ['Q179700', 'Q241045'], // statue 60,852; bust (Nov 17)
   marker: ['Q721747'], // commemorative plaque 23,862
-  mural: ['Q219423'], // mural 4,008
+  mural: ['Q219423', 'Q133067'], // mural 4,008; mosaic (Nov 17)
   sculpture: ['Q860861', 'Q557141'], // sculpture 129,767; public art 162
+  // ST1 (Nov 17; US counts with coordinates in the comments).
+  fountain: ['Q483453'], // fountain 165
+  sign: ['Q6006', 'Q3410466', 'Q83809'], // neon sign 11; ghost sign 1; totem pole 6
   overlook: ['Q6017969', 'Q177305'], // scenic viewpoint 1,510; observation deck 165
-  tower: ['Q1440300', 'Q748998'], // observation tower 1,891; fire lookout tower 1,791
+  tower: ['Q1440300'], // observation tower 1,891
+  fire_tower: ['Q748998'], // fire lookout tower 277 (from tower)
+  bridge: ['Q1825472'], // covered bridge 896 (from odd_engineering)
+  lighthouse: ['Q39715'], // lighthouse 888 (from odd_engineering)
+  mill: ['Q185187', 'Q38720'], // watermill 142; windmill 56
+  water_tower: ['Q274153'], // water tower 146
+  clock_tower: ['Q853854'], // clock tower 22
+  fort: ['Q1412205'], // armory 34
+  historic_machine: ['Q575727'], // museum ship 45
+  mausoleum: ['Q162875', 'Q381885'], // mausoleum 86; tomb 24
+  waterfall: ['Q34038'], // waterfall 823
+  cave: ['Q2232001'], // show cave 112
+  hot_spring: ['Q177380', 'Q83471'], // hot spring 170; geyser 106
+  old_tree: ['Q811534'], // remarkable tree 120
+  garden: ['Q167346', 'Q272231', 'Q15835', 'Q291177'], // botanical garden 704; arboretum 82; Japanese garden 27; rose garden 14
+  community_garden: ['Q251958'], // community garden 114
+  concert_hall: ['Q1060829', 'Q153562'], // concert hall 190; opera house 218
+  observatory: ['Q62832', 'Q148319'], // observatory 76; planetarium 43
+  carousel: ['Q208322', 'Q3126170'], // carousel 70; bandstand 30
+  zoo: ['Q43501', 'Q2281788'], // zoo 337; public aquarium 74
+  archaeological_site: ['Q42195'], // petroglyph 17
   folly: ['Q180174'], // folly 359
   novelty_building: ['Q548879'], // novelty architecture 1
   roadside_giant: ['Q14915208'], // roadside attraction 35
   natural_oddity: ['Q372934', 'Q4850014', 'Q954501', 'Q854550', 'Q2086896'], // glacial erratic, balancing rock, natural arch, hoodoo, gravity hill
-  odd_engineering: ['Q39715', 'Q1825472', 'Q142031', 'Q2250229'], // lighthouse, covered bridge, funicular, shot tower
-  marks_a_fact: ['Q316655', 'Q352956', 'Q10145', 'Q590232'], // tripoint, survey marker, milestone, geographical center
+  odd_engineering: ['Q142031', 'Q2250229'], // funicular, shot tower (lighthouse and covered bridge moved, Nov 17)
+  old_stone: ['Q10145'], // milestone (from marks_a_fact, Nov 17)
+  marks_a_fact: ['Q316655', 'Q352956', 'Q590232'], // tripoint, survey marker, geographical center
   art_environment: ['Q2860356'], // visionary environment
-  ruin: ['Q109607', 'Q74047'], // ruins, ghost town
+  ghost_town: ['Q74047'], // ghost town 2,748 (from ruin, Nov 17)
+  ruin: ['Q109607'], // ruins
 };
 
 /** National Historic Landmark, as a heritage designation (P1435): 2,522 uses on 2026-11-06. */
@@ -47,6 +78,16 @@ export const NRHP = 'Q19558910';
 // only a home is taken out of the public groups. Never looked up at build time.
 const TYPES = createRequire(import.meta.url)('./public-types.json');
 const GROUPS = Object.fromEntries(Object.entries(TYPES.groups).map(([g, ids]) => [g, new Set(ids)]));
+/** ST3: a listed place's class by its type's root, in this order; a class no root names stays as `listing` found it. */
+const BY_ROOT = Object.entries(TYPES.classes ?? {}).map(([cls, ids]) => [cls, new Set(ids)]);
+/** ST3: which broad class each root's class refines. */
+const REFINES = { building_structure: ['bridge', 'mill', 'station', 'lighthouse', 'civic_building', 'fort', 'water_tower', 'fountain', 'tavern'], historic_site: ['battlefield', 'archaeological_site'], theatre: ['concert_hall'] };
+/** ST3: the class a listed place takes from its root, within the broad class its entry decided. */
+function byRoot(broad, p31) {
+  const ok = REFINES[broad] ?? [];
+  for (const [cls, ids] of BY_ROOT) if (ok.includes(cls) && [...p31].some((q) => ids.has(q))) return cls;
+  return broad;
+}
 const inGroup = (p31, g) => [...p31].some((q) => GROUPS[g].has(q));
 
 /** Every Wikidata class the fetch asks for. */
@@ -64,9 +105,9 @@ export function listing(item) {
   if (!item.listed && !item.nhl) return null;
   const p31 = new Set(item.p31 ?? []);
   if (p31.has(DISTRICT)) return null;
-  for (const cls of ['church', 'cemetery', 'theatre']) if (inGroup(p31, cls)) return { cls, publicType: true, needsOpen: false };
+  for (const cls of ['church', 'cemetery', 'theatre']) if (inGroup(p31, cls)) return { cls: byRoot(cls, p31), publicType: true, needsOpen: false };
   if (inGroup(p31, 'museum')) return { cls: 'museum', publicType: false, needsOpen: false };
-  const cls = inGroup(p31, 'site') ? 'historic_site' : 'building_structure';
+  const cls = byRoot(inGroup(p31, 'site') ? 'historic_site' : 'building_structure', p31);
   if (inGroup(p31, 'public')) return { cls, publicType: true, needsOpen: false };
   if (inGroup(p31, 'open') || item.nhl) return { cls, publicType: false, needsOpen: false };
   return { cls, publicType: false, needsOpen: true };
@@ -93,7 +134,7 @@ export function classify(item) {
  * @param {string | null} [cls]
  */
 export function gone(item, cls = null) {
-  if (item.dissolved && cls !== 'ruin') return true;
+  if (item.dissolved && cls !== 'ruin' && cls !== 'ghost_town') return true;
   return (item.states ?? []).some((s) => /\b(demolish|destroy|razed|no longer exist)/i.test(String(s)));
 }
 

@@ -9,7 +9,7 @@
 // also a subclass of a public one (a rectory is a house before it is a church's). A class reached from another mundane
 // root (an office, a school, a hotel) stays public when a public root reaches it too: a courthouse is a government
 // building, which Wikidata makes an office building (remarkable-and-public audit 1).
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ENDPOINT = 'https://query.wikidata.org/sparql';
@@ -43,6 +43,25 @@ export const ROOTS = {
   },
 };
 
+/**
+ * ST3 (Subtypes, the app's decision 0191): a listed place's class by its type's root, within the broad class its entry
+ * decided (`listing` in classify.mjs). Pinned Nov 17 with `--classes`, which leaves the entry groups above as they were.
+ */
+export const CLASS_ROOTS = {
+  bridge: { Q12280: 'bridge', Q181348: 'viaduct', Q474: 'aqueduct' },
+  mill: { Q44494: 'mill', Q185187: 'watermill', Q623605: 'gristmill', Q38720: 'windmill' },
+  station: { Q55488: 'railway station' },
+  lighthouse: { Q39715: 'lighthouse' },
+  civic_building: { Q1137809: 'courthouse', Q543654: 'town hall', Q25550691: 'city hall', Q35054: 'post office', Q856584: 'library building', Q7075: 'library', Q28564: 'public library' },
+  fort: { Q1785071: 'fort', Q1412205: 'armory' },
+  water_tower: { Q274153: 'water tower' },
+  fountain: { Q483453: 'fountain' },
+  tavern: { Q154250: 'tavern', Q256020: 'inn' },
+  battlefield: { Q4895508: 'battlefield' },
+  archaeological_site: { Q839954: 'archaeological site', Q42195: 'petroglyph' },
+  concert_hall: { Q1060829: 'concert hall', Q153562: 'opera house' },
+};
+
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function subclasses(root) {
@@ -74,7 +93,28 @@ export function groupsFrom(closures) {
   return out;
 }
 
+/** ST3: each class's ids, every root with its subclasses; a home is never a class by type (RP3). */
+export function classesFrom(closures) {
+  const homes = new Set(HOMES.flatMap((r) => closures[r] ?? [r]));
+  return Object.fromEntries(Object.entries(CLASS_ROOTS).map(([cls, roots]) => [cls, [...new Set(Object.keys(roots).flatMap((r) => closures[r] ?? [r]))].filter((id) => !homes.has(id)).sort()]));
+}
+
+/** `--classes`: pin only the class roots (and the homes they exclude), keeping the entry groups as pinned before. */
+async function pinClasses() {
+  const file = join(import.meta.dirname, '../src/adapters/wikidata/public-types.json');
+  const pinned = JSON.parse(readFileSync(file, 'utf8'));
+  const closures = {};
+  for (const r of [...new Set([...Object.values(CLASS_ROOTS).flatMap((roots) => Object.keys(roots)), ...HOMES])]) {
+    closures[r] = await subclasses(r);
+    await wait(1500);
+  }
+  const classes = classesFrom(closures);
+  writeFileSync(file, `${JSON.stringify({ ...pinned, classesPinned: new Date().toISOString().slice(0, 10), classRoots: CLASS_ROOTS, classes }, null, 1)}\n`);
+  console.error(Object.entries(classes).map(([c, ids]) => `${c} ${ids.length}`).join(', '));
+}
+
 async function main() {
+  if (process.argv.includes('--classes')) return pinClasses();
   const closures = {};
   for (const roots of Object.values(ROOTS))
     for (const r of Object.keys(roots)) {

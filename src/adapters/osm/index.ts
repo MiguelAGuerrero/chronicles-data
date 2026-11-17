@@ -42,17 +42,40 @@ export const FILTER: Filter = {
  * SL2: the tag table, pinned. Each row is a tag and its values, a class, and an extra tag the element must also carry.
  * An element matching no row is no place (0103: an unmapped tag is left out, never guessed).
  */
-export const SMALL_TABLE: readonly { key: string; values: readonly string[]; cls: ClassName; also?: [string, readonly string[]] }[] = [
-  { key: 'memorial', values: ['plaque', 'blue_plaque'], cls: 'marker' },
+export const SMALL_TABLE: readonly {
+  key: string;
+  values: readonly string[];
+  cls: ClassName;
+  also?: [string, readonly string[]];
+  /** ST5: tags that keep an element out of the row (a drinking fountain is no fountain). */
+  not?: readonly [string, readonly string[]][];
+}[] = [
+  { key: 'memorial', values: ['plaque', 'blue_plaque'], cls: 'plaque' },
+  // ST1: a war memorial before the small memorials (the app's decision 0191).
+  { key: 'memorial', values: ['war_memorial'], cls: 'war_memorial' },
   { key: 'memorial', values: ['bench', 'ghost_bike', 'stolperstein'], cls: 'small_memorial' },
   { key: 'historic', values: ['milestone', 'boundary_stone'], cls: 'old_stone' },
   { key: 'historic', values: ['wayside_shrine', 'wayside_cross'], cls: 'wayside_shrine' },
   { key: 'historic', values: ['time_capsule'], cls: 'time_capsule' },
+  { key: 'historic', values: ['cannon', 'locomotive', 'railway_car', 'aircraft', 'tank'], cls: 'historic_machine' },
   { key: 'amenity', values: ['public_bookcase'], cls: 'public_bookcase' },
   { key: 'leisure', values: ['garden'], cls: 'community_garden', also: ['garden:type', ['community']] },
+  { key: 'leisure', values: ['garden'], cls: 'garden', also: ['garden:type', ['botanical']] },
   { key: 'tourism', values: ['artwork'], cls: 'mural', also: ['artwork_type', ['mural', 'mosaic']] },
   { key: 'tourism', values: ['artwork'], cls: 'sculpture', also: ['artwork_type', ['sculpture', 'relief']] },
-  { key: 'tourism', values: ['artwork'], cls: 'statue', also: ['artwork_type', ['statue']] },
+  { key: 'tourism', values: ['artwork'], cls: 'statue', also: ['artwork_type', ['statue', 'bust']] },
+  // ST5: a fountain that is an artwork is a sculpture (the owner, Nov 17: "unless they're truly artistic"); a drinking one is none.
+  { key: 'tourism', values: ['artwork'], cls: 'sculpture', also: ['amenity', ['fountain']] },
+  { key: 'amenity', values: ['fountain'], cls: 'fountain', not: [['fountain', ['drinking', 'bubbler', 'bottle_refill']], ['drinking_water', ['yes']]] },
+  { key: 'man_made', values: ['windmill', 'watermill'], cls: 'mill' },
+  { key: 'man_made', values: ['lighthouse'], cls: 'lighthouse' },
+  { key: 'man_made', values: ['water_tower'], cls: 'water_tower' },
+  { key: 'waterway', values: ['waterfall'], cls: 'waterfall' },
+  { key: 'natural', values: ['cave_entrance'], cls: 'cave' },
+  { key: 'natural', values: ['hot_spring', 'geyser'], cls: 'hot_spring' },
+  { key: 'natural', values: ['tree'], cls: 'old_tree', also: ['denotation', ['natural_monument']] },
+  { key: 'attraction', values: ['carousel'], cls: 'carousel' },
+  { key: 'leisure', values: ['bandstand'], cls: 'carousel' },
 ];
 
 /** SL1: the classes this source locates. */
@@ -63,6 +86,7 @@ export function smallClass(t: Record<string, string>): ClassName | null {
   for (const r of SMALL_TABLE) {
     if (!r.values.includes(t[r.key])) continue;
     if (r.also && !r.also[1].includes(t[r.also[0]])) continue;
+    if (r.not?.some(([k, vs]) => vs.includes(t[k]))) continue;
     return r.cls;
   }
   return null;

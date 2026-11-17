@@ -78,7 +78,8 @@ test('RD1: a listed church, cemetery, bridge, mill and station enter by type', a
   ])]);
   assert.deepEqual(names(r), ['Bushkill Gristmill', 'Central Moravian Church', 'Mauch Chunk Station', 'Nisky Hill Cemetery', 'Northampton Street Bridge']);
   assert.equal(classOf(r, 'Central Moravian Church'), 'church');
-  assert.equal(classOf(r, 'Northampton Street Bridge'), 'building_structure');
+  // ST3 (the app's decision 0191): a listed bridge takes its root's class.
+  assert.equal(classOf(r, 'Northampton Street Bridge'), 'bridge');
 });
 
 test('RD2: a home is never public by type; a courthouse stays public', async () => {
@@ -112,10 +113,10 @@ test('RD6: museums and sites take their own class; 0103\'s classes keep theirs',
   ])]);
   assert.equal(classOf(r, 'A Museum'), 'museum');
   assert.equal(classOf(r, 'A Theatre'), 'theatre');
-  assert.equal(classOf(r, 'Bushy Run Battlefield'), 'historic_site');
-  assert.equal(classOf(r, 'Indian Steps'), 'historic_site');
+  assert.equal(classOf(r, 'Bushy Run Battlefield'), 'battlefield'); // ST3
+  assert.equal(classOf(r, 'Indian Steps'), 'archaeological_site'); // ST3: an archaeological site takes its root's class
   assert.equal(classOf(r, 'Washington Grays Monument'), 'statue');
-  assert.equal(classOf(r, 'A Lighthouse'), 'odd_engineering');
+  assert.equal(classOf(r, 'A Lighthouse'), 'lighthouse'); // ST2: lighthouses moved out of odd_engineering
 });
 
 test('RD7: the OSM adapter confirms by wikidata tag only, never makes a place; one, two or five open elements give identical blocks, and closed wins', async () => {

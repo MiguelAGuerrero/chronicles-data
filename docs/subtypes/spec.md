@@ -1,6 +1,6 @@
 # Subtypes, the data side (ST)
 
-Nov 17, 2026 · the owner, from the app's Explore subtypes (the app's `specs/explore-subtypes`, decision 0187).
+Nov 17, 2026 · the owner, from the app's Explore subtypes (the app's `specs/explore-subtypes`, decision 0191).
 
 The archive's classes split by what a place is, so the app can give each kind its subtypes; new Wikidata types and an
 extended OpenStreetMap table add the places the app could not show at all. Type decides, never a judgment (0103); a
@@ -52,7 +52,7 @@ the contract can hold a count, rank or score); a class comes from a type, tag or
   | `lighthouse` | lighthouse Q39715 (from `odd_engineering`) | lighthouse | `man_made=lighthouse` |
   | `civic_building` | | courthouse, town hall, city hall, post office, library | |
   | `fort` | armory Q1412205 | fort | |
-  | `water_tower` | water tower Q274153 | water tower | `man_made=water_tower`, only named or tagged `historic`/`heritage` |
+  | `water_tower` | water tower Q274153 | water tower | `man_made=water_tower`, named only (an unnamed one is set aside, ST6) |
   | `clock_tower` | clock tower Q853854 | | |
   | `tavern` | | tavern Q154250, inn Q256020 (new roots) | |
   | `historic_machine` | museum ship Q575727 | | `historic=cannon\|locomotive\|railway_car\|aircraft\|tank` |
@@ -81,7 +81,10 @@ the contract can hold a count, rank or score); a class comes from a type, tag or
   open, a Landmark) does not change (RD1-RD8).
 - **ST4** the OSM table of ST1, pinned; any other tag is no place; `access=private|no` keeps a place out (SL3); an
   element whose `wikidata` tag names a place already made is that place (SL4).
-- **ST5** a drinking fountain is never a `fountain`, however tagged with `amenity=fountain`.
+- **ST5** a drinking fountain is never a `fountain`, however tagged with `amenity=fountain`. An artistic fountain is a
+  `sculpture` (the owner, Nov 17: small things off "unless they're truly artistic in nature"): a Wikidata item typed as
+  a sculpture or public art as well as a fountain (`sculpture` comes before `fountain` in the order), and an OSM
+  `amenity=fountain` also tagged `tourism=artwork`.
 - **ST6** the classes that may come unnamed: SL5's, and `fountain`, `plaque`, `war_memorial`, `mill`, `lighthouse`,
   `historic_machine`, `waterfall`, `hot_spring`, `old_tree`, `carousel` (never `water_tower`); any other unnamed place is
   set aside (PP4).
