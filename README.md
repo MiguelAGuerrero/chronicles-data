@@ -14,6 +14,9 @@ ordinary file request. Phones never call a data source: every outside request ha
   changed; a new version gets a new name. Its license family is in `places-<region>-<version>.license` and the
   manifest's `license` (none means CC0): a region OpenStreetMap changed is ODbL, one file under the region's id, so a
   region's license can change between versions (RD11).
+- `stores-<region>-<version>.pmtiles`: the stores pack (docs/stores/spec.md, contract v5): shops by what they sell, from
+  OpenStreetMap's shop tags, read by the app only to plan an outing. It is listed under its region's `stores` in the
+  manifest, has its own place ids and is published only when one of its blocks changed. Its license is ODbL.
 - `contract/`: the contract below, beside the data it describes.
 
 The app reads `manifest.json` (at most daily) and then only the parts of the current archive it needs.
@@ -22,6 +25,8 @@ The app reads `manifest.json` (at most daily) and then only the parts of the cur
 
 What a client may rely on, generated from the code by `npm run contract` and checked by CI:
 
+- `stores.schema.json`: a store's shape (name, position, facets by dimension, source, id) and the closed list of each
+  dimension. Nothing in it can hold a rating, a price, a count or opening hours.
 - `places.schema.json`: the canonical shape (candidates, places, a pack's tile feature: name, class, src, id) and the
   class names. Every object is closed; the only numbers are a position. Nothing in it can hold a count, rank or score.
 - `manifest.schema.json`: the manifest's shape.
