@@ -4,6 +4,8 @@
 // v2 (Remarkable and public, RD13): the listed places' classes by type, and `heritage_building` renamed
 // `building_structure`, since no class name may name a register or significance (the data side of the app's RP18).
 // v3 (Small places, SL10; the app's decision 0183): OpenStreetMap's small places, and an empty name for them.
+// v4 (Subtypes, the app's decision 0187) is on claude/explore-subtypes: it merges when the app that reads it ships, since
+// the app leaves out a class it does not know (v4 was published early on Nov 17 and reverted here).
 export const CONTRACT_VERSION = 3;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
