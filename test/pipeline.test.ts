@@ -13,7 +13,7 @@ import { PMTiles, type RangeResponse, type Source } from 'pmtiles';
 import type { Adapter, Box } from '../src/adapter';
 import { partOf, wikidata } from '../src/adapters/wikidata';
 import { emptyRegistry } from '../src/conflate';
-import { politeFetch, RETRY_CAP_S, type Clock } from '../src/http';
+import { politeFetch, RETRY_CAP_S, SourceTimeout, type Clock } from '../src/http';
 import { blocksOf, type Pack } from '../src/package';
 import { decide } from '../src/publish';
 import { createRawStore, type RawStore } from '../src/rawStore';
@@ -191,6 +191,19 @@ test('PP3: each source is held to its declared pace, waits a Retry-After and sen
   // Wikidata keeps its manners: one query at a time, a 1.5 s pause, its User-Agent naming the project.
   assert.equal(60_000 / wikidata.declaration.pace.perMinute, 1500);
   assert.match(wikidata.declaration.pace.userAgent, /Chronicles places build/);
+});
+
+test('PP3, wikidata 502 (Nov 17): a 502 is the gateway failing: waited out and asked again; repeated, a timeout the caller can split', async () => {
+  const pace = { pace: { perMinute: 60, userAgent: 'Test agent (+example)' } };
+  // Two builds of Nov 17 lost Wikidata to one 502 each (6 s in, and 8 minutes in): it was thrown as a hard error.
+  const clock = fakeClock(0);
+  let bad = 2;
+  const http = politeFetch(pace, async () => (bad-- > 0 ? new Response('', { status: 502 }) : new Response('ok')), clock);
+  assert.equal(await (await http('https://example.org/')).text(), 'ok', 'a passing 502 is asked again');
+  assert.ok(clock.slept.length >= 2 && clock.slept.every((ms) => ms <= RETRY_CAP_S * 1000), 'with a wait between');
+  // A 502 every time is what an overloaded query looks like: a timeout, so a cell query is split and a new class swept.
+  const always = politeFetch(pace, async () => new Response('', { status: 502 }), fakeClock(0));
+  await assert.rejects(always('https://example.org/'), (e) => e instanceof SourceTimeout);
 });
 
 test('PP4: a candidate that fails the schema is set aside with its reason and the run goes on', async () => {

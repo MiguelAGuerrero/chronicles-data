@@ -1,5 +1,5 @@
 // How an adapter reaches its source (PP3): one request at a time, no faster than its declared pace, with its
-// User-Agent, waiting out a 429's or 503's Retry-After. The runner builds one per adapter; an adapter never calls
+// User-Agent, waiting out a 429's or 503's Retry-After and a 502's gateway failure. The runner builds one per adapter; an adapter never calls
 // `fetch` itself. Clock and sleep are passed in, so tests run without waiting.
 import type { Declaration } from './schema';
 
@@ -14,6 +14,8 @@ export const realClock: Clock = { now: () => Date.now(), sleep: (ms) => new Prom
 export const RETRY_CAP_S = 300;
 export const RETRY_DEFAULT_S = 60;
 const ATTEMPTS = 5;
+/** The first wait after a 502; each further try waits this much longer. */
+export const BAD_GATEWAY_WAIT_S = 30;
 
 /** A timeout the caller can act on (a query service's way of saying "ask for less"). */
 export class SourceTimeout extends Error {}
@@ -39,6 +41,13 @@ export function politeFetch(decl: Pick<Declaration, 'pace'>, fetchImpl: Fetch, c
       if (res && (res.status === 429 || res.status === 503)) {
         const s = Number(res.headers.get('retry-after'));
         await clock.sleep(Math.min(Number.isFinite(s) && s > 0 ? s : RETRY_DEFAULT_S, RETRY_CAP_S) * 1000);
+        continue;
+      }
+      // A 502 is the source's gateway failing, as Wikidata's query service does under load (two builds lost on Nov 17): waited
+      // out and asked again, longer each time; on the last try, a timeout the caller can act on (split the cell, sweep the class).
+      if (res && res.status === 502) {
+        if (attempt === ATTEMPTS - 1) throw new SourceTimeout(`${url} kept failing at its gateway (502)`);
+        await clock.sleep(Math.min(BAD_GATEWAY_WAIT_S * (attempt + 1), RETRY_CAP_S) * 1000);
         continue;
       }
       if (!res || res.status === 500 || res.status === 504) throw new SourceTimeout(`${url} timed out`);
