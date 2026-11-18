@@ -209,7 +209,8 @@ test('AT5: amusement parks, piers, suspension bridges and national monuments', a
   const { classify } = await wd();
   for (const q of ['Q194195', 'Q740326', 'Q2416723', 'Q3363974', 'Q15060435', 'Q15411990']) assert.equal(classify({ p31: [q] }), 'amusement_park', q);
   for (const q of ['Q863454', 'Q11111030', 'Q93338609']) assert.equal(classify({ p31: [q] }), 'pier', q);
-  assert.equal(classify({ p31: ['Q12570'] }), 'bridge');
+  // AT10 (contract v8): an unlisted suspension bridge is `suspension_bridge`.
+  assert.equal(classify({ p31: ['Q12570'] }), 'suspension_bridge');
   assert.equal(classify({ p31: ['Q893745'] }), 'monument');
 });
 
@@ -264,7 +265,7 @@ test('more-attractions audit 17: a listing wins over every v6 type', async () =>
   }
   // A v4 garden type is still a garden, listed or not; unlisted, the v6 types hold.
   assert.equal(classify({ p31: ['Q167346'], listed: true }), 'garden');
-  assert.equal(classify({ p31: ['Q12570'] }), 'bridge');
+  assert.equal(classify({ p31: ['Q12570'] }), 'suspension_bridge'); // AT10
   assert.equal(classify({ p31: ['Q1107656'] }), 'garden');
   assert.equal(classify({ p31: ['Q893745'] }), 'monument');
   // A listed national monument that is also a monument keeps `monument` (not a v6 type).
@@ -276,7 +277,7 @@ test('more-attractions audit 18: a pinned natural national monument is natural_m
   const { NATURAL_MONUMENTS } = (await import(String('../src/adapters/wikidata/classify.mjs'))) as { NATURAL_MONUMENTS: string[] };
   assert.ok((CLASS_NAMES as readonly string[]).includes('natural_monument'));
   assert.ok(!(UNNAMED_CLASSES as readonly string[]).includes('natural_monument'));
-  assert.equal(CONTRACT_VERSION, 7);
+  assert.ok(CONTRACT_VERSION >= 7, 'v7 or later (v8: suspension_bridge, AT10)');
   assert.equal(NATURAL_MONUMENTS.length, 24);
   // Devils Tower, Muir Woods, Jewel Cave, Cedar Breaks, Colorado, Organ Pipe Cactus, Virgin Islands Coral Reef.
   for (const id of ['Q28920023', 'Q1195839', 'Q386178', 'Q374879', 'Q1111312', 'Q1276829', 'Q386154']) assert.ok(NATURAL_MONUMENTS.includes(id), id);
@@ -288,4 +289,32 @@ test('more-attractions audit 18: a pinned natural national monument is natural_m
   // Timpanogos Cave stays a cave; an unpinned national monument is still a monument.
   assert.equal(classify({ id: 'Q1456525', p31: [...nps, 'Q2232001'] }), 'cave');
   assert.equal(classify({ id: 'Q359939', p31: nps }), 'monument');
+});
+
+// Typed bridges (docs/attractions/spec.md, AT10; the owner, Nov 18). Written before the code.
+test('typed bridges: a suspension bridge with no listing is suspension_bridge, a listed one bridge, a covered bridge bridge', async () => {
+  const { classify, listing } = await wd();
+  const { CLASSES, ORDER } = (await import(String('../src/adapters/wikidata/classify.mjs'))) as { CLASSES: Record<string, string[]>; ORDER: string[] };
+  assert.equal(CONTRACT_VERSION, 8);
+  assert.ok((CLASS_NAMES as readonly string[]).includes('suspension_bridge'));
+  assert.ok(!(UNNAMED_CLASSES as readonly string[]).includes('suspension_bridge'));
+  assert.deepEqual(CLASSES.suspension_bridge, ['Q12570']);
+  assert.ok(!CLASSES.bridge.includes('Q12570'));
+  assert.ok(ORDER.indexOf('bridge') < ORDER.indexOf('suspension_bridge'));
+  const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
+  assert.ok(sources.classes.includes('suspension_bridge'));
+  // Unlisted: its own class (the George Washington Bridge: suspension bridge, steel bridge, toll bridge).
+  assert.equal(classify({ p31: ['Q12570'] }), 'suspension_bridge');
+  assert.equal(classify({ p31: ['Q12570', 'Q537127', 'Q1068842'] }), 'suspension_bridge');
+  // Listed or a Landmark: the listing's class (a bridge's root gives `bridge`), whatever it gives (AT7).
+  assert.equal(classify({ p31: ['Q12570', 'Q12280'], listed: true }), 'bridge');
+  assert.equal(classify({ p31: ['Q12570', 'Q537127', 'Q12280'], nhl: true }), 'bridge');
+  for (const it of [{ p31: ['Q12570'], listed: true }, { p31: ['Q12570'], nhl: true }]) {
+    assert.notEqual(classify(it), 'suspension_bridge');
+    assert.equal(classify(it), listing(it)?.cls);
+  }
+  // A covered bridge stays `bridge`, listed or not, and wins over suspension bridge.
+  assert.equal(classify({ p31: ['Q1825472'] }), 'bridge');
+  assert.equal(classify({ p31: ['Q1825472'], listed: true }), 'bridge');
+  assert.equal(classify({ p31: ['Q1825472', 'Q12570'] }), 'bridge');
 });

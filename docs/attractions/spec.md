@@ -27,7 +27,7 @@ Source and licence unchanged (Wikidata, CC0). Type decides (0103); nothing is fe
 - **AT4** nature reserves, National Wildlife Refuges, wildlife refuges and areas, national preserves and ecological
   reserves are `nature_reserve`; Research Natural Areas, biosphere reserves and marine sanctuaries are not asked.
 - **AT5** amusement, water, theme, animal theme and marine mammal parks are `amusement_park`; piers and boardwalks are
-  `pier`; suspension bridges are `bridge`; national monuments are `monument`.
+  `pier`; suspension bridges are `bridge` (`suspension_bridge` from v8, AT10); national monuments are `monument`.
 - **AT6** the new types are asked whole by country on the first run that knows them (CF3), with no other change to the
   fetch.
 
@@ -65,3 +65,27 @@ data does.
   natural features kept for their history and stay as they were. A pinned item that is listed or a Landmark keeps its
   listing's class (AT7). It needs a name (it is not among the classes that may come unnamed). The class is new:
   contract v7.
+
+## Typed bridges (Nov 18)
+
+The owner, Nov 18: a bridge that enters only by a v6 Wikidata type gets a class of its own, which the app does not
+count toward History, as typed museums (`museum_by_type`) and piers already are. The contract goes to version 8
+(`CONTRACT_VERSION` 8).
+
+- **AT10** a suspension bridge (Q12570) with no NRHP listing or Landmark designation is `suspension_bridge`, never
+  `bridge`. A covered bridge (Q1825472, from v4) stays `bridge`, and wins over `suspension_bridge` when an item is
+  typed both (`bridge` comes first in ORDER): a covered bridge is historic by nature. A listed or Landmark place keeps
+  its listing's class (AT7), so a listed suspension bridge is `bridge` when its listing's root maps to `bridge`, or
+  whatever else its listing gives. It needs a name, as `bridge` does (it is not among the classes that may come
+  unnamed). The class is new: contract v8.
+
+  The name: Q12570 is the only v6 bridge type, and the fetch asks P31 directly, never a subclass. Of its subclasses
+  only self-anchored suspension bridge (Q7448015) has US items with coordinates (3), and those are not asked; rope,
+  chain and simple suspension bridges have none. So the class names what it holds, `suspension_bridge`, not a
+  catch-all `bridge_by_type`; a later bridge type gets its own name or renames this one in a new contract version.
+
+  A lookup on Nov 18 (`?item wdt:P31 wd:Q12570 ; wdt:P17 wd:Q30 ; wdt:P625 ?c`, listing as the fetch reads it: an
+  NRHP statement with no end time, or NHL) found 122 US suspension bridges: 41 listed or Landmarks (3 Landmarks, the
+  Brooklyn Bridge among them), all `bridge` by their listing's root; 81 unlisted, all `suspension_bridge` (none is
+  also typed a covered bridge or an earlier class), of which 80 carry a name and enter (the George Washington,
+  Verrazzano-Narrows and Williamsburg bridges among them) and one (Q15825753) has no English label and is left out.
