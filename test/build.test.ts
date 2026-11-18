@@ -198,3 +198,12 @@ test('PW19: the weekly build publishes only when the archive changed, and a fail
   assert.deepEqual(decide({ region: 'us', blocks: null, manifest }), { publish: false, reason: 'no archive built' });
   assert.deepEqual(decide({ region: 'us', blocks, manifest: null, unreachable: true }), { publish: false, reason: 'manifest unreachable' }, 'places-worth-the-stop audit 7: one network error publishes nothing');
 });
+
+test('archive bounds: an archive of a whole US OSM run (500,000 points) is written, its bounds those of its points', async () => {
+  // Weekly run 33 (Nov 18): the first full OSM fetch failed in writeArchive, `Math.min(...lons)` past the call stack.
+  const many = Array.from({ length: 500_000 }, (_, i) => place(`P${i}`, -124 + (i % 5000) * 0.011, 25 + Math.floor(i / 5000) * 0.23));
+  const a = writeArchive(many);
+  const header = await new PMTiles(memory(a)).getHeader();
+  assert.deepEqual([header.minLon, header.minLat], [-124, 25]);
+  assert.ok(Math.abs(header.maxLon - (-124 + 4999 * 0.011)) < 1e-6 && Math.abs(header.maxLat - (25 + 99 * 0.23)) < 1e-6);
+});
