@@ -145,9 +145,14 @@ export function writeArchive(places, { name = 'Chronicles places', firstRead = F
   })), { level: 9 });
   const { root, leaves } = directories(entries, firstRead);
 
-  const lons = places.map((p) => p.lon);
-  const lats = places.map((p) => p.lat);
-  const bounds = places.length ? [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)] : [0, 0, 0, 0];
+  // A loop, never Math.min(...all): a whole US OSM run's archive holds more points than the call stack takes (run 33).
+  const bounds = places.length ? [Infinity, Infinity, -Infinity, -Infinity] : [0, 0, 0, 0];
+  for (const p of places) {
+    if (p.lon < bounds[0]) bounds[0] = p.lon;
+    if (p.lat < bounds[1]) bounds[1] = p.lat;
+    if (p.lon > bounds[2]) bounds[2] = p.lon;
+    if (p.lat > bounds[3]) bounds[3] = p.lat;
+  }
   const h = Buffer.alloc(HEADER);
   h.write('PMTiles', 0, 'ascii');
   h.writeUInt8(3, 7);
