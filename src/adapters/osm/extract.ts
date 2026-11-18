@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FetchContext } from '../../adapter';
+import { partShopCounts, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
 import { countExpressions, countFilter, COUNTS_NOTE, parseTagsCount, partCounts } from './tagCounts';
 
 /** Geofabrik's US regions sit beside the states' folder, not in it (`north-america/us/` holds states only). */
@@ -93,6 +94,25 @@ function countExtract(pbf: string, dir: string, part: string, table: Record<stri
 }
 
 /**
+ * SK2, SK3: one extract's shop counts, for the owner's review only: every value of `shop` and `craft` among the elements
+ * that carry one, and the second-hand among those.
+ */
+export function countShopsIn(pbf: string, dir: string, part: string): ShopCounts {
+  const kept = join(dir, `shops-count-${part}.osm.pbf`);
+  const second = join(dir, `shops-count-${part}.second.osm.pbf`);
+  try {
+    osmium(['tags-filter', pbf, '-R', ...shopCountFilter(), '-o', kept, '--overwrite']);
+    const all = parseTagsCount(osmium(['tags-count', kept, ...shopCountExpressions()]));
+    osmium(['tags-filter', kept, '-R', ...SECOND_HAND_FILTER, '-o', second, '--overwrite']);
+    const secondHand = parseTagsCount(osmium(['tags-count', second, ...shopCountExpressions()]));
+    return partShopCounts(all, secondHand);
+  } finally {
+    rmSync(kept, { force: true });
+    rmSync(second, { force: true });
+  }
+}
+
+/**
  * RD7: downloads each US part, applies every filter to it, stores each filter's GeoJSON lines as a raw part
  * (`<filter>-<part>.geojsonl`), and deletes the extract before the next. Throws when a part can't be had (the run then
  * uses this source's last good answers, PP14). OC3, OC4: with `counts`, also counts those tags in each extract, kept as
@@ -134,6 +154,9 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         // OC4: its counts are carried with its answers.
         const note = prev.meta[`${COUNTS_NOTE}${part}`];
         if (counts && note != null) ctx.setMeta(`${COUNTS_NOTE}${part}`, note);
+        // SK5: and its shop counts.
+        const shopNote = prev.meta[`${SHOP_COUNTS_NOTE}${part}`];
+        if (counts && shopNote != null) ctx.setMeta(`${SHOP_COUNTS_NOTE}${part}`, shopNote);
         ctx.log(`osm: ${part} unchanged since ${prev.run}, its answers carried`);
         continue;
       }
@@ -165,6 +188,12 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         } catch (e) {
           // OC7: the counts are only for the owner's review; a failure leaves this run with none, and nothing else.
           ctx.log(`osm: ${part} tag counts failed (${String((e as Error)?.message ?? e)}); this run reports no counts`);
+        }
+        try {
+          ctx.setMeta(`${SHOP_COUNTS_NOTE}${part}`, JSON.stringify(countShopsIn(pbf, dir, part)));
+        } catch (e) {
+          // SK8: for the owner's review only; a failure leaves this run with none, and nothing else.
+          ctx.log(`osm: ${part} shop counts failed (${String((e as Error)?.message ?? e)}); this run reports no shop counts`);
         }
       }
       rmSync(pbf, { force: true });
