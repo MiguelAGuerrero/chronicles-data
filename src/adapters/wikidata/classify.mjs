@@ -22,7 +22,7 @@ export const ORDER = [
 
 /** Wikidata classes per archive class (usage counts on 2026-11-06 in the comments). */
 export const CLASSES = {
-  monument: ['Q4989906', 'Q170980', 'Q893745'], // monument 48,814; obelisk 1,134; national monument 76 (AT5)
+  monument: ['Q4989906', 'Q170980', 'Q893745'], // monument 48,814; obelisk 1,134; national monument 76 (AT5; AT8 limits it)
   // ST2: war memorial moved to its own class (Nov 17).
   war_memorial: ['Q575759'], // war memorial 66,515
   memorial: ['Q5003624'], // memorial 20,074
@@ -105,6 +105,22 @@ function byRoot(broad, p31) {
 }
 const inGroup = (p31, g) => [...p31].some((q) => GROUPS[g].has(q));
 
+/** AT7: the v6 classes a listing's class wins over (more-attractions audit 15). */
+const LISTING_WINS = new Set(['museum_by_type', 'amusement_park', 'nature_reserve', 'pier']);
+/** AT8: national monument (AT5), and what `monument` holds besides it. */
+const NATIONAL_MONUMENT = 'Q893745';
+const MONUMENT_OWN = CLASSES.monument.filter((q) => q !== NATIONAL_MONUMENT);
+const STATUE = CLASSES.statue;
+/**
+ * AT8: a national monument typed as one of these is a natural area, not a monument: protected area, nature reserve,
+ * natural landscape, natural monument, biosphere reserve, canyon, volcano, mountain, forest, coral reef, cave (pinned
+ * from a lookup on 2026-11-18), and the archive's nature classes.
+ */
+const NATURAL = new Set([
+  'Q473972', 'Q179049', 'Q1286517', 'Q23790', 'Q158454', 'Q150784', 'Q8072', 'Q8502', 'Q4421', 'Q11292', 'Q35509',
+  ...['nature_reserve', 'waterfall', 'cave', 'hot_spring', 'natural_oddity'].flatMap((c) => CLASSES[c]),
+]);
+
 /** Every Wikidata class the fetch asks for. */
 export const ALL_CLASS_IDS = [...new Set(Object.values(CLASSES).flat())].sort();
 
@@ -130,16 +146,22 @@ export function listing(item) {
 
 /**
  * PW6: the archive class of a Wikidata item {p31: [Q…], listed, nhl}: a district never (RD4, whatever else it is
- * typed); else the first in ORDER whose list holds one of its classes (a listing never changes it, RD6); else its
- * listed class (`listing`). Nothing about articles is read (the owner, Nov 6). Else null.
+ * typed); else the first in ORDER whose list holds one of its classes (a listing never changes it, RD6, except that it
+ * wins over a v6 class, AT7; national monument as AT8 limits it); else its listed class (`listing`). Nothing about articles is read (the owner, Nov 6). Else null.
  */
 export function classify(item) {
   const p31 = new Set(item.p31 ?? []);
   if (p31.has(DISTRICT)) return null;
   for (const cls of ORDER) {
     if (!CLASSES[cls].some((q) => p31.has(q))) continue;
-    // AT2: a museum that enters by its listing keeps `museum` (the app reads History from it); by type alone, museum_by_type.
-    if (cls === 'museum_by_type' && listing(item)?.cls === 'museum') return 'museum';
+    // AT2, AT7: a listed place keeps its listing's class over a v6 type (a listed museum stays `museum`, a listed
+    // church that is also a museum `church`; more-attractions audit 15).
+    if (LISTING_WINS.has(cls)) {
+      const l = listing(item);
+      if (l) return l.cls;
+    }
+    // AT8: national monument alone yields to a statue and makes no monument of a natural area (audit 16).
+    if (cls === 'monument' && !MONUMENT_OWN.some((q) => p31.has(q)) && (STATUE.some((q) => p31.has(q)) || [...p31].some((q) => NATURAL.has(q)))) continue;
     return cls;
   }
   return listing(item)?.cls ?? null;
