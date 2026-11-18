@@ -17,6 +17,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Adapter, Box } from './adapter';
 import { osm } from './adapters/osm';
+import { US_PARTS } from './adapters/osm/extract';
+import { countsForReport } from './adapters/osm/tagCounts';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
@@ -74,6 +76,7 @@ async function main() {
     console.log(`stale=${staleSources(ADAPTERS, store, version, REGIONS[region]).join(' ')}`);
     return;
   }
+  const fetching = !process.argv.includes('--no-fetch');
   const only = process.argv.includes('--fetch-stale') ? staleSources(ADAPTERS, store, version, REGIONS[region]) : sourcesArg(arg('sources'));
   if (only) console.error(`fetching only: ${only.join(', ') || 'nothing'}`);
   mkdirSync(out, { recursive: true });
@@ -89,7 +92,7 @@ async function main() {
     store,
     registry,
     edits,
-    fetch: !process.argv.includes('--no-fetch'),
+    fetch: fetching,
     only,
     box: boxArg(arg('box')),
     http: (u, init) => fetch(u, init),
@@ -143,7 +146,10 @@ async function main() {
     writeFileSync(storesRegFile, `${JSON.stringify(stores.registry)}\n`);
   }
   writeFileSync(regFile, `${JSON.stringify(r.registry)}\n`);
-  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, stores: stores.report }, null, 1)}\n`);
+  // OC6: the owner's OSM tag counts, only from a run that fetched OpenStreetMap; never in a pack, release or manifest.
+  const osmEntry = r.report.sources.find((x) => x.name === 'osm');
+  const osmTagCounts = countsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
+  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), stores: stores.report }, null, 1)}\n`);
   console.log(`publish=${files.length > 0}`);
   console.log(`reason=${reasons.join('; ')}`);
   console.log(`files=${files.join(' ')}`);

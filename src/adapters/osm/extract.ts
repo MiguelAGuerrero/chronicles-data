@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FetchContext } from '../../adapter';
+import { countExpressions, countFilter, COUNTS_NOTE, parseTagsCount, partCounts } from './tagCounts';
 
 /** Geofabrik's US regions sit beside the states' folder, not in it (`north-america/us/` holds states only). */
 export const GEOFABRIK = 'https://download.geofabrik.de/north-america';
@@ -64,17 +65,40 @@ export interface Filter {
   then?: string[];
 }
 
-function osmium(args: string[]) {
+function osmium(args: string[]): string {
   const r = spawnSync('osmium', args, { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 26 });
   if (r.error || r.status !== 0) throw new Error(`osmium ${args[0]} failed: ${r.error?.message ?? r.stderr.toString().slice(0, 300)}`);
+  return r.stdout.toString();
+}
+
+/**
+ * OC3: one extract's tag counts, for the owner's review only. One pass over the extract keeps the elements carrying a
+ * counted tag (`-R`: not the nodes and members they only refer to); `tags-count` on that small file gives `all`, and on
+ * its elements that carry `wikidata` gives `withWikidata`.
+ */
+function countExtract(pbf: string, dir: string, part: string, table: Record<string, readonly string[]>) {
+  if (!Object.values(table).some((vs) => vs.length)) throw new Error('nothing to count');
+  const kept = join(dir, `counts-${part}.osm.pbf`);
+  const wd = join(dir, `counts-${part}.wikidata.osm.pbf`);
+  try {
+    osmium(['tags-filter', pbf, '-R', ...countFilter(table), '-o', kept, '--overwrite']);
+    const all = parseTagsCount(osmium(['tags-count', kept, ...countExpressions(table)]));
+    osmium(['tags-filter', kept, '-R', 'nwr/wikidata', '-o', wd, '--overwrite']);
+    const withWikidata = parseTagsCount(osmium(['tags-count', wd, ...countExpressions(table)]));
+    return partCounts(all, withWikidata, table);
+  } finally {
+    rmSync(kept, { force: true });
+    rmSync(wd, { force: true });
+  }
 }
 
 /**
  * RD7: downloads each US part, applies every filter to it, stores each filter's GeoJSON lines as a raw part
  * (`<filter>-<part>.geojsonl`), and deletes the extract before the next. Throws when a part can't be had (the run then
- * uses this source's last good answers, PP14).
+ * uses this source's last good answers, PP14). OC3, OC4: with `counts`, also counts those tags in each extract, kept as
+ * the run's note `tagCounts:<part>` (never a raw part); a count that fails is logged and changes nothing else (OC7).
  */
-export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS) {
+export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>) {
   const dir = mkdtempSync(join(tmpdir(), 'osm-'));
   try {
     for (const part of parts) {
@@ -107,6 +131,9 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         for (const f of filters) ctx.carry(`${f.name}-${part}.geojsonl`);
         if (etag) ctx.setMeta(`etag:${part}`, etag);
         if (modified) ctx.setMeta(`modified:${part}`, modified);
+        // OC4: its counts are carried with its answers.
+        const note = prev.meta[`${COUNTS_NOTE}${part}`];
+        if (counts && note != null) ctx.setMeta(`${COUNTS_NOTE}${part}`, note);
         ctx.log(`osm: ${part} unchanged since ${prev.run}, its answers carried`);
         continue;
       }
@@ -131,6 +158,14 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         ctx.put(`${f.name}-${part}.geojsonl`, readFileSync(out, 'utf8').replace(/\x1e/g, ''));
         rmSync(kept, { force: true });
         rmSync(out, { force: true });
+      }
+      if (counts) {
+        try {
+          ctx.setMeta(`${COUNTS_NOTE}${part}`, JSON.stringify(countExtract(pbf, dir, part, counts)));
+        } catch (e) {
+          // OC7: the counts are only for the owner's review; a failure leaves this run with none, and nothing else.
+          ctx.log(`osm: ${part} tag counts failed (${String((e as Error)?.message ?? e)}); this run reports no counts`);
+        }
       }
       rmSync(pbf, { force: true });
     }

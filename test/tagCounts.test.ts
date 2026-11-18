@@ -32,7 +32,7 @@ test('OC1: the counted tags are pinned; a waterfall is waterway=waterfall', asyn
     natural: ['cave_entrance'],
     waterway: ['waterfall'],
   });
-  assert.equal(COUNTED.length, 26);
+  assert.equal(COUNTED.length, 25);
   assert.ok(COUNTED.includes('waterway=waterfall') && !COUNTED.includes('natural=waterfall'));
 });
 

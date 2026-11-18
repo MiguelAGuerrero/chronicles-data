@@ -10,6 +10,7 @@ import type { ClassName } from '../../classes';
 import { fingerprint } from '../../fingerprint';
 import { SHOP_FILTER } from '../../stores/osmShops';
 import { filterExtracts, GEOFABRIK, US_PARTS, type Filter } from './extract';
+import { COUNT_TAGS } from './tagCounts';
 
 /** RD8: tags that show a place open to visitors; `historic=building` and the like are no sign. */
 export const OPEN_TAGS: Record<string, readonly string[]> = {
@@ -183,7 +184,8 @@ export const osm: Adapter = {
   // SL9: both filters from the same download of each extract.
   async fetch(ctx) {
     // ST9: the stores' shop filter rides the same pass, so the week's extracts are downloaded once.
-    await filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER]);
+    // OC3: the owner's tag counts ride the same pass too; they never reach a place (OC7), so the fingerprint leaves them out.
+    await filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER], US_PARTS, COUNT_TAGS);
   },
 
   /** RD7: one confirming candidate per Wikidata id an element carries (`wikidata=Q1;Q2` speaks for both); SL9: the small part locates. */
