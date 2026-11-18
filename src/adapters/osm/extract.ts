@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FetchContext } from '../../adapter';
-import { MIN_PER_EXTRACT, partShopCounts, placeCountExpressions, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
+import { HOURS_FILTER, MIN_PER_EXTRACT, partShopCounts, placeCountExpressions, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
 import { countExpressions, countFilter, COUNTS_NOTE, parseTagsCount, partCounts } from './tagCounts';
 
 /** Geofabrik's US regions sit beside the states' folder, not in it (`north-america/us/` holds states only). */
@@ -100,6 +100,7 @@ function countExtract(pbf: string, dir: string, part: string, table: Record<stri
 export function countShopsIn(pbf: string, dir: string, part: string): ShopCounts {
   const kept = join(dir, `shops-count-${part}.osm.pbf`);
   const second = join(dir, `shops-count-${part}.second.osm.pbf`);
+  const hours = join(dir, `shops-count-${part}.hours.osm.pbf`);
   try {
     osmium(['tags-filter', pbf, '-R', ...shopCountFilter(), '-o', kept, '--overwrite']);
     const all = parseTagsCount(osmium(['tags-count', kept, ...shopCountExpressions()]));
@@ -107,10 +108,14 @@ export function countShopsIn(pbf: string, dir: string, part: string): ShopCounts
     const secondHand = parseTagsCount(osmium(['tags-count', second, ...shopCountExpressions()]));
     // SK9: the other kinds of stop, counted on the extract itself (no file of them is written: there are millions).
     const places = parseTagsCount(osmium(['tags-count', '-m', String(MIN_PER_EXTRACT), pbf, ...placeCountExpressions()]));
-    return partShopCounts(all, secondHand, undefined, places);
+    // SK10: among every counted key, the elements that say when they are open (one more small file).
+    osmium(['tags-filter', pbf, '-R', ...HOURS_FILTER, '-o', hours, '--overwrite']);
+    const withHours = parseTagsCount(osmium(['tags-count', hours, ...shopCountExpressions(), ...placeCountExpressions()]));
+    return partShopCounts(all, secondHand, undefined, places, withHours);
   } finally {
     rmSync(kept, { force: true });
     rmSync(second, { force: true });
+    rmSync(hours, { force: true });
   }
 }
 
