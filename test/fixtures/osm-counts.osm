@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- OC3: hand-written; a way and a relation with a wikidata tag refer to a node and a way that carry counted tags of their own. -->
+<osm version="0.6" generator="hand">
+ <node id="1" version="1" lat="40.0" lon="-75.0"><tag k="tourism" v="museum"/><tag k="wikidata" v="Q1"/><tag k="name" v="A Museum"/></node>
+ <node id="2" version="1" lat="40.1" lon="-75.0"><tag k="tourism" v="museum"/></node>
+ <node id="3" version="1" lat="40.2" lon="-75.0"><tag k="tourism" v="artwork"/></node>
+ <node id="4" version="1" lat="40.3" lon="-75.0"><tag k="amenity" v="bench"/><tag k="wikidata" v="Q4"/></node>
+ <node id="5" version="1" lat="40.4" lon="-75.0"/>
+ <node id="6" version="1" lat="40.5" lon="-75.1"><tag k="tourism" v="artwork"/></node>
+ <node id="7" version="1" lat="40.5" lon="-75.2"/>
+ <node id="8" version="1" lat="40.6" lon="-75.2"><tag k="natural" v="waterfall"/></node>
+ <way id="10" version="1"><nd ref="5"/><nd ref="6"/><nd ref="7"/><nd ref="5"/><tag k="leisure" v="park"/><tag k="wikidata" v="Q10"/></way>
+ <way id="11" version="1"><nd ref="5"/><nd ref="7"/><tag k="waterway" v="waterfall"/></way>
+ <relation id="20" version="1"><member type="way" ref="11" role="outer"/><tag k="type" v="multipolygon"/><tag k="historic" v="castle"/><tag k="wikidata" v="Q20"/></relation>
+</osm>
