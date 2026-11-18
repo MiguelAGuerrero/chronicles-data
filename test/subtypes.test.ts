@@ -216,3 +216,35 @@ test('AT6: the new types are among the targets a run asks, so a first run asks t
   const { ALL_TARGETS } = await import(String('../src/adapters/wikidata/query'));
   for (const q of ['Q33506', 'Q1410668', 'Q194195', 'Q863454']) assert.ok((ALL_TARGETS as string[]).includes(q), q);
 });
+
+// More attractions audit (docs/attractions/spec.md, AT7, AT8). Written before the code.
+test('more-attractions audit 15: a listed church that is also a museum keeps its listed class', async () => {
+  const { classify, listing } = await wd();
+  // AT7: church Q16970, theatre Q24354, with museum Q33506 or a museum subtype (history museum Q16735822).
+  assert.equal(classify({ p31: ['Q16970', 'Q33506'], listed: true }), 'church');
+  assert.equal(classify({ p31: ['Q16970', 'Q16735822'], nhl: true }), 'church');
+  assert.equal(classify({ p31: ['Q24354', 'Q33506'], listed: true }), 'theatre');
+  // A Landmark amusement park (Kennywood) is History again, not a viewpoint.
+  assert.equal(classify({ p31: ['Q194195'], nhl: true }), 'building_structure');
+  assert.equal(classify({ p31: ['Q194195'], listed: true }), listing({ p31: ['Q194195'], listed: true })?.cls);
+  // Nature reserves and piers too.
+  for (const q of ['Q179049', 'Q863454']) assert.equal(classify({ p31: [q], nhl: true }), listing({ p31: [q], nhl: true })?.cls, q);
+  // Unlisted, the v6 class still holds; a listed museum is still museum (AT2).
+  assert.equal(classify({ p31: ['Q16970', 'Q33506'] }), 'museum_by_type');
+  assert.equal(classify({ p31: ['Q194195'] }), 'amusement_park');
+  assert.equal(classify({ p31: ['Q33506'], listed: true }), 'museum');
+});
+
+test('more-attractions audit 16: a statue that is a national monument keeps statue', async () => {
+  const { classify } = await wd();
+  assert.equal(classify({ p31: ['Q179700', 'Q893745'] }), 'statue');
+  assert.equal(classify({ p31: ['Q241045', 'Q893745'] }), 'statue');
+  // AT8: a natural national monument makes no monument (Colorado, Organ Pipe Cactus, Virgin Islands Coral Reef, a canyon).
+  for (const q of ['Q1286517', 'Q158454', 'Q11292', 'Q150784', 'Q473972']) assert.equal(classify({ p31: ['Q893745', q] }), null, q);
+  // Timpanogos Cave: a show cave is a cave.
+  assert.equal(classify({ p31: ['Q893745', 'Q2232001'] }), 'cave');
+  // A national monument alone, or with a monument or an obelisk, is still a monument.
+  assert.equal(classify({ p31: ['Q893745'] }), 'monument');
+  assert.equal(classify({ p31: ['Q893745', 'Q170980', 'Q179700'] }), 'monument');
+  assert.equal(classify({ p31: ['Q893745', 'Q4989906', 'Q150784'] }), 'monument');
+});
