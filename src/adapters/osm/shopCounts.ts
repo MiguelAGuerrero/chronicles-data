@@ -13,7 +13,7 @@ export const shopCountFilter = (): string[] => SHOP_COUNT_KEYS.map((k) => `nwr/$
 export const shopCountExpressions = (): string[] => SHOP_COUNT_KEYS.map((k) => `${k}=*`);
 
 /** SK9: every stop is a facet of the data, not only shops: these keys' values are counted too, straight from the extract. */
-export const PLACE_COUNT_KEYS = ['tourism', 'historic', 'leisure', 'amenity', 'information'] as const;
+export const PLACE_COUNT_KEYS = ['tourism', 'historic', 'leisure', 'amenity', 'information', 'place', 'railway'] as const;
 export const placeCountExpressions = (): string[] => PLACE_COUNT_KEYS.map((k) => `${k}=*`);
 
 /** SK3: the elements that say they sell second-hand. */

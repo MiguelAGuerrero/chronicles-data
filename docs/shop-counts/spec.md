@@ -43,6 +43,9 @@ gate and rank nothing; the list of kinds drawn from them is the owner's, by a co
   stores ... but are well-known attractions") `information` is counted too: a visitor centre is `tourism=information` with
   `information=visitor_centre`, which the value of `tourism` alone does not tell from a signpost. A farmers' market
   (`amenity=marketplace`), a boutique and a gift shop (`shop=boutique`, `shop=gift`) are already among the keys counted.
+- **SK13** (the owner, Nov 18, on a town's fixtures: "every area might have a visitor center or a plaza ... staples in any
+  developed community") `place` and `railway` are counted too: a plaza is `place=square`, a station `railway=station`. A town
+  hall, a library, a post office and a market are already under `amenity`.
 - **SK11** an extract whose kinds were never counted is asked for whole on the next run that asks OpenStreetMap, even if
   unchanged since the copy held, so the counts do not wait for the extract to change; once its note exists it is asked only
   if it changed, as before (RB5).
