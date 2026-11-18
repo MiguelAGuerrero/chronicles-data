@@ -18,7 +18,7 @@ import { join } from 'node:path';
 import type { Adapter, Box } from './adapter';
 import { osm } from './adapters/osm';
 import { US_PARTS } from './adapters/osm/extract';
-import { shopCountsForReport } from './adapters/osm/shopCounts';
+import { kindCountsForReport } from './adapters/osm/shopCounts';
 import { countsForReport } from './adapters/osm/tagCounts';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
@@ -150,9 +150,9 @@ async function main() {
   // OC6: the owner's OSM tag counts, only from a run that fetched OpenStreetMap; never in a pack, release or manifest.
   const osmEntry = r.report.sources.find((x) => x.name === 'osm');
   const osmTagCounts = countsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
-  // SK7: every shop and craft value, for redrawing the stores contract's facets; the same rule, and never in a pack.
-  const osmShopCounts = shopCountsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
-  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), ...(osmShopCounts ? { osmShopCounts } : {}), stores: stores.report }, null, 1)}\n`);
+  // SK7, SK9: every value of the keys a stop is told by, for redrawing the facets; the same rule, and never in a pack.
+  const osmKindCounts = kindCountsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
+  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), ...(osmKindCounts ? { osmKindCounts } : {}), stores: stores.report }, null, 1)}\n`);
   console.log(`publish=${files.length > 0}`);
   console.log(`reason=${reasons.join('; ')}`);
   console.log(`files=${files.join(' ')}`);

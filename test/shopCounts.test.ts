@@ -25,6 +25,18 @@ test('SK1, SK2, SK3: every value of shop and craft is counted, in one small pass
   assert.deepEqual(m.SECOND_HAND_FILTER, ['nwr/second_hand=only,yes']);
 });
 
+test('SK9: every value of tourism, historic, leisure and amenity is counted too, straight from the extract', async () => {
+  const m = await load('adapters/osm/shopCounts');
+  assert.deepEqual(m.PLACE_COUNT_KEYS, ['tourism', 'historic', 'leisure', 'amenity']);
+  assert.deepEqual(m.placeCountExpressions(), ['tourism=*', 'historic=*', 'leisure=*', 'amenity=*']);
+  const { parseTagsCount } = await load('adapters/osm/tagCounts');
+  const got = m.partShopCounts(parseTagsCount(ALL), parseTagsCount(SECOND), 3, parseTagsCount('7\t"tourism"\t"museum"\n2\t"tourism"\t"musuem"\n9\t"amenity"\t"library"\n'));
+  assert.deepEqual(got['tourism=museum'], { all: 7, secondHand: 0 });
+  assert.deepEqual(got['amenity=library'], { all: 9, secondHand: 0 });
+  assert.equal(got['tourism=musuem'], undefined);
+  assert.deepEqual(got['shop=books'], { all: 4, secondHand: 1 });
+});
+
 test('SK4: a value under three elements of an extract is left out; the rest keep both counts', async () => {
   const m = await load('adapters/osm/shopCounts');
   const { parseTagsCount } = await load('adapters/osm/tagCounts');
@@ -49,13 +61,13 @@ test('SK7: the report orders the tags by how many carry them, then by name, and 
   const m = await load('adapters/osm/shopCounts');
   const a = JSON.stringify({ 'shop=toys': { all: 5, secondHand: 0 }, 'shop=books': { all: 5, secondHand: 1 }, 'shop=clothes': { all: 9, secondHand: 4 } });
   const meta = Object.fromEntries(PARTS.map((p) => [`shopCounts:${p}`, a]));
-  const got = m.shopCountsForReport({ run: 'v1' }, 'v1', true, meta, PARTS);
+  const got = m.kindCountsForReport({ run: 'v1' }, 'v1', true, meta, PARTS);
   assert.equal(got.minPerExtract, 3);
   assert.deepEqual(Object.keys(got.tags), ['shop=clothes', 'shop=books', 'shop=toys']);
   assert.deepEqual(got.tags['shop=clothes'], { all: 36, secondHand: 16 });
-  assert.equal(m.shopCountsForReport({ run: 'v0' }, 'v1', true, meta, PARTS), null, 'answers carried from an earlier run');
-  assert.equal(m.shopCountsForReport({ run: 'v1' }, 'v1', false, meta, PARTS), null, 'a run that did not ask OpenStreetMap');
-  assert.equal(m.shopCountsForReport({ run: 'v1', error: 'x' }, 'v1', true, meta, PARTS), null);
+  assert.equal(m.kindCountsForReport({ run: 'v0' }, 'v1', true, meta, PARTS), null, 'answers carried from an earlier run');
+  assert.equal(m.kindCountsForReport({ run: 'v1' }, 'v1', false, meta, PARTS), null, 'a run that did not ask OpenStreetMap');
+  assert.equal(m.kindCountsForReport({ run: 'v1', error: 'x' }, 'v1', true, meta, PARTS), null);
 });
 
 test('SK2, SK3: on a real extract, osmium counts every value and the second-hand among them', { skip: !hasOsmium && 'osmium is not installed' }, async () => {
@@ -68,10 +80,12 @@ test('SK2, SK3: on a real extract, osmium counts every value and the second-hand
     ...[8, 9, 10].map((i) => node(i, { craft: 'pottery' })),
     node(11, { shop: 'bokos' }),
     node(12, { amenity: 'cafe', second_hand: 'yes' }),
+    ...[13, 14, 15].map((i) => node(i, { tourism: 'museum' })),
   ];
   const file = join(dir, 'x.osm');
   writeFileSync(file, `<?xml version='1.0' encoding='UTF-8'?>\n<osm version="0.6" generator="test">\n${rows.join('\n')}\n</osm>\n`);
-  assert.deepEqual(countShopsIn(file, dir, 'x'), { 'shop=books': { all: 4, secondHand: 1 }, 'shop=clothes': { all: 3, secondHand: 3 }, 'craft=pottery': { all: 3, secondHand: 0 } });
+  // SK9: the cafe's amenity is one element (left out); three museums are counted from the extract itself.
+  assert.deepEqual(countShopsIn(file, dir, 'x'), { 'shop=books': { all: 4, secondHand: 1 }, 'shop=clothes': { all: 3, secondHand: 3 }, 'craft=pottery': { all: 3, secondHand: 0 }, 'tourism=museum': { all: 3, secondHand: 0 } });
 });
 
 test('SK8: the shop counts are outside the fetch fingerprint and write no raw part', async () => {

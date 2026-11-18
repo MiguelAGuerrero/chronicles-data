@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FetchContext } from '../../adapter';
-import { partShopCounts, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
+import { MIN_PER_EXTRACT, partShopCounts, placeCountExpressions, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
 import { countExpressions, countFilter, COUNTS_NOTE, parseTagsCount, partCounts } from './tagCounts';
 
 /** Geofabrik's US regions sit beside the states' folder, not in it (`north-america/us/` holds states only). */
@@ -105,7 +105,9 @@ export function countShopsIn(pbf: string, dir: string, part: string): ShopCounts
     const all = parseTagsCount(osmium(['tags-count', kept, ...shopCountExpressions()]));
     osmium(['tags-filter', kept, '-R', ...SECOND_HAND_FILTER, '-o', second, '--overwrite']);
     const secondHand = parseTagsCount(osmium(['tags-count', second, ...shopCountExpressions()]));
-    return partShopCounts(all, secondHand);
+    // SK9: the other kinds of stop, counted on the extract itself (no file of them is written: there are millions).
+    const places = parseTagsCount(osmium(['tags-count', '-m', String(MIN_PER_EXTRACT), pbf, ...placeCountExpressions()]));
+    return partShopCounts(all, secondHand, undefined, places);
   } finally {
     rmSync(kept, { force: true });
     rmSync(second, { force: true });

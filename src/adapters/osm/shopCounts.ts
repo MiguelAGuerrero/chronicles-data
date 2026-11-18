@@ -12,6 +12,10 @@ export const shopCountFilter = (): string[] => SHOP_COUNT_KEYS.map((k) => `nwr/$
 /** SK1: `osmium tags-count` expressions; `key=*` counts each value (a bare key would count the key alone). */
 export const shopCountExpressions = (): string[] => SHOP_COUNT_KEYS.map((k) => `${k}=*`);
 
+/** SK9: every stop is a facet of the data, not only shops: these keys' values are counted too, straight from the extract. */
+export const PLACE_COUNT_KEYS = ['tourism', 'historic', 'leisure', 'amenity'] as const;
+export const placeCountExpressions = (): string[] => PLACE_COUNT_KEYS.map((k) => `${k}=*`);
+
 /** SK3: the elements that say they sell second-hand. */
 export const SECOND_HAND_FILTER = ['nwr/second_hand=only,yes'];
 
@@ -28,9 +32,11 @@ export interface ShopCount {
 export type ShopCounts = Record<string, ShopCount>;
 
 /** SK4: one extract's counts: each value carried by enough elements, with the second-hand among them. */
-export function partShopCounts(all: Record<string, number>, secondHand: Record<string, number>, min = MIN_PER_EXTRACT): ShopCounts {
+export function partShopCounts(all: Record<string, number>, secondHand: Record<string, number>, min = MIN_PER_EXTRACT, places: Record<string, number> = {}): ShopCounts {
   const out: ShopCounts = {};
   for (const [tag, n] of Object.entries(all)) if (n >= min) out[tag] = { all: n, secondHand: secondHand[tag] ?? 0 };
+  // SK9: the other kinds of stop; second-hand is asked of shops and crafts only.
+  for (const [tag, n] of Object.entries(places)) if (n >= min && !(tag in out)) out[tag] = { all: n, secondHand: 0 };
   return out;
 }
 
@@ -58,7 +64,7 @@ export function sumShopParts(meta: Record<string, string>, parts: readonly strin
 }
 
 /** SK7: what the report holds: the tags by how many carry them, then by name; only from a run that fetched OpenStreetMap itself. */
-export function shopCountsForReport(
+export function kindCountsForReport(
   entry: { run: string | null; error?: string; fellBack?: string } | undefined,
   version: string,
   asked: boolean,

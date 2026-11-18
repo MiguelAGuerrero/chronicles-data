@@ -29,9 +29,13 @@ gate and rank nothing; the list of kinds drawn from them is the owner's, by a co
   since the copy held carries its note with its answers.
 - **SK6** the run's counts are the sum over the four US extracts; if any extract's note is missing or unreadable there
   are none that run: a part of the US is never reported as the whole.
-- **SK7** the report holds them as `osmShopCounts: { minPerExtract: 3, tags: { "shop=books": { "all": n, "secondHand": m }, ... } }`,
+- **SK7** the report holds them as `osmKindCounts: { minPerExtract: 3, tags: { "shop=books": { "all": n, "secondHand": m }, ... } }`,
   the tags ordered by `all`, largest first, then by name; only from a run that asked OpenStreetMap and fetched it itself
   (as OC6).
+- **SK9** (the owner, Nov 18: "shops are one type of store, but attractions and galleries and other sorts of stops, museums,
+  things you can enter are also under consideration"; asked, **widen the count**) every value of `tourism`, `historic`,
+  `leisure` and `amenity` is counted too, with `tags-count` on the extract itself (those elements are millions, so no
+  file of them is written); they carry `secondHand: 0`. The same floor of three per extract applies.
 - **SK8** a count that fails is logged and changes nothing else: no raw part, no place, no store, no fetch fingerprint.
 
 ## Not in this slice
