@@ -86,6 +86,7 @@ count toward History, as typed museums (`museum_by_type`) and piers already are.
 
   A lookup on Nov 18 (`?item wdt:P31 wd:Q12570 ; wdt:P17 wd:Q30 ; wdt:P625 ?c`, listing as the fetch reads it: an
   NRHP statement with no end time, or NHL) found 122 US suspension bridges: 41 listed or Landmarks (3 Landmarks, the
-  Brooklyn Bridge among them), all `bridge` by their listing's root; 81 unlisted, all `suspension_bridge` (none is
-  also typed a covered bridge or an earlier class), of which 80 carry a name and enter (the George Washington,
-  Verrazzano-Narrows and Williamsburg bridges among them) and one (Q15825753) has no English label and is left out.
+  Brooklyn Bridge among them), all `bridge` by their listing's root; 81 unlisted. Of those, one is also typed a
+  covered bridge and stays `bridge` (Lumberville–Raven Rock Bridge, Q6703124); 80 are `suspension_bridge`, of which 79
+  carry a name and enter (the George Washington, Verrazzano-Narrows and Williamsburg bridges among them) and one
+  (Q15825753) has no English label and is left out.

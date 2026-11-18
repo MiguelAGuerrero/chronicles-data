@@ -1,6 +1,6 @@
 {
   "$comment": "Generated from src/schema.ts by `npm run contract`; a test fails when they differ (PP5).",
-  "contractVersion": 7,
+  "contractVersion": 8,
   "candidate": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -97,7 +97,8 @@
           "nature_reserve",
           "amusement_park",
           "pier",
-          "natural_monument"
+          "natural_monument",
+          "suspension_bridge"
         ]
       },
       "signals": {
@@ -289,7 +290,8 @@
           "nature_reserve",
           "amusement_park",
           "pier",
-          "natural_monument"
+          "natural_monument",
+          "suspension_bridge"
         ]
       },
       "gone": {
@@ -443,7 +445,8 @@
           "nature_reserve",
           "amusement_park",
           "pier",
-          "natural_monument"
+          "natural_monument",
+          "suspension_bridge"
         ]
       },
       "src": {

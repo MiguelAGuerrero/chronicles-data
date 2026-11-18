@@ -1,5 +1,5 @@
 {
-  "contractVersion": 7,
+  "contractVersion": 8,
   "classes": [
     "monument",
     "memorial",
@@ -61,7 +61,8 @@
     "nature_reserve",
     "amusement_park",
     "pier",
-    "natural_monument"
+    "natural_monument",
+    "suspension_bridge"
   ],
   "sources": [
     {

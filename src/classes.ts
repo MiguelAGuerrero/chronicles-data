@@ -10,7 +10,8 @@
 // its own schema, dimensions (`what` emitted, `how` reserved) and manifest key `stores`; the places classes are unchanged.
 // v6 (More attractions, AT1; the app's specs/more-attractions): museums by type, nature reserves, amusement parks, piers.
 // v7 (more-attractions audit 18, AT9; the owner, Nov 18): `natural_monument`, the US national monuments that are natural places.
-export const CONTRACT_VERSION = 7;
+// v8 (typed bridges, AT10; the owner, Nov 18): `suspension_bridge`, a suspension bridge that enters by type, not a listing.
+export const CONTRACT_VERSION = 8;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
 export const CLASS_NAMES = [
@@ -30,6 +31,8 @@ export const CLASS_NAMES = [
   'museum_by_type', 'nature_reserve', 'amusement_park', 'pier',
   // AT9 (contract v7): the natural national monuments, pinned by item.
   'natural_monument',
+  // AT10 (contract v8): suspension bridges by type (a listed one is `bridge`, AT7).
+  'suspension_bridge',
 ] as const;
 export type ClassName = (typeof CLASS_NAMES)[number];
 

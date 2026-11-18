@@ -13,7 +13,8 @@ export const ORDER = [
   // You go there to look out: a fire lookout tower before an observation tower.
   'fire_tower', 'overlook', 'tower',
   // What it is, by type (ST1): structures, nature, culture.
-  'bridge', 'lighthouse', 'mill', 'water_tower', 'clock_tower', 'fort', 'historic_machine', 'mausoleum',
+  // AT10: a covered bridge (`bridge`) before a suspension bridge.
+  'bridge', 'suspension_bridge', 'lighthouse', 'mill', 'water_tower', 'clock_tower', 'fort', 'historic_machine', 'mausoleum',
   'waterfall', 'cave', 'hot_spring', 'old_tree', 'garden', 'community_garden',
   'concert_hall', 'observatory', 'carousel', 'zoo', 'amusement_park', 'museum_by_type', 'archaeological_site', 'nature_reserve', 'pier',
   // It is one of the odd classes: a curiosity; a milestone is an old stone before it marks a fact; a ghost town before a ruin.
@@ -36,7 +37,9 @@ export const CLASSES = {
   overlook: ['Q6017969', 'Q177305'], // scenic viewpoint 1,510; observation deck 165
   tower: ['Q1440300'], // observation tower 1,891
   fire_tower: ['Q748998'], // fire lookout tower 277 (from tower)
-  bridge: ['Q1825472', 'Q12570'], // covered bridge 896 (from odd_engineering); suspension bridge 122 (AT5)
+  bridge: ['Q1825472'], // covered bridge 896 (from odd_engineering)
+  // AT10 (contract v8; the owner, Nov 18): suspension bridge 122 (AT5; from `bridge`), not History unless listed (AT7).
+  suspension_bridge: ['Q12570'],
   lighthouse: ['Q39715'], // lighthouse 888 (from odd_engineering)
   mill: ['Q185187', 'Q38720'], // watermill 142; windmill 56
   water_tower: ['Q274153'], // water tower 146
@@ -110,8 +113,8 @@ const inGroup = (p31, g) => [...p31].some((q) => GROUPS[g].has(q));
  * owner, Nov 18: "Yes, every new type").
  */
 const V6_TYPES = new Set([
-  ...['museum_by_type', 'amusement_park', 'nature_reserve', 'pier'].flatMap((c) => CLASSES[c]),
-  'Q893745', 'Q12570', // national monument, suspension bridge
+  ...['museum_by_type', 'amusement_park', 'nature_reserve', 'pier', 'suspension_bridge'].flatMap((c) => CLASSES[c]),
+  'Q893745', // national monument
   'Q1107656', 'Q1759852', 'Q84343482', 'Q55177716', 'Q47692', 'Q140470772', 'Q11507581', // AT3's new garden types
 ]);
 /**
