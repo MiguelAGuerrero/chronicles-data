@@ -293,7 +293,8 @@ test('ST9: the shops filter shares the OSM pass: no second download, no new host
   const urls: string[] = [];
   const carried: string[] = [];
   const metas: Record<string, string> = {};
-  for (const p of US_PARTS) Object.assign(metas, { [`etag:${p}`]: `"${p}"` });
+  // SK11: each extract's kinds were counted by the earlier run, so it is asked for only if it changed.
+  for (const p of US_PARTS) Object.assign(metas, { [`etag:${p}`]: `"${p}"`, [`shopCounts:${p}`]: '{}' });
   const prevParts = US_PARTS.flatMap((p: string) => [FILTER.name, SMALL_FILTER.name, SHOP_FILTER.name].map((n: string) => ({ part: `${n}-${p}.geojsonl`, sha256: 'x', fetchedAt: AT })));
   await osm.fetch({
     area: [], run: 'r2', put: () => { throw new Error('nothing is re-read'); }, log: () => {}, week: 1, box: null, keepClock: () => {}, setMeta: () => {},

@@ -132,7 +132,9 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const pbf = join(dir, `${part}.osm.pbf`);
       // RB5: ask only if the extract changed since the copy the earlier run read, when that run kept the same filters.
       const prev = ctx.previous;
-      const held = ctx.sameFetch && prev != null && filters.every((f) => prev.parts.some((p) => p.part === `${f.name}-${part}.geojsonl`));
+      // SK11: an extract whose kinds were never counted is asked for whole, once, so the counts do not wait for it to change.
+      const counted = !counts || prev?.meta[`${SHOP_COUNTS_NOTE}${part}`] != null;
+      const held = ctx.sameFetch && prev != null && counted && filters.every((f) => prev.parts.some((p) => p.part === `${f.name}-${part}.geojsonl`));
       const etag = held ? prev.meta[`etag:${part}`] : undefined;
       const modified = held ? prev.meta[`modified:${part}`] : undefined;
       const headers: Record<string, string> = {};

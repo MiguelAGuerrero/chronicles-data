@@ -75,7 +75,7 @@ test('OC4: an extract unchanged since the copy held carries its counts with its 
     area: [[-76, 40, -72, 42]], run: '20261118', week: 47, box: null, log: () => {},
     put: () => assert.fail('nothing is downloaded or written'),
     http: async () => new Response(null, { status: 304 }),
-    previous: { run: '20261111', startedAt: null, parts: [{ part: 'confirm-us-west.geojsonl', sha256: 'x', fetchedAt: '2026-11-11T07:17:00Z' }], read: () => '', meta: { 'etag:us-west': '"abc"', [`${COUNTS_NOTE}us-west`]: note } },
+    previous: { run: '20261111', startedAt: null, parts: [{ part: 'confirm-us-west.geojsonl', sha256: 'x', fetchedAt: '2026-11-11T07:17:00Z' }], read: () => '', meta: { 'etag:us-west': '"abc"', [`${COUNTS_NOTE}us-west`]: note, 'shopCounts:us-west': '{}' } },
     carry: () => {}, keepClock: () => {}, setMeta: (k, v) => { meta[k] = v; }, sameFetch: true,
   };
   await filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west'], COUNT_TAGS);

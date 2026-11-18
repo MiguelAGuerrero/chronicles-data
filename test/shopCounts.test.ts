@@ -5,6 +5,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import type { FetchContext } from '../src/adapter';
 
 // OpenStreetMap shop counts, for the owner's review (docs/shop-counts/spec.md, SK1-SK8). Written before the code; loaded
 // by a path TypeScript doesn't resolve until it exists.
@@ -105,4 +106,28 @@ test('SK8: the shop counts are outside the fetch fingerprint and write no raw pa
   const ex = readFileSync(new URL('../src/adapters/osm/extract.ts', import.meta.url), 'utf8');
   assert.match(ex, /SHOP_COUNTS_NOTE/);
   assert.doesNotMatch(ex, /ctx\.put\([^)]*shopCounts/);
+});
+
+test('SK11: an extract whose kinds were never counted is asked for whole, once; with its counts held it is asked only if it changed', async () => {
+  const { filterExtracts } = await load('adapters/osm/extract');
+  const { COUNT_TAGS, COUNTS_NOTE } = await load('adapters/osm/tagCounts');
+  const { SHOP_COUNTS_NOTE } = await load('adapters/osm/shopCounts');
+  const asked: Record<string, string>[] = [];
+  const meta: Record<string, string> = {};
+  const ctxWith = (held: Record<string, string>): FetchContext => ({
+    area: [[-76, 40, -72, 42]], run: '20261119', week: 47, box: null, log: () => {},
+    put: () => {},
+    http: async (_u: string, init?: { headers?: Record<string, string> }) => { asked.push({ ...(init?.headers ?? {}) }); return new Response(null, { status: 304 }); },
+    previous: { run: '20261118', startedAt: null, parts: [{ part: 'confirm-us-west.geojsonl', sha256: 'x', fetchedAt: '2026-11-18T07:17:00Z' }], read: () => '', meta: { 'etag:us-west': '"abc"', [`${COUNTS_NOTE}us-west`]: '{}', ...held } },
+    carry: () => {}, keepClock: () => {}, setMeta: (k: string, v: string) => { meta[k] = v; }, sameFetch: true,
+  } as unknown as FetchContext);
+  const filter = [{ name: 'confirm', expressions: ['nwr/wikidata'] }];
+  // Never counted: no "only if changed" header, so the extract comes whole (the fake's 304 is then no answer, and the run says so).
+  await assert.rejects(filterExtracts(ctxWith({}), filter, ['us-west'], COUNT_TAGS));
+  assert.equal(asked[0]['if-none-match'], undefined);
+  // Counted before: asked only if it changed, and the note is carried.
+  const note = JSON.stringify({ 'shop=books': { all: 4, secondHand: 1, withHours: 2 } });
+  await filterExtracts(ctxWith({ [`${SHOP_COUNTS_NOTE}us-west`]: note }), filter, ['us-west'], COUNT_TAGS);
+  assert.equal(asked[asked.length - 1]['if-none-match'], '"abc"');
+  assert.equal(meta[`${SHOP_COUNTS_NOTE}us-west`], note);
 });

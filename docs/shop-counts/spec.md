@@ -39,6 +39,9 @@ gate and rank nothing; the list of kinds drawn from them is the owner's, by a co
 - **SK10** (the owner, Nov 18: "there has to be some consideration on operational hours as well") each tag also carries
   `withHours`: the count among its elements that carry `opening_hours` (`tags-filter -R nwr/opening_hours` over the extract,
   then `tags-count` on that file), so the owner sees how far hours are recorded for each kind before anything is built on them.
+- **SK11** an extract whose kinds were never counted is asked for whole on the next run that asks OpenStreetMap, even if
+  unchanged since the copy held, so the counts do not wait for the extract to change; once its note exists it is asked only
+  if it changed, as before (RB5).
 - **SK8** a count that fails is logged and changes nothing else: no raw part, no place, no store, no fetch fingerprint.
 
 ## Not in this slice
