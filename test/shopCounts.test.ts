@@ -28,8 +28,8 @@ test('SK1, SK2, SK3: every value of shop and craft is counted, in one small pass
 
 test('SK9: every value of tourism, historic, leisure and amenity is counted too, straight from the extract', async () => {
   const m = await load('adapters/osm/shopCounts');
-  assert.deepEqual(m.PLACE_COUNT_KEYS, ['tourism', 'historic', 'leisure', 'amenity']);
-  assert.deepEqual(m.placeCountExpressions(), ['tourism=*', 'historic=*', 'leisure=*', 'amenity=*']);
+  assert.deepEqual(m.PLACE_COUNT_KEYS, ['tourism', 'historic', 'leisure', 'amenity', 'information']);
+  assert.deepEqual(m.placeCountExpressions(), ['tourism=*', 'historic=*', 'leisure=*', 'amenity=*', 'information=*']);
   const { parseTagsCount } = await load('adapters/osm/tagCounts');
   const got = m.partShopCounts(parseTagsCount(ALL), parseTagsCount(SECOND), 3, parseTagsCount('7\t"tourism"\t"museum"\n2\t"tourism"\t"musuem"\n9\t"amenity"\t"library"\n'));
   assert.deepEqual(got['tourism=museum'], { all: 7, secondHand: 0, withHours: 0 });
