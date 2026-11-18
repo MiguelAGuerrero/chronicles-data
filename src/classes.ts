@@ -9,7 +9,8 @@
 // v5 (the stores pack, docs/stores/spec.md; written as v3 on its branch, before v3 and v4 landed): a separate stores layer with
 // its own schema, dimensions (`what` emitted, `how` reserved) and manifest key `stores`; the places classes are unchanged.
 // v6 (More attractions, AT1; the app's specs/more-attractions): museums by type, nature reserves, amusement parks, piers.
-export const CONTRACT_VERSION = 6;
+// v7 (more-attractions audit 18, AT9; the owner, Nov 18): `natural_monument`, the US national monuments that are natural places.
+export const CONTRACT_VERSION = 7;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
 export const CLASS_NAMES = [
@@ -27,6 +28,8 @@ export const CLASS_NAMES = [
   'hot_spring', 'old_tree', 'concert_hall', 'observatory', 'carousel', 'zoo', 'fire_tower', 'ghost_town',
   // AT1 (contract v6): conventional attractions asked by type.
   'museum_by_type', 'nature_reserve', 'amusement_park', 'pier',
+  // AT9 (contract v7): the natural national monuments, pinned by item.
+  'natural_monument',
 ] as const;
 export type ClassName = (typeof CLASS_NAMES)[number];
 

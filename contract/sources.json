@@ -1,5 +1,5 @@
 {
-  "contractVersion": 6,
+  "contractVersion": 7,
   "classes": [
     "monument",
     "memorial",
@@ -60,7 +60,8 @@
     "museum_by_type",
     "nature_reserve",
     "amusement_park",
-    "pier"
+    "pier",
+    "natural_monument"
   ],
   "sources": [
     {

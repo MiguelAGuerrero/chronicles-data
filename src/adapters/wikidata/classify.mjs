@@ -105,8 +105,47 @@ function byRoot(broad, p31) {
 }
 const inGroup = (p31, g) => [...p31].some((q) => GROUPS[g].has(q));
 
-/** AT7: the v6 classes a listing's class wins over (more-attractions audit 15). */
-const LISTING_WINS = new Set(['museum_by_type', 'amusement_park', 'nature_reserve', 'pier']);
+/**
+ * AT7: every Wikidata type v6 added (AT1-AT5): a listing's class wins over each (more-attractions audit 15, 17; the
+ * owner, Nov 18: "Yes, every new type").
+ */
+const V6_TYPES = new Set([
+  ...['museum_by_type', 'amusement_park', 'nature_reserve', 'pier'].flatMap((c) => CLASSES[c]),
+  'Q893745', 'Q12570', // national monument, suspension bridge
+  'Q1107656', 'Q1759852', 'Q84343482', 'Q55177716', 'Q47692', 'Q140470772', 'Q11507581', // AT3's new garden types
+]);
+/**
+ * AT9: the US national monuments that are natural places (the owner, Nov 18: "Own subtype under Nature"), pinned by
+ * item because Wikidata types most of them only as national monuments. From a lookup on 2026-11-18 of the 76 items
+ * `?item wdt:P31 wd:Q893745 ; wdt:P17 wd:Q30 ; wdt:P625 ?c` with their P31 types; Timpanogos Cave (a show cave) stays
+ * `cave`, and El Morro, Scotts Bluff and Russell Cave are kept for their history.
+ */
+export const NATURAL_MONUMENTS = [
+  'Q390945', // Agate Fossil Beds
+  'Q999352', // Buck Island Reef
+  'Q2937254', // Cape Krusenstern
+  'Q1035203', // Capulin Volcano
+  'Q22927906', // Castle Mountains
+  'Q374879', // Cedar Breaks
+  'Q1111312', // Colorado
+  'Q729965', // Devils Postpile
+  'Q28920023', // Devils Tower
+  'Q1324315', // El Malpais
+  'Q1430179', // Florissant Fossil Beds
+  'Q1439427', // Fossil Butte
+  'Q692370', // Hagerman Fossil Beds
+  'Q386178', // Jewel Cave
+  'Q26695669', // Katahdin Woods and Waters
+  'Q1476014', // Lava Beds
+  'Q1195839', // Muir Woods
+  'Q1936970', // Natural Bridges
+  'Q1276829', // Organ Pipe Cactus
+  'Q1894724', // Rainbow Bridge
+  'Q1754469', // Sunset Crater Volcano
+  'Q18712585', // Tule Springs Fossil Beds
+  'Q386154', // Virgin Islands Coral Reef
+  'Q7958854', // Waco Mammoth
+];
 /** AT8: national monument (AT5), and what `monument` holds besides it. */
 const NATIONAL_MONUMENT = 'Q893745';
 const MONUMENT_OWN = CLASSES.monument.filter((q) => q !== NATIONAL_MONUMENT);
@@ -146,25 +185,26 @@ export function listing(item) {
 
 /**
  * PW6: the archive class of a Wikidata item {p31: [Q…], listed, nhl}: a district never (RD4, whatever else it is
- * typed); else the first in ORDER whose list holds one of its classes (a listing never changes it, RD6, except that it
- * wins over a v6 class, AT7; national monument as AT8 limits it); else its listed class (`listing`). Nothing about articles is read (the owner, Nov 6). Else null.
+ * typed); a pinned natural national monument `natural_monument` (AT9); else the first in ORDER whose list holds one of
+ * its classes (a listing never changes it, RD6, except that it wins over every v6 type, AT7; national monument as AT8
+ * limits it); else its listed class (`listing`). Nothing about articles is read (the owner, Nov 6). Else null.
  */
 export function classify(item) {
   const p31 = new Set(item.p31 ?? []);
   if (p31.has(DISTRICT)) return null;
+  const listed = listing(item);
+  // AT9: a pinned natural national monument is `natural_monument`, unless its listing gives it a class (AT7).
+  if (NATURAL_MONUMENTS.includes(item.id)) return listed?.cls ?? 'natural_monument';
   for (const cls of ORDER) {
     if (!CLASSES[cls].some((q) => p31.has(q))) continue;
-    // AT2, AT7: a listed place keeps its listing's class over a v6 type (a listed museum stays `museum`, a listed
-    // church that is also a museum `church`; more-attractions audit 15).
-    if (LISTING_WINS.has(cls)) {
-      const l = listing(item);
-      if (l) return l.cls;
-    }
+    // AT2, AT7: a listed place is classified as if the v6 types did not exist, so it keeps its listing's class (a listed
+    // museum stays `museum`, a listed church that is also a museum `church`; more-attractions audit 15, 17).
+    if (listed && CLASSES[cls].every((q) => !p31.has(q) || V6_TYPES.has(q))) continue;
     // AT8: national monument alone yields to a statue and makes no monument of a natural area (audit 16).
     if (cls === 'monument' && !MONUMENT_OWN.some((q) => p31.has(q)) && (STATUE.some((q) => p31.has(q)) || [...p31].some((q) => NATURAL.has(q)))) continue;
     return cls;
   }
-  return listing(item)?.cls ?? null;
+  return listed?.cls ?? null;
 }
 
 /**
