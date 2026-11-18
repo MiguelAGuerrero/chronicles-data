@@ -202,9 +202,10 @@ test('CF5: answers are carried with their time and hash; the newest answer about
 
 test('CF6: a push that changes the edits or the classes rebuilds (amended by RB3: it fetches only what is stale)', () => {
   const wf = readFileSync(join(ROOT, '.github/workflows/weekly-build.yml'), 'utf8');
+  const job = readFileSync(join(ROOT, '.github/workflows/build.yml'), 'utf8');
   const push = /\n  push:\n([\s\S]*?)\n  [a-z_]+:/.exec(`${wf.split('\njobs:')[0]}\n  end:`)?.[1] ?? '';
   assert.ok(push.includes('edits.json'), 'pushes to edits.json rebuild');
   assert.ok(push.includes("'src/**'"), 'pushes to the classes (src/adapters/wikidata/classify.mjs, src/classes.ts) rebuild');
-  assert.match(wf, /github\.event_name == 'push'[\s\S]{0,200}--fetch-stale/, 'a push fetches only the stale sources: the edits alone fetch nothing (RB3)');
-  assert.match(wf, /workflow_dispatch:\n\s+inputs:\n\s+box:/, 'a sweep by hand takes a box');
+  assert.match(job, /github\.event_name == 'push'[\s\S]{0,200}--fetch-stale/, 'a push fetches only the stale sources: the edits alone fetch nothing (RB3)');
+  assert.match(job, /workflow_call:\n\s+inputs:\n\s+(# .*\n\s+)?box:/, 'a sweep by hand takes a box');
 });

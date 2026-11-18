@@ -66,7 +66,7 @@ npm run build -- --region us --version 20261116 --state state --out out --manife
 
 ## How a new version is published
 
-`.github/workflows/weekly-build.yml` runs on Mondays (and by hand): it restores the pipeline's state (raw answers and
+`.github/workflows/weekly-build.yml` runs on Mondays and on a push to `main`, and calls `build.yml`, the one job. A build by hand is `.github/workflows/manual-build.yml` (Actions, "Manual places build", Run workflow): one checkbox for each source ingested (Wikidata, OpenStreetMap), an optional box to sweep, and the unticked sources built from their kept answers. The job restores the pipeline's state (raw answers and
 the place ID registry) from the `state-us` pre-release, runs the build, saves the state back (only sources whose terms
 allow redistribution), and publishes a release with the archive and its blocks only when a block changed. A push to
 `main` that changes `src/`, `edits.json`, `review-areas.json` or the dependencies runs it too, after the typecheck and

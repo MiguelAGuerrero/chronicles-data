@@ -1,0 +1,49 @@
+name: Manual places build
+
+# A build started by hand, or by an agent (`actions_run_trigger`, `workflow_dispatch`): tick the sources to fetch now;
+# each unticked source is built from its kept answers (RB9, MB1-MB4). One box per source, so the list of what is ingested
+# is the list of boxes. A new adapter adds a box here (a test fails until it does, MB2). The job itself is build.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      wikidata:
+        description: 'Wikidata: landmarks, museums, parks and the rest of the listed places (minutes)'
+        type: boolean
+        default: true
+      osm:
+        description: 'OpenStreetMap: corroboration, small places and stores, four Geofabrik extracts (over an hour)'
+        type: boolean
+        default: true
+      box:
+        description: 'Sweep only this box, w,s,e,n (empty: the usual fetch of each ticked source)'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  pick:
+    runs-on: ubuntu-latest
+    outputs:
+      sources: ${{ steps.pick.outputs.sources }}
+    steps:
+      - id: pick
+        env:
+          WIKIDATA: ${{ inputs.wikidata }}
+          OSM: ${{ inputs.osm }}
+        run: |
+          sources=""
+          [ "$WIKIDATA" = "true" ] && sources="wikidata"
+          [ "$OSM" = "true" ] && sources="${sources:+$sources,}osm"
+          if [ -z "$sources" ]; then echo "::error::Tick at least one source. A rebuild from kept answers alone is what a push to main does."; exit 1; fi
+          echo "sources=$sources" >> "$GITHUB_OUTPUT"
+  build:
+    needs: pick
+    uses: ./.github/workflows/build.yml
+    with:
+      sources: ${{ needs.pick.outputs.sources }}
+      box: ${{ inputs.box }}

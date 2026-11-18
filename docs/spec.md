@@ -187,6 +187,16 @@ The weekly and hand runs stay as they are.
    source, as before (RB6). An unknown name stops the run before it fetches anything. (Nov 11: a Wikidata fix needed a
    fetch, and every hand run also fetched OpenStreetMap, over an hour.)
 
+10. **MB1-MB4 A build by hand is its own workflow (Nov 18).** The weekly build doubled as the manual run, so a
+    hand run shared its triggers and its name. Now `build.yml` is the one job (`workflow_call`, never started by
+    itself), `weekly-build.yml` calls it on Monday's schedule and on a push to `main` and cannot be run by hand
+    (MB1), and `manual-build.yml` calls it from `workflow_dispatch`. **MB2** The hand run shows one checkbox for each
+    source the pipeline ingests (a test fails when an adapter has none), each ticked by default, so the form is the list
+    of what is ingested. **MB3** The ticked boxes become RB9's `--sources` list, the unticked are built from kept
+    answers; none ticked stops the run before it fetches (a rebuild from kept answers alone is a push to `main`). An
+    optional box (CF4) sweeps one area. **MB4** Agents start it themselves (`actions_run_trigger`, workflow
+    `manual-build.yml`; the app repo's `/data-build` skill).
+
 Found after it shipped (Nov 12): run versions were compared as text, so `20261111.14` sorted before `20261111.8`.
 Keeping the newest three runs then deleted the run just fetched (run 10's first OpenStreetMap answers, run 14's
 Wikidata), and a fetch found no earlier run to ask changes since, so run 14 swept all 633 cells. Runs now compare by

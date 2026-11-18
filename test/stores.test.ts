@@ -325,6 +325,6 @@ test('ST10: the stores pack is published only when a block of it changed; the wo
   const cli = readFileSync(join(ROOT, 'src/cli.ts'), 'utf8');
   assert.match(cli, /decideStores/);
   assert.match(cli, /buildStores/);
-  assert.match(readFileSync(join(ROOT, '.github/workflows/weekly-build.yml'), 'utf8'), /registry-stores-us\.json/);
+  assert.match(readFileSync(join(ROOT, '.github/workflows/build.yml'), 'utf8'), /registry-stores-us\.json/);
   assert.match(readFileSync(join(ROOT, '.github/workflows/pages.yml'), 'utf8'), /stores-\*\.pmtiles/);
 });

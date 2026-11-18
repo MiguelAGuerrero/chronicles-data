@@ -10,7 +10,7 @@ import type { Adapter, Box, FetchContext } from '../src/adapter';
 import { FILTER, osm } from '../src/adapters/osm';
 import { DOWNLOAD_MAX_MS, filterExtracts, saveStream, STALL_MS } from '../src/adapters/osm/extract';
 import { wikidata } from '../src/adapters/wikidata';
-import { sourcesArg } from '../src/cli';
+import { ADAPTERS, sourcesArg } from '../src/cli';
 import { emptyRegistry } from '../src/conflate';
 import { compareRuns, createRawStore, type RawStore } from '../src/rawStore';
 import { FETCH_KEY, run, staleSources, type RunOptions } from '../src/runner';
@@ -19,7 +19,8 @@ import type { Declaration } from '../src/schema';
 // Rebuild on push, fetch only what's stale (docs/spec.md, RB).
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
-const WORKFLOW = readFileSync(join(ROOT, '.github/workflows/weekly-build.yml'), 'utf8');
+const WORKFLOW = readFileSync(join(ROOT, '.github/workflows/build.yml'), 'utf8'); // the one job (MB1)
+const TRIGGERS = readFileSync(join(ROOT, '.github/workflows/weekly-build.yml'), 'utf8'); // its schedule and push
 const AREA: Box[] = [[-76, 40, -72, 42]];
 const clock = { now: () => Date.parse('2026-11-11T07:17:00Z'), sleep: async () => {} };
 const tmpStore = () => createRawStore(mkdtempSync(join(tmpdir(), 'rb-raw-')));
@@ -50,7 +51,7 @@ function opts(store: RawStore, adapters: Adapter[], o: Partial<RunOptions> = {})
 const names = (r: Awaited<ReturnType<typeof run>>) => r.packs.flatMap((p) => p.places.map((q) => q.name)).sort();
 
 test('RB1: the push trigger covers the code, the owner\'s files and the dependencies, and runs the tests first', () => {
-  const push = WORKFLOW.slice(WORKFLOW.indexOf('  push:'), WORKFLOW.indexOf('permissions:'));
+  const push = TRIGGERS.slice(TRIGGERS.indexOf('  push:'), TRIGGERS.indexOf('permissions:'));
   for (const p of ["'src/**'", 'edits.json', 'review-areas.json', 'package.json', 'package-lock.json']) assert.ok(push.includes(`- ${p}`), `a push to ${p} rebuilds`);
   assert.match(push, /branches: \[main\]/);
   const tests = WORKFLOW.indexOf('npm run typecheck && npm test');
@@ -142,7 +143,7 @@ test('RB6: the weekly and hand runs fetch every source, as before', async () => 
   await run(opts(store, [a.adapter, b.adapter], { version: '20261110' }));
   await run(opts(store, [a.adapter, b.adapter]));
   assert.deepEqual([a.s.fetched, b.s.fetched], [2, 2], 'without `only`, every source is fetched though nothing changed');
-  assert.match(WORKFLOW, /cron: '17 7 \* \* 1'/);
+  assert.match(TRIGGERS, /cron: '17 7 \* \* 1'/);
   assert.match(WORKFLOW, /if \[ "\$\{\{ github\.event_name == 'push' \}\}" = "true" \]; then extra="--fetch-stale"; fi/, 'only a push fetches what is stale');
 });
 
@@ -267,4 +268,33 @@ test('RB audit 2: conflating tens of thousands of places is a lookup, not a scan
   const again = await run(opts(store, [big], { registry: first.registry }));
   assert.equal(again.packs[0].places.length, 30_000);
   assert.ok(Date.now() - t0 < 60_000, `two builds of 30,000 places took ${Date.now() - t0} ms`);
+});
+
+// A build by hand is its own workflow; the weekly one is never run by hand (MB1-MB4).
+const MANUAL = readFileSync(join(ROOT, '.github/workflows/manual-build.yml'), 'utf8');
+
+test('MB1: the weekly workflow only runs itself; a hand build is manual-build.yml, and both call the one job', () => {
+  assert.ok(!TRIGGERS.includes('workflow_dispatch'), 'the weekly workflow cannot be run by hand');
+  assert.match(TRIGGERS, /uses: \.\/\.github\/workflows\/build\.yml/);
+  assert.match(MANUAL, /\n {2}workflow_dispatch:/);
+  assert.ok(!/\n {2}(schedule|push):/.test(MANUAL), 'a hand build never starts by itself');
+  assert.match(MANUAL, /uses: \.\/\.github\/workflows\/build\.yml/);
+  assert.match(WORKFLOW, /\n {2}workflow_call:/);
+  assert.ok(!/\n {2}(schedule|push|workflow_dispatch):/.test(WORKFLOW), 'the job is called, never started');
+  assert.match(WORKFLOW, /concurrency:\n\s+group: places-build/, 'a hand build waits for the weekly one, as a push does');
+});
+
+test('MB2: the hand build has one checkbox for each source the pipeline ingests', () => {
+  for (const a of ADAPTERS) {
+    const name = a.declaration.name;
+    assert.match(MANUAL, new RegExp(`\\n {6}${name}:\\n {8}description: [^\\n]+\\n {8}type: boolean\\n {8}default: true`), `${name} is a ticked box`);
+    assert.match(MANUAL, new RegExp(`\\[ "\\$\\{?[A-Z]+\\}?" = "true" \\] && sources=.*${name}`), `${name}'s box adds it to the sources`);
+  }
+});
+
+test('MB3: ticked boxes become the --sources list; none ticked stops the run', () => {
+  assert.match(MANUAL, /sources: \$\{\{ needs\.pick\.outputs\.sources \}\}/);
+  assert.match(MANUAL, /Tick at least one source/);
+  assert.match(MANUAL, /box: \$\{\{ inputs\.box \}\}/);
+  assert.deepEqual(sourcesArg('wikidata,osm'), ['wikidata', 'osm'], 'the list the boxes build is one the CLI takes');
 });
