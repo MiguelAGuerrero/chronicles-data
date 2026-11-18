@@ -18,9 +18,10 @@ const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const CELL: Box = [-76, 40, -74, 42];
 
 type Classify = {
-  classify: (item: { p31?: string[]; listed?: boolean; nhl?: boolean }) => string | null;
-  listing: (item: { p31?: string[]; listed?: boolean; nhl?: boolean }) => { cls: string; publicType: boolean; needsOpen: boolean } | null;
+  classify: (item: WdItem) => string | null;
+  listing: (item: WdItem) => { cls: string; publicType: boolean; needsOpen: boolean } | null;
 };
+type WdItem = { id?: string; p31?: string[]; listed?: boolean; nhl?: boolean };
 const wd = async () => (await import(String('../src/adapters/wikidata/classify.mjs'))) as Classify;
 type Osm = {
   osm: Adapter;
@@ -177,10 +178,10 @@ test('ST10: no class name names significance', () => {
 
 // More attractions (docs/attractions/spec.md, AT1-AT6; the owner's calls of Nov 17). Written before the code.
 test('AT1: contract v6: museum_by_type, nature_reserve, amusement_park, pier', () => {
-  assert.equal(CONTRACT_VERSION, 6);
+  assert.ok(CONTRACT_VERSION >= 6, 'v6 or later (v7: natural_monument, AT9)');
   for (const c of ['museum_by_type', 'nature_reserve', 'amusement_park', 'pier']) assert.ok((CLASS_NAMES as readonly string[]).includes(c), c);
   const sources = JSON.parse(readFileSync(join(ROOT, 'contract/sources.json'), 'utf8'));
-  assert.equal(sources.contractVersion, 6);
+  assert.equal(sources.contractVersion, CONTRACT_VERSION);
 });
 
 test('AT2: a museum by type is museum_by_type; a listed or Landmark museum stays museum', async () => {
@@ -247,4 +248,44 @@ test('more-attractions audit 16: a statue that is a national monument keeps stat
   assert.equal(classify({ p31: ['Q893745'] }), 'monument');
   assert.equal(classify({ p31: ['Q893745', 'Q170980', 'Q179700'] }), 'monument');
   assert.equal(classify({ p31: ['Q893745', 'Q4989906', 'Q150784'] }), 'monument');
+});
+
+test('more-attractions audit 17: a listing wins over every v6 type', async () => {
+  const { classify, listing } = await wd();
+  const lst = (it: WdItem) => listing(it)?.cls;
+  // AT7: national monument (Castle Clinton, Fort McHenry, the Statue of Liberty NM: typed only that and an NPS unit).
+  for (const it of [{ p31: ['Q893745', 'Q893775', 'Q30304302'], listed: true }, { p31: ['Q893745'], nhl: true }]) {
+    assert.notEqual(classify(it), 'monument');
+    assert.equal(classify(it), lst(it));
+  }
+  // A suspension bridge and a v6 garden type.
+  for (const q of ['Q12570', 'Q1107656', 'Q1759852', 'Q84343482', 'Q55177716', 'Q47692', 'Q140470772', 'Q11507581']) {
+    assert.equal(classify({ p31: [q], nhl: true }), lst({ p31: [q], nhl: true }), q);
+  }
+  // A v4 garden type is still a garden, listed or not; unlisted, the v6 types hold.
+  assert.equal(classify({ p31: ['Q167346'], listed: true }), 'garden');
+  assert.equal(classify({ p31: ['Q12570'] }), 'bridge');
+  assert.equal(classify({ p31: ['Q1107656'] }), 'garden');
+  assert.equal(classify({ p31: ['Q893745'] }), 'monument');
+  // A listed national monument that is also a monument keeps `monument` (not a v6 type).
+  assert.equal(classify({ p31: ['Q893745', 'Q4989906'], listed: true }), 'monument');
+});
+
+test('more-attractions audit 18: a pinned natural national monument is natural_monument, never monument', async () => {
+  const { classify } = await wd();
+  const { NATURAL_MONUMENTS } = (await import(String('../src/adapters/wikidata/classify.mjs'))) as { NATURAL_MONUMENTS: string[] };
+  assert.ok((CLASS_NAMES as readonly string[]).includes('natural_monument'));
+  assert.ok(!(UNNAMED_CLASSES as readonly string[]).includes('natural_monument'));
+  assert.equal(CONTRACT_VERSION, 7);
+  assert.equal(NATURAL_MONUMENTS.length, 24);
+  // Devils Tower, Muir Woods, Jewel Cave, Cedar Breaks, Colorado, Organ Pipe Cactus, Virgin Islands Coral Reef.
+  for (const id of ['Q28920023', 'Q1195839', 'Q386178', 'Q374879', 'Q1111312', 'Q1276829', 'Q386154']) assert.ok(NATURAL_MONUMENTS.includes(id), id);
+  const nps = ['Q893745', 'Q893775', 'Q30304302'];
+  for (const id of NATURAL_MONUMENTS) assert.equal(classify({ id, p31: nps }), 'natural_monument', id);
+  assert.equal(classify({ id: 'Q1111312', p31: [...nps, 'Q1286517'] }), 'natural_monument');
+  // AT7: a pinned one that is listed or a Landmark keeps its listing's class (Cape Krusenstern is a Landmark).
+  assert.equal(classify({ id: 'Q2937254', p31: nps, nhl: true }), 'building_structure');
+  // Timpanogos Cave stays a cave; an unpinned national monument is still a monument.
+  assert.equal(classify({ id: 'Q1456525', p31: [...nps, 'Q2232001'] }), 'cave');
+  assert.equal(classify({ id: 'Q359939', p31: nps }), 'monument');
 });

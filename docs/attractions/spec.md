@@ -33,11 +33,15 @@ Source and licence unchanged (Wikidata, CC0). Type decides (0103); nothing is fe
 
 ## Audit (Nov 18)
 
-Two findings of the more-attractions audit. Neither adds or renames a class, so the contract stays at version 6 and
-`CONTRACT_VERSION` does not change.
+Two findings of the more-attractions audit. AT7 and AT8 add or rename no class; AT9 (the owner's answer to audit 16,
+Nov 18) adds `natural_monument`, so the contract goes to version 7 (`CONTRACT_VERSION` 7). The app ships v7 before the
+data does.
 
-- **AT7** (audit 15) a listed or Landmark place keeps the class its listing gives it (`listing()`), whatever v6 type it
-  also carries: the listing's class wins over `museum_by_type`, `amusement_park`, `nature_reserve` and `pier`. A listed
+- **AT7** (audit 15, 17) a listed or Landmark place keeps the class its listing gives it (`listing()`), whatever v6 type it
+  also carries: it is classified as if the v6 types did not exist. The listing's class wins over `museum_by_type`,
+  `amusement_park`, `nature_reserve` and `pier`, and (the owner, Nov 18: "Yes, every new type") over national monument
+  Q893745, suspension bridge Q12570 and the garden types v6 added. Castle Clinton, Fort McHenry and the Statue of Liberty
+  National Monument take their listing's class again. A listed
   church or theatre that is also typed a museum stays `church` or `theatre`; a Landmark amusement park (Kennywood) is
   `building_structure` again, as before v6. AT2's listed museum is the case where the listing's class is `museum`.
 - **AT8** (audit 16) national monument (Q893745) makes a `monument` only on its own terms: an item typed a statue as well
@@ -52,5 +56,12 @@ Two findings of the more-attractions audit. Neither adds or renames a class, so 
   natural landscape; Organ Pipe Cactus: biosphere reserve; Virgin Islands Coral Reef: coral reef) and one a nature class
   (Timpanogos Cave: show cave, so `cave`). The others (Cedar Breaks, Devils Tower, Muir Woods, Jewel Cave, the fossil
   beds and so on) are typed only as national monuments and still enter as `monument`: telling them apart by type alone
-  is not possible, and reading another property only to sort a place is ruled out (the app's 0117). That is left to the
-  owner.
+  is not possible, and reading another property only to sort a place is ruled out (the app's 0117). AT9 answers it.
+- **AT9** (audit 18; the owner, Nov 18: "Own subtype under Nature") the US national monuments that are natural places
+  are a new class, `natural_monument`, never `monument`. Wikidata cannot tell them by type (about 20 of the 25 natural
+  ones are typed only national monument), so they are pinned by item (QID) from the Nov 18 lookup: 24 items, the fossil
+  beds, volcanoes, reefs, caves, canyons, forests and wild lands among the 76, with the four AT8's types caught except
+  Timpanogos Cave, which stays `cave` (a show cave is a cave, by type). El Morro, Scotts Bluff and Russell Cave are
+  natural features kept for their history and stay as they were. A pinned item that is listed or a Landmark keeps its
+  listing's class (AT7). It needs a name (it is not among the classes that may come unnamed). The class is new:
+  contract v7.
