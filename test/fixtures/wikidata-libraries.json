@@ -1,0 +1,178 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "coord",
+   "dissolved",
+   "closed"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900001"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Hudson Free Library"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.999 40.7001)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900002"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Hudson Free Library (New York)"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-74.0042 40.7001)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900003"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ridge Public Library"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5 41.2)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900003"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Ridge Public Library"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.5001 41.2001)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900004"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Gone Library"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.6 41.1)"
+    },
+    "dissolved": {
+     "type": "literal",
+     "value": "1990-01-01T00:00:00Z"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900005"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Shut Library"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.61 41.11)"
+    },
+    "closed": {
+     "type": "literal",
+     "value": "2001-01-01T00:00:00Z"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900006"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.62 41.12)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900007"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Maple Street Library, Brookfield"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.8015 40.9008)"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q900008"
+    },
+    "label": {
+     "xml:lang": "en",
+     "type": "literal",
+     "value": "Crowd Library"
+    },
+    "coord": {
+     "datatype": "http://www.opengis.net/ont/geosparql#wktLiteral",
+     "type": "literal",
+     "value": "Point(-73.7 41.0)"
+    },
+    "sitelinks": {
+     "type": "literal",
+     "value": "40"
+    },
+    "P1174": {
+     "type": "literal",
+     "value": "120000"
+    },
+    "listed": {
+     "type": "literal",
+     "value": "true"
+    },
+    "nhl": {
+     "type": "literal",
+     "value": "true"
+    }
+   }
+  ]
+ }
+}

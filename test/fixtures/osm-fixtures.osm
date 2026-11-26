@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version="0.6" generator="hand">
+  <node id="1" lat="40.7000" lon="-74.0000" version="1"><tag k="amenity" v="library"/><tag k="name" v="Hudson Free Library"/></node>
+  <node id="2" lat="40.7010" lon="-74.0010" version="1"><tag k="tourism" v="information"/><tag k="information" v="office"/><tag k="name" v="Hudson Visitor Center"/></node>
+  <node id="3" lat="40.7020" lon="-74.0020" version="1"><tag k="amenity" v="toilets"/><tag k="name" v="Public Toilets"/></node>
+  <node id="4" lat="40.7030" lon="-74.0030" version="1"><tag k="tourism" v="information"/><tag k="information" v="visitor_centre"/><tag k="name" v="Battlefield Visitor Center"/></node>
+  <node id="5" lat="40.7040" lon="-74.0040" version="1"/>
+  <node id="6" lat="40.7040" lon="-74.0038" version="1"/>
+  <node id="7" lat="40.7042" lon="-74.0038" version="1"/>
+  <node id="8" lat="40.7042" lon="-74.0040" version="1"/>
+  <node id="9" lat="40.7050" lon="-74.0050" version="1"><tag k="railway" v="station"/><tag k="name" v="Hudson"/></node>
+  <way id="10" version="1"><nd ref="5"/><nd ref="6"/><nd ref="7"/><nd ref="8"/><nd ref="5"/><tag k="amenity" v="townhall"/><tag k="name" v="Hudson Town Hall"/><tag k="building" v="yes"/></way>
+</osm>
