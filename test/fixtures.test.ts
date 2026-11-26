@@ -448,3 +448,137 @@ test('FX14, town-fixtures audit 6: a heritage railway\'s station is not a fixtur
   const r = await built();
   assert.deepEqual(byName(r.pack.fixtures.filter((f: any) => f.kind === 'station')), ['station:Fulton St:osm', 'station:Hudson:osm']);
 });
+
+// The diff review's findings (town-fixtures audit 7-15; the coordinator's rulings, Nov 26).
+const at = (lon: number, lat: number, dNorthM: number, dEastM: number): [number, number] => [lon + dEastM / (111_320 * Math.cos((lat * Math.PI) / 180)), lat + dNorthM / 110_540];
+const cand = (source: string, sourceId: string, a: [number, number], name?: string, item?: string, kind = 'library') => ({ source, sourceId, kind, at: a, ...(name ? { name } : {}), ...(item ? { item } : {}), fetchedAt: AT });
+
+test('town-fixtures audit 7: one fixture kept once in every direction and at every latitude (Seattle, Anchorage)', { todo: 'test first' }, async () => {
+  const { mergeFixtures } = await load('fixtures/merge');
+  // The auditor's pairs: 200 m north-south.
+  assert.equal(mergeFixtures([cand('osm', 'node/1', [-122.29898, 47.60078], 'A'), cand('osm', 'node/2', [-122.29898, 47.602579], 'A')]).length, 1, 'Seattle');
+  const loussac = mergeFixtures([cand('osm', 'way/1', [-149.9, 61.2006], 'Loussac Library'), cand('wikidata', 'Q9', at(-149.9, 61.2006, 200, 0), 'Loussac Library', 'Q9')]);
+  assert.deepEqual(loussac.map((f: any) => f.sourceId), ['way/1'], 'Anchorage: OSM\'s way kept, Wikidata\'s point 200 m north joins it');
+  // Every direction at 200 m joins, 300 m does not, from Florida to Alaska; and unnamed at 40 m joins, 60 m does not.
+  for (const lat of [25.77, 40.7, 47.6, 61.2, 64.84, 70.2]) {
+    for (let k = 0; k < 16; k++) {
+      const a = (k * Math.PI) / 8;
+      const base = cand('osm', 'node/1', [-100 + k * 0.37, lat], 'Town Library');
+      const p = (m: number, name?: string) => cand('osm', 'node/2', at(base.at[0], lat, m * Math.cos(a), m * Math.sin(a)), name);
+      assert.equal(mergeFixtures([base, p(200, 'Town Library')]).length, 1, `lat ${lat}, bearing ${k * 22.5}: 200 m`);
+      assert.equal(mergeFixtures([base, p(300, 'Town Library')]).length, 2, `lat ${lat}, bearing ${k * 22.5}: 300 m`);
+      assert.equal(mergeFixtures([base, p(40)]).length, 1, `lat ${lat}, bearing ${k * 22.5}: unnamed 40 m`);
+      assert.equal(mergeFixtures([base, p(60)]).length, 2, `lat ${lat}, bearing ${k * 22.5}: unnamed 60 m`);
+    }
+  }
+});
+
+test('town-fixtures audit 8: a Wikidata item joins two of one fixture only within 1 km', { todo: 'test first' }, async () => {
+  const { mergeFixtures } = await load('fixtures/merge');
+  // Two branches tagged with one item, about 6 km apart: two libraries.
+  const two = mergeFixtures([cand('osm', 'node/1', [-74, 40.7], 'Branch A', 'Q1'), cand('osm', 'node/2', [-74.05, 40.75], 'Branch B', 'Q1')]);
+  assert.equal(two.length, 2);
+  // One item 900 m apart under two names: one.
+  assert.equal(mergeFixtures([cand('osm', 'node/1', [-74, 40.7], 'Main Library', 'Q1'), cand('osm', 'way/2', at(-74, 40.7, 900, 0), 'Central Library', 'Q1')]).length, 1);
+  // A Wikidata point 3 km from the OSM element naming its item stays apart (its coordinate is another place).
+  assert.equal(mergeFixtures([cand('osm', 'node/1', [-74, 40.7], 'Main Library', 'Q1'), cand('wikidata', 'Q1', at(-74, 40.7, 3000, 0), 'Main Library', 'Q1')]).length, 2);
+  const spec = readFileSync(join(ROOT, 'docs/fixtures/spec.md'), 'utf8');
+  assert.match(spec, /same Wikidata item within 1 km/);
+});
+
+test('town-fixtures audit 9: a library whose library statement has ended, or that is closed, demolished or without its use, yields nothing', { todo: 'test first' }, async () => {
+  const w = await load('fixtures/wikidata');
+  assert.match(w.LIBRARY_QUERY, /p:P31 \?st \. \?st ps:P31 wd:Q28564 ; pq:P582 \?ended/);
+  assert.match(w.LIBRARY_QUERY, /wdt:P5817 \?use/);
+  for (const q of ['Q104664889', 'Q56556915', 'Q110435753']) assert.ok(w.LIBRARY_QUERY.includes(`wd:${q}`), `state of use ${q}`);
+  const row = (extra: Record<string, unknown>) => JSON.stringify({ results: { bindings: [{ item: { value: 'http://www.wikidata.org/entity/Q7' }, label: { value: 'Former Library' }, coord: { value: 'Point(-74 40.7)' }, ...extra }] } });
+  assert.equal(w.adaptLibraries(row({}), AT).length, 1);
+  assert.deepEqual(w.adaptLibraries(row({ ended: { value: '1990-01-01T00:00:00Z' } }), AT), [], 'its P31 = public library ended (pq:P582)');
+  assert.deepEqual(w.adaptLibraries(row({ use: { value: 'http://www.wikidata.org/entity/Q104664889' } }), AT), [], 'permanently closed');
+  // The query changed, so the libraries are stale once: the next fetching run asks them again, and only them.
+  assert.notEqual(w.fixturesWikidataKey(), '8816490e2b7ca70d', 'run 41 kept its libraries under this key');
+});
+
+test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam takes a fake export, and the held answers are carried', { todo: 'test first' }, async () => {
+  const { filterExtracts } = await load('adapters/osm/extract');
+  const { FIXTURE_FILTER } = await load('fixtures/kinds');
+  const put: Record<string, string> = {};
+  const carried: string[] = [];
+  const meta: Record<string, string> = {};
+  const asked: Record<string, string>[] = [];
+  const exported: string[] = [];
+  const held = ['confirm', 'small'].map((n) => ({ part: `${n}-us-west.geojsonl` }));
+  const ctx: any = {
+    sameFetch: true,
+    previous: { run: '20261123.40', parts: held, read: () => '', meta: { 'etag:us-west': '"old"', 'modified:us-west': 'Mon, 23 Nov 2026', 'tagCounts:us-west': '{"a":1}', 'shopCounts:us-west': '{"b":2}' } },
+    http: async (_u: string, init: any) => { asked.push(init.headers); return new Response('pbf bytes', { status: 200, headers: { etag: '"new"' } }); },
+    put: (p: string, b: string) => { put[p] = b; },
+    carry: (p: string) => carried.push(p),
+    setMeta: (k: string, v: string) => { meta[k] = v; },
+    log: () => {},
+  };
+  const io = {
+    exportFilter: (c: any, _pbf: string, _dir: string, part: string, f: any) => { exported.push(f.name); c.put(`${f.name}-${part}.geojsonl`, `${f.name} lines`); },
+    countExtract: () => { throw new Error('a fill counts nothing'); },
+    countShopsIn: () => { throw new Error('a fill counts nothing'); },
+  };
+  await filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/x=y'] }], ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER], io);
+  assert.deepEqual(asked, [{}], 'asked once, unconditionally');
+  assert.deepEqual(exported, ['fixtures'], 'only the fixtures filter runs');
+  assert.deepEqual(Object.keys(put), ['fixtures-us-west.geojsonl']);
+  assert.deepEqual(carried.sort(), ['confirm-us-west.geojsonl', 'small-us-west.geojsonl']);
+  assert.deepEqual([meta['etag:us-west'], meta['modified:us-west'], meta['tagCounts:us-west'], meta['shopCounts:us-west']], ['"old"', 'Mon, 23 Nov 2026', '{"a":1}', '{"b":2}']);
+  assert.ok(meta['filter:fixtures']);
+  // A week later, with the fixtures held: asked conditionally, a 304 carries all three.
+  const ctx2: any = { ...ctx, previous: { ...ctx.previous, parts: [...held, { part: 'fixtures-us-west.geojsonl' }], meta: { ...ctx.previous.meta, 'filter:fixtures': meta['filter:fixtures'] } }, http: async (_u: string, init: any) => { asked.push(init.headers); return new Response(null, { status: 304 }); } };
+  carried.length = 0;
+  exported.length = 0;
+  await filterExtracts(ctx2, [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/x=y'] }], ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER], io);
+  assert.equal(asked[1]['if-none-match'], '"old"');
+  assert.deepEqual(exported, []);
+  assert.deepEqual(carried.sort(), ['confirm-us-west.geojsonl', 'fixtures-us-west.geojsonl', 'small-us-west.geojsonl']);
+});
+
+test('town-fixtures audit 12: a station in service is a station, whatever else it is; only a heritage railway\'s is not (decision 0268, narrowed)', { todo: 'test first' }, async () => {
+  const { kindsOf } = await load('fixtures/osm');
+  assert.deepEqual(kindsOf({ railway: 'station', public_transport: 'station', tourism: 'attraction', name: 'Union Station' }), ['station']);
+  assert.deepEqual(kindsOf({ railway: 'station', historic: 'railway_station', name: 'Old Depot' }), ['station']);
+  for (const t of [{ 'railway:preserved': 'yes' }, { usage: 'tourism' }, { tourism: 'museum' }]) assert.deepEqual(kindsOf({ railway: 'station', name: 'Steam Line', ...t }), [], JSON.stringify(t));
+});
+
+test('town-fixtures audit 13: a trailing ", <clause>" is set aside only when what is left is more than a kind\'s word', { todo: 'test first' }, async () => {
+  const { mergeFixtures, normName } = await load('fixtures/merge');
+  assert.equal(normName('Maple Street Library, Brookfield'), normName('Maple Street Library'));
+  assert.notEqual(normName('Library, Main Branch'), normName('Library, Branch 2'));
+  assert.equal(mergeFixtures([cand('osm', 'node/1', [-74, 40.7], 'Library, Main Branch'), cand('osm', 'node/2', at(-74, 40.7, 100, 0), 'Library, Branch 2')]).length, 2);
+  assert.notEqual(normName('Post Office, Station A'), normName('Post Office, Station B'));
+});
+
+test('town-fixtures audit 15: the checks that could not fail, made to bite', async () => {
+  // FX7: no module of the places or stores pipeline imports fixtures/ by any path or quote.
+  const { readdirSync } = await import('node:fs');
+  const files = ['gate.ts', 'conflate.ts', 'package.ts', 'runner.ts', 'publish.ts', ...readdirSync(join(ROOT, 'src/stores')).map((f) => `stores/${f}`), ...readdirSync(join(ROOT, 'src/adapters/wikidata')).filter((f) => /\.(ts|mjs)$/.test(f)).map((f) => `adapters/wikidata/${f}`)];
+  for (const f of files) assert.doesNotMatch(readFileSync(join(ROOT, 'src', f), 'utf8'), /(from|import\(|require\()\s*['"`][^'"`]*fixtures/, `${f} imports nothing of fixtures/`);
+  // FX12: the report holds no number at any depth, and the record and feature hold exactly their fields.
+  const { fixturesJsonSchema } = await load('fixtures/schema');
+  const js = fixturesJsonSchema();
+  assert.deepEqual(Object.keys((js.record as any).properties).sort(), ['at', 'id', 'kind', 'name', 'src']);
+  assert.deepEqual(Object.keys((js.feature as any).properties).sort(), ['id', 'kind', 'name', 'src']);
+  const r = await built();
+  const numbers = (v: unknown): number => (typeof v === 'number' ? 1 : v && typeof v === 'object' ? Object.values(v).reduce((n: number, x) => n + numbers(x), 0) : 0);
+  assert.equal(numbers(r.report), 0, 'no number in the report at any depth');
+  // FX10: the OSM adapter carries the fixtures part in a steady week (behaviour, not its source's text).
+  const { osm } = await import('../src/adapters/osm');
+  const { FIXTURE_FILTER } = await load('fixtures/kinds');
+  const { fingerprint } = await import('../src/fingerprint');
+  const { US_PARTS } = await load('adapters/osm/extract');
+  const metas: Record<string, string> = { [`filter:${FIXTURE_FILTER.name}`]: fingerprint([FIXTURE_FILTER]) };
+  for (const p of US_PARTS) Object.assign(metas, { [`etag:${p}`]: `"${p}"`, [`shopCounts:${p}`]: '{}' });
+  const prevParts = US_PARTS.flatMap((p: string) => ['confirm', 'small', 'shops', 'fixtures'].map((n) => ({ part: `${n}-${p}.geojsonl`, sha256: 'x', fetchedAt: AT })));
+  const carried: string[] = [];
+  await osm.fetch({ area: [], run: 'r2', put: () => {}, log: () => {}, week: 1, box: null, keepClock: () => {}, setMeta: () => {}, http: async () => new Response(null, { status: 304 }), carry: (p: string) => carried.push(p), sameFetch: true, previous: { run: 'r1', startedAt: AT, parts: prevParts, read: () => '', meta: metas } } as any);
+  assert.equal(carried.filter((c) => c.startsWith('fixtures-')).length, US_PARTS.length, 'the fixtures filter rides the OSM pass');
+  // FX14: no transit tag a station in service carries drops it.
+  const { kindsOf } = await load('fixtures/osm');
+  for (const t of [{ station: 'subway' }, { station: 'light_rail' }, { subway: 'yes' }, { light_rail: 'yes' }, { public_transport: 'station' }, { train: 'yes' }, { operator: 'Amtrak' }]) assert.deepEqual(kindsOf({ railway: 'station', ...t }), ['station'], JSON.stringify(t));
+});
