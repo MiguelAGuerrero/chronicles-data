@@ -340,14 +340,14 @@ test('FX10: on a real extract, the fill writes the fixtures part and carries the
   const ctx: any = {
     sameFetch: true,
     previous: { run: '20261123.40', parts: Object.keys(held).map((part) => ({ part })), read: (p: string) => (held as any)[p], meta: { 'etag:us-west': '"old"', 'modified:us-west': 'Mon, 23 Nov 2026', 'tagCounts:us-west': '{"a":1}', 'shopCounts:us-west': '{"b":2}' } },
-    http: async (_u: string, init: any) => { asked.push(init.headers); return new Response(body, { status: 200, headers: { etag: '"new"' } }); },
+    http: async (_u: string, init: any) => { asked.push(init.headers); return init.headers['if-none-match'] ? new Response(null, { status: 304 }) : new Response(body, { status: 200, headers: { etag: '"new"' } }); },
     put: (p: string, b: string) => { put[p] = b; },
     carry: (p: string) => carried.push(p),
     setMeta: (k: string, v: string) => { meta[k] = v; },
     log: () => {},
   };
   await filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/historic=milestone'] }], ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER]);
-  assert.deepEqual(asked, [{}], 'asked once, unconditionally');
+  assert.deepEqual(asked, [{ 'if-none-match': '"old"', 'if-modified-since': 'Mon, 23 Nov 2026' }, {}], 'asked against the held copy (a 304), then downloaded once (T66)');
   assert.deepEqual(Object.keys(put), ['fixtures-us-west.geojsonl'], 'only the fixtures part is written');
   assert.deepEqual(carried.sort(), ['confirm-us-west.geojsonl', 'small-us-west.geojsonl']);
   assert.equal(meta['etag:us-west'], '"old"', 'the held copy\'s ETag, so next week asks against what was carried');
@@ -512,7 +512,8 @@ test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam take
   const ctx: any = {
     sameFetch: true,
     previous: { run: '20261123.40', parts: held, read: () => '', meta: { 'etag:us-west': '"old"', 'modified:us-west': 'Mon, 23 Nov 2026', 'tagCounts:us-west': '{"a":1}', 'shopCounts:us-west': '{"b":2}' } },
-    http: async (_u: string, init: any) => { asked.push(init.headers); return new Response('pbf bytes', { status: 200, headers: { etag: '"new"' } }); },
+    // T66: the fill asks with the held copy's ETag first; unchanged (304), the extract is downloaded once, unasked.
+    http: async (_u: string, init: any) => { asked.push(init.headers); return init.headers['if-none-match'] ? new Response(null, { status: 304 }) : new Response('pbf bytes', { status: 200, headers: { etag: '"new"' } }); },
     put: (p: string, b: string) => { put[p] = b; },
     carry: (p: string) => carried.push(p),
     setMeta: (k: string, v: string) => { meta[k] = v; },
@@ -524,7 +525,7 @@ test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam take
     countShopsIn: () => { throw new Error('a fill counts nothing'); },
   };
   await filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/x=y'] }], ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER], io);
-  assert.deepEqual(asked, [{}], 'asked once, unconditionally');
+  assert.deepEqual(asked, [{ 'if-none-match': '"old"', 'if-modified-since': 'Mon, 23 Nov 2026' }, {}], 'asked against the held copy, then downloaded once (T66)');
   assert.deepEqual(exported, ['fixtures'], 'only the fixtures filter runs');
   assert.deepEqual(Object.keys(put), ['fixtures-us-west.geojsonl']);
   assert.deepEqual(carried.sort(), ['confirm-us-west.geojsonl', 'small-us-west.geojsonl']);
@@ -535,9 +536,62 @@ test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam take
   carried.length = 0;
   exported.length = 0;
   await filterExtracts(ctx2, [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/x=y'] }], ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER], io);
-  assert.equal(asked[1]['if-none-match'], '"old"');
+  assert.equal(asked[2]['if-none-match'], '"old"');
+  assert.equal(asked.length, 3, 'a held week is one conditional ask');
   assert.deepEqual(exported, []);
   assert.deepEqual(carried.sort(), ['confirm-us-west.geojsonl', 'fixtures-us-west.geojsonl', 'small-us-west.geojsonl']);
+});
+
+// The app's T66 (the owner's yes, 2026-11-26): a fill asks with the held copy's ETag first. Both run the fill through
+// audit 11's seam, so CI runs them without osmium.
+const T66_BASE = [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/x=y'] }, { name: 'shops', expressions: ['nwr/shop'] }];
+const T66_HELD = { 'etag:us-west': '"old"', 'modified:us-west': 'Mon, 23 Nov 2026', 'tagCounts:us-west': '{"a":1}', 'shopCounts:us-west': '{"b":2}' };
+function t66(answer: (conditional: boolean) => Response) {
+  const seen = { put: {} as Record<string, string>, carried: [] as string[], meta: {} as Record<string, string>, asked: [] as Record<string, string>[], exported: [] as string[], counted: [] as string[], logs: [] as string[] };
+  const ctx: any = {
+    sameFetch: true,
+    previous: { run: '20261123.40', parts: T66_BASE.map((f) => ({ part: `${f.name}-us-west.geojsonl` })), read: () => '', meta: T66_HELD },
+    http: async (_u: string, init: any) => { seen.asked.push({ ...init.headers }); return answer(init.headers['if-none-match'] != null); },
+    put: (p: string, b: string) => { seen.put[p] = b; },
+    carry: (p: string) => seen.carried.push(p),
+    setMeta: (k: string, v: string) => { seen.meta[k] = v; },
+    log: (l: string) => seen.logs.push(l),
+  };
+  const io = {
+    exportFilter: (c: any, _pbf: string, _dir: string, part: string, f: any) => { seen.exported.push(f.name); c.put(`${f.name}-${part}.geojsonl`, `${f.name} lines`); },
+    countExtract: () => { seen.counted.push('tags'); return { tags: 1 }; },
+    countShopsIn: () => { seen.counted.push('shops'); return { shops: 2 }; },
+  };
+  return { seen, go: async () => { const { filterExtracts } = await load('adapters/osm/extract'); const { FIXTURE_FILTER } = await load('fixtures/kinds'); await filterExtracts(ctx, T66_BASE, ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER], io); } };
+}
+
+test('town-fixtures T66: a fill whose extract is unchanged (304) carries every held answer and fills the fixtures from one fresh download', async () => {
+  const { seen, go } = t66((conditional) => conditional ? new Response(null, { status: 304 }) : new Response('pbf bytes', { status: 200, headers: { etag: '"new"', 'last-modified': 'Thu, 26 Nov 2026' } }));
+  await go();
+  assert.deepEqual(seen.asked, [{ 'if-none-match': '"old"', 'if-modified-since': 'Mon, 23 Nov 2026' }, {}], 'asked against the held copy first, then one unconditional download');
+  assert.deepEqual(seen.exported, ['fixtures'], 'only the new filter runs');
+  assert.deepEqual(Object.keys(seen.put), ['fixtures-us-west.geojsonl'], 'no places or stores part is written');
+  assert.deepEqual(seen.carried.sort(), ['confirm-us-west.geojsonl', 'shops-us-west.geojsonl', 'small-us-west.geojsonl']);
+  assert.deepEqual(seen.counted, [], 'nothing is counted again');
+  const { 'filter:fixtures': fx, ...kept } = seen.meta;
+  assert.ok(fx);
+  assert.deepEqual(kept, T66_HELD, 'the held ETag, date and counts, never the download\'s');
+  // The download after the 304 refused (twice): nothing is carried or noted, and the run keeps the source's last good answers.
+  const refused = t66((conditional) => new Response(null, { status: conditional ? 304 : 503 }));
+  await assert.rejects(refused.go());
+  assert.deepEqual([refused.seen.carried, refused.seen.meta, refused.seen.put, refused.seen.asked.length], [[], {}, {}, 3]);
+});
+
+test('town-fixtures T66: a fill whose extract changed (200) runs every filter on that one download, as any week', async () => {
+  const { seen, go } = t66(() => new Response('pbf bytes', { status: 200, headers: { etag: '"new"', 'last-modified': 'Thu, 26 Nov 2026' } }));
+  await go();
+  assert.deepEqual(seen.asked, [{ 'if-none-match': '"old"', 'if-modified-since': 'Mon, 23 Nov 2026' }], 'one request, asked against the held copy');
+  assert.deepEqual(seen.exported, ['confirm', 'small', 'shops', 'fixtures'], 'the places\' and stores\' filters take the week\'s edits');
+  assert.deepEqual(seen.carried, [], 'nothing of the held copy is carried');
+  assert.deepEqual(seen.counted, ['tags', 'shops'], 'counted, as any downloaded week');
+  assert.deepEqual([seen.meta['etag:us-west'], seen.meta['modified:us-west'], seen.meta['tagCounts:us-west'], seen.meta['shopCounts:us-west']], ['"new"', 'Thu, 26 Nov 2026', '{"tags":1}', '{"shops":2}'], 'the download\'s ETag, date and counts');
+  assert.ok(seen.meta['filter:fixtures']);
+  assert.ok(seen.logs.some((l) => /us-west downloaded/.test(l)) && !seen.logs.some((l) => /fixtures filled/.test(l)), seen.logs.join(' | '));
 });
 
 test('town-fixtures audit 12: a station in service is a station, whatever else it is; only a heritage railway\'s is not (decision 0268, narrowed)', async () => {
