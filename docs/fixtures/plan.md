@@ -1,4 +1,4 @@
-# Plan: the fixtures pack (FX1-FX12)
+# Plan: the fixtures pack (FX1-FX14)
 
 Spec: `docs/fixtures/spec.md`. The app's side: `specs/town-fixtures/spec.md` (TF1, TF2, TF4, TF5, TF14, TF19, TF21,
 TF25-TF27) and its `plan.md`. The model is the stores pack (`docs/stores/`), file for file.
@@ -9,14 +9,16 @@ TF25-TF27) and its `plan.md`. The model is the stores pack (`docs/stores/`), fil
 src/fixtures/
   kinds.ts      KINDS: the thirteen {kind, key, value}, in the owner's order; FIXTURE_FILTER derived from it (FX2, FX3, FX10)
   schema.ts     FixtureSchema, FixtureCandidateSchema, FeatureSchema, fixturesJsonSchema() (FX1, FX2, FX9)
-  osm.ts        READS, kindsOf(tags), adaptFixtures(raw, fetchedAt) (FX3, FX4, FX5)
-  merge.ts      mergeFixtures(candidates): one fixture once, a grid index, a fixed preference (FX6)
+  osm.ts        READS, kindsOf(tags) with FX14's heritage stations out, adaptFixtures(raw, fetchedAt) (FX3, FX4, FX5, FX14)
+  wikidata.ts   LIBRARY_QUERY, fetchKey, fetchLibraries(store, http, clock, ...), adaptLibraries(raw) (FX5, FX13)
+  merge.ts      mergeFixtures(osm, wikidata): one fixture once, OSM first, a grid index, a fixed preference (FX6)
   package.ts    packFixtures: the pack through archive.mjs, block hashes (FX8)
   build.ts      buildFixtures(raw store, run, registry, newId): reads fixtures-* parts of the osm source (FX7)
 src/adapters/osm/index.ts   fetch passes FIXTURE_FILTER as a filter keyed by its own note; adapt skips fixtures-* parts (FX7, FX10)
 src/adapters/osm/extract.ts planPart(): what one extract's fetch does (ask, carry, fill), pure; filterExtracts follows it (FX10)
 src/publish.ts      decideFixtures (FX11)
-src/cli.ts          after the stores: buildFixtures, decideFixtures, files written as the stores' are (odbl), its registry
+src/cli.ts          after the stores: Wikidata's libraries fetched when FX13 says, buildFixtures, decideFixtures, files written
+                    as the stores' are (odbl), its registry; `state-sources` gains `wikidata-fixtures`
 scripts/manifest.mjs  fixtures-<region>-<version>.pmtiles listed as region.fixtures {current, previous} (FX8)
 src/contract.ts     fixtures.schema.json, the example pack and fixtures-example.json, the manifest schema's `fixtures` (FX9)
 src/classes.ts      CONTRACT_VERSION 9 (places classes unchanged)
@@ -28,7 +30,11 @@ README.md           the fixtures pack in "What's published" and the contract lis
 
 - **Raw parts** `fixtures-<part>.geojsonl` of source `osm`, from the one pass per extract (FX10).
 - **Ids**: registry `registry-fixtures-<region>.json` through `createIds` with the pattern `^f_[0-9a-f]{16}$`, keyed
-  `osm:<type>/<id>#<kind>`; kept in the state asset.
+  `osm:<type>/<id>#<kind>` or `wd:<Q>#library`; kept in the state asset.
+- **Wikidata's libraries (FX13)**: raw source `wikidata-fixtures`, one part `libraries-us.json` per run, its run's note
+  `fetchKey` the fingerprint of the endpoint and the query. Fetched through `politeFetch` with the places' Wikidata
+  declaration (same host, pace and user agent); not an adapter, so `ADAPTERS`, `sources.json`'s sources, the places'
+  fingerprints and the manual build's boxes are main's.
 - **Tile properties**: `kind`, `id`, `src`, and `name` when it has one.
 - **The fill (FX10).** `planPart({ sameFetch, previous, counted, base, added, part })` returns `{ ask: headers | null, run:
   Filter[], carry: string[], keepNotes: boolean }`. Base filters (confirm, small, shops) are held as today (RB5: the same
@@ -39,11 +45,15 @@ README.md           the fixtures pack in "What's published" and the contract lis
   conditional on the copy the carried parts came from. Otherwise: everything, as today. The OSM `fetchKey` stays the
   fingerprint of the base filters, byte for byte, so the held copy of run 40 (Nov 23) is held.
 - **The merge (FX6)**: per kind, a grid of about 250 m cells; a candidate joins a kept fixture in its cell or the eight
-  around it by Wikidata item, by normalised name within 250 m, or unnamed within 50 m; candidates are taken in the
-  preference order first, so the kept one is the first and the result does not depend on the input's order. O(n) cells,
-  n about 100,000 for the US.
+  around it by Wikidata item, by normalised name within 250 m, or unnamed within 50 m; OSM's candidates are taken first, in
+  the preference order, then Wikidata's libraries (an OSM element's `wikidata` tag first, then name and distance), so the
+  kept one is OSM's and the result does not depend on the input's order. O(n) cells, n about 110,000 for the US.
 
 ## Tests (`test/fixtures.test.ts`, one per id, todo first)
+
+Each steward finding of the plan review is named in its test too: town-fixtures audit 1 (FX13: both sources in the pack),
+2 (FX13: libraries only, exact P31, gone items), 3 (FX6: OSM preferred), 4 (FX7: the places and stores do not move), 5
+(FX5: Wikidata's crowd fields), 6 (FX14: heritage stations).
 
 FX1 closed schema, extra fields at depth, JSON Schema walk; FX2 the kinds and tags, visitor centre and a bare
 `tourism=information` give none, unknown kind fails; FX3 the filter's expressions are the thirteen tags exactly, and
@@ -54,19 +64,27 @@ input the same; FX7 places and stores identical with and without a fixtures part
 yields nothing, the import grep; FX8 pack read back with the pmtiles reader, order-free bytes, places pack bytes unchanged,
 manifest with and without fixtures (byte for byte the old one without); FX9 contract files and version; FX10 `planPart`
 over every case, and with osmium installed a real `filterExtracts` over a small `.osm`: the held run's base parts carried
-byte for byte, the fixtures part written, the notes kept; FX11 decideFixtures and the workflows' text; FX12 no count key
-in the schema, the feature, the manifest entry or the report.
+byte for byte, the fixtures part written, the notes kept; FX11 decideFixtures, no pack without OSM's fixtures, the workflows' text; FX12 no count
+key in the schema, the feature, the manifest entry or the report; FX13 the query's text (exact P31, no `P279`, no listing,
+no sitelinks), a fake answer's rows (dissolved, closed, unlabelled, duplicated), when it is fetched (weekly, Wikidata
+fetched, stale, not stale), a failure keeping the last; FX14 the four heritage signals and a subway station.
 
 A differential beside the tests (the app's review asks for it, kept outside the repo): the places and stores outputs over
 the same fixture input from main's code and this branch's, every difference printed.
 
 ## The build the owner authorised (Nov 26)
 
-After this lands on `main` (its push rebuilds from kept answers and fetches nothing: OSM is weekly, Wikidata's fingerprint
-is unchanged), one "Manual places build" with `osm: true`, `wikidata: false`: the extracts are downloaded, only the
-fixtures filter runs (FX10), the places and stores are built from the same answers as run 40 and are not published
-("unchanged"), and the fixtures pack is published ("new region"). If the plan step or the log shows anything else
-(OSM asked whole, places or stores published), the run is cancelled and reported.
+1. **The push to `main`** runs the weekly workflow's push path: its plan names no stale adapter (OSM is fetched only weekly
+   and by hand; Wikidata's places fingerprint is main's), so it fetches no adapter and builds places and stores from run
+   40's answers: "unchanged", not published. Wikidata's libraries are stale (none kept), so they are fetched (one query
+   to the places' host) and kept in the state. No fixtures pack: run 40's OSM answers hold no fixtures (FX11).
+2. **One "Manual places build"**, `osm: true`, `wikidata: false`: the extracts are downloaded and only the fixtures filter
+   runs on them (FX10); the places and stores are built from the same answers as run 40 and are not published; the
+   libraries are the push's (or fetched again if the push could not keep them). It publishes the first fixtures pack,
+   holding both sources ("new region").
+3. **The tripwire**: an extract asked for whole (its log says "downloaded" and no "fixtures filled"), the places pack
+   differing from main's build over the same answers, or the stores pack published: the run is cancelled before it
+   publishes, if it can be, and reported.
 
 ## Not run here
 
