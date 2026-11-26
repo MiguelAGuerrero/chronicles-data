@@ -187,7 +187,8 @@ export const osm: Adapter = {
   async fetch(ctx) {
     // ST9: the stores' shop filter rides the same pass, so the week's extracts are downloaded once.
     // OC3: the owner's tag counts ride the same pass too; they never reach a place (OC7), so the fingerprint leaves them out.
-    // FX10: the fixtures' filter rides it too, as an added filter: filled from a download while the held answers are carried.
+    // FX10: the fixtures' filter rides it too, as an added filter: a fill asks against the held copy first (T66); unchanged,
+    // the new filter alone runs on a download and the held answers are carried; changed, every filter runs, as any week.
     await filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER], US_PARTS, COUNT_TAGS, [FIXTURE_FILTER]);
   },
 

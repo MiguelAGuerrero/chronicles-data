@@ -36,14 +36,17 @@ README.md           the fixtures pack in "What's published" and the contract lis
   declaration (same host, pace and user agent); not an adapter, so `ADAPTERS`, `sources.json`'s sources, the places'
   fingerprints and the manual build's boxes are main's.
 - **Tile properties**: `kind`, `id`, `src`, and `name` when it has one.
-- **The fill (FX10).** `planPart({ sameFetch, previous, counted, base, added, part })` returns `{ ask: headers | null, run:
-  Filter[], carry: string[], keepNotes: boolean }`. Base filters (confirm, small, shops) are held as today (RB5: the same
-  fingerprint and every base part held). An added filter (fixtures) is held when its part is held and the note
-  `filter:fixtures` equals its fingerprint. All held: the conditional request, a 304 carries everything (as today). The
-  base held and an added one not: an unconditional download, only the unheld added filters run on it, the rest carried,
-  and the held copy's `etag:`, `modified:`, `tagCounts:` and `shopCounts:` notes kept, so next week's request is
-  conditional on the copy the carried parts came from. Otherwise: everything, as today. The OSM `fetchKey` stays the
-  fingerprint of the base filters, byte for byte, so the held copy of run 40 (Nov 23) is held.
+- **The fill (FX10; the app's T66).** `planPart({ sameFetch, prev, counted, base, added, part })` returns `{ mode: 'ask' |
+  'fill' | 'whole', run: Filter[], carry: string[] }`. Base filters (confirm, small, shops) are held as today (RB5: the
+  same fingerprint and every base part held). An added filter (fixtures) is held when its part is held and the note
+  `filter:fixtures` equals its fingerprint. All held (`ask`): the conditional request, a 304 carries everything (as
+  today). The base held and an added one not (`fill`): the same conditional request first (T66, Nov 26). A 304: one
+  unconditional download, only the unheld added filters (`run`) run on it, the rest (`carry`) carried, and the held
+  copy's `etag:`, `modified:`, `tagCounts:` and `shopCounts:` notes kept, so next week's request is conditional on the
+  copy the carried parts came from; the download is made before anything is carried, so a refused one throws and the
+  source keeps its last good answers. A 200: every filter runs on that one download, its ETag, date and counts kept, as
+  any downloaded week. Otherwise (`whole`): everything, as today. The OSM `fetchKey` stays the fingerprint of the base
+  filters, byte for byte, so the held copy of run 40 (Nov 23) is held.
 - **The merge (FX6)**: per kind, a grid of about 250 m cells; a candidate joins a kept fixture in its cell or the eight
   around it by Wikidata item, by normalised name within 250 m, or unnamed within 50 m; OSM's candidates are taken first, in
   the preference order, then Wikidata's libraries (an OSM element's `wikidata` tag first, then name and distance), so the
@@ -78,13 +81,17 @@ the same fixture input from main's code and this branch's, every difference prin
    and by hand; Wikidata's places fingerprint is main's), so it fetches no adapter and builds places and stores from run
    40's answers: "unchanged", not published. Wikidata's libraries are stale (none kept), so they are fetched (one query
    to the places' host) and kept in the state. No fixtures pack: run 40's OSM answers hold no fixtures (FX11).
-2. **One "Manual places build"**, `osm: true`, `wikidata: false`: the extracts are downloaded and only the fixtures filter
-   runs on them (FX10); the places and stores are built from the same answers as run 40 and are not published; the
-   libraries are the push's (or fetched again if the push could not keep them). It publishes the first fixtures pack,
-   holding both sources ("new region").
-3. **The tripwire**: an extract asked for whole (its log says "downloaded" and no "fixtures filled"), the places pack
-   differing from main's build over the same answers, or the stores pack published: the run is cancelled before it
-   publishes, if it can be, and reported.
+2. **One "Manual places build"**, `osm: true`, `wikidata: false`: each extract is a fill, asked for against run 40's
+   copy first (FX10, as T66 reshaped it on Nov 26). An extract unchanged since (304) is downloaded once and only the
+   fixtures filter runs on it (its log: "fixtures filled"), its places' and stores' answers run 40's. One that changed
+   (200; Geofabrik renews its extracts daily, so the likely answer for each) logs "downloaded, changed since the held
+   copy: every filter runs": its places and stores take the edits since Nov 23 and are published if a block changed, as
+   a weekly run would. The libraries are the push's (or fetched again if the push could not keep them). It publishes
+   the first fixtures pack, holding both sources ("new region").
+3. **The tripwire**: an extract whose log says neither "fixtures filled" nor "changed since the held copy" (asked for
+   whole: run 40's copy was not held), or, with every extract "fixtures filled", the places pack differing from main's
+   build over the same answers or the stores pack published: the run is cancelled before it publishes, if it can be,
+   and reported.
 
 ## Not run here
 

@@ -41,9 +41,11 @@ Criteria: FX1-FX14
   wherever it is, a park's visitor centre tagged so included ("Trust the tag").
 - **OpenStreetMap first.** Every kind from the same Geofabrik extracts the places and stores already read, in the same
   pass; OpenStreetMap is preferred at every step of the merge (FX6).
-- **Adding the pack moves nothing else.** The week the fixtures filter is first asked, the other filters' answers are
-  carried as they were (FX10), and Wikidata's libraries are read by a fetch of their own (FX13), so the places and stores
-  packs are built from the same answers as before, and neither is republished by this work.
+- **Adding the pack moves nothing the week does not.** The week the fixtures filter is first asked, an extract unchanged
+  since the held copy has the other filters' answers carried as they were, and one that changed has every filter run on
+  it, as any week (FX10; the app's T66, the owner's yes of Nov 26); Wikidata's libraries are read by a fetch of their own
+  (FX13). So the places and stores packs move only with the week's edits, as any weekly run moves them, never by this
+  work's own doing.
 
 ## The kinds
 
@@ -113,12 +115,15 @@ Wikidata adds `library` only: items whose `P31` is exactly `Q28564` (public libr
    and what a client does with an unknown kind; `contract/example/` holds `fixtures-example-<version>.pmtiles` and
    `fixtures-example.json`, built from fixtures; `npm run contract` regenerates them with CONTRACT_VERSION 9, and the
    contract test fails when they drift.
-10. **FX10 One download a week, and a new filter moves nothing else.** The fixtures' osmium filter runs in the same pass
-    as the others (`filterExtracts`); no adapter adds a host or a download. A filter the held copy lacks (or holds under
-    another fingerprint, its note `filter:<name>`) is filled from the extract's download while the parts of the filters
-    the held copy already has are carried as they were, with its ETag, its date and its counts; the next week the extract
-    is asked for as usual. The OSM fetch fingerprint of the other filters is unchanged, so the run that first fills the
-    fixtures builds the places and stores from the same answers as the run before it.
+10. **FX10 One download a week, and a new filter moves nothing the week does not.** The fixtures' osmium filter runs in
+    the same pass as the others (`filterExtracts`); no adapter adds a host or a download. A filter the held copy lacks
+    (or holds under another fingerprint, its note `filter:<name>`) is filled, and a fill asks for the extract against the
+    held copy's ETag and date first, as a held week does (the app's T66). Unchanged (304): the extract is downloaded once,
+    only the new filter runs on it, and the parts of the filters the held copy already has are carried as they were, with
+    its ETag, its date and its counts, so the places and stores are built from the same answers as the run before and
+    the next week the extract is asked for as usual. Changed (200): every filter runs on that one download, with its
+    ETag, its date and its counts, as any week, so the places and stores take the week's edits and are published if a
+    block changed. The OSM fetch fingerprint of the other filters is unchanged.
 11. **FX11 Published only when a block changed.** `decideFixtures` reads the live manifest's `fixtures.current.blocks`: no
     change publishes nothing, a changed block publishes, no `fixtures` yet publishes; an unreachable manifest publishes
     nothing. A pack is built only from a run whose OpenStreetMap answers hold the fixtures (OpenStreetMap first), so no

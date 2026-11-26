@@ -73,10 +73,11 @@ const partName = (f: Filter, part: string) => `${f.name}-${part}.geojsonl`;
 
 /**
  * FX10: what one extract's fetch does, pure. `ask`: every filter is held (the base by RB5's rule, each added one by its
- * note), so the extract is asked for only if it changed, as before. `fill`: the base is held and an added filter is not,
- * so the extract is downloaded, only the unheld added filters run on it, and the rest of the held copy is carried as it
- * was, with its ETag, date and counts. `whole`: anything else, every filter run on a fresh download, as before. With no
- * added filter this is RB5's rule unchanged.
+ * note), so the extract is asked for only if it changed, as before. `fill`: the base is held and an added filter is not;
+ * the extract is asked for against the held copy too (the app's T66): unchanged (304), it is downloaded once, unasked,
+ * only the unheld added filters (`run`) run on it, and the rest of the held copy (`carry`) is carried as it was, with its
+ * ETag, date and counts; changed (200), every filter runs on that one download, as any week. `whole`: anything else,
+ * every filter run on a fresh download, as before. With no added filter this is RB5's rule unchanged.
  */
 export function planPart(o: { sameFetch: boolean; prev: { parts: { part: string }[]; meta: Record<string, string> } | null; counted: boolean; base: Filter[]; added: Filter[]; part: string }): { mode: 'ask' | 'fill' | 'whole'; run: Filter[]; carry: string[] } {
   const has = (f: Filter) => o.prev?.parts.some((p) => p.part === partName(f, o.part)) ?? false;
@@ -187,38 +188,45 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const plan = planPart({ sameFetch: ctx.sameFetch, prev, counted, base: filters, added, part });
       const held = plan.mode === 'ask';
       const filling = plan.mode === 'fill';
+      // T66: a fill asks against the held copy first, as a held week does.
+      const asked = held || filling;
       const notes = () => {
         for (const f of added) ctx.setMeta(`${FILTER_NOTE}${f.name}`, fingerprint([f]));
       };
-      const etag = held ? prev!.meta[`etag:${part}`] : undefined;
-      const modified = held ? prev!.meta[`modified:${part}`] : undefined;
+      const etag = asked ? prev!.meta[`etag:${part}`] : undefined;
+      const modified = asked ? prev!.meta[`modified:${part}`] : undefined;
       const headers: Record<string, string> = {};
       if (etag) headers['if-none-match'] = etag;
       if (modified) headers['if-modified-since'] = modified;
-      let res: Response | null = null;
-      let saved = false;
-      for (let attempt = 1; attempt <= TRIES && !saved; attempt++) {
-        const controller = new AbortController();
-        try {
-          res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(DOWNLOAD_MAX_MS)]) });
-          if (res.status === 304 && held) break;
-          if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
-          await saveStream(Readable.fromWeb(res.body as never), pbf, controller);
-          saved = true;
-        } catch (e) {
-          if (attempt === TRIES) throw e;
-          ctx.log(`osm: ${part} failed (${String((e as Error)?.message ?? e)}); asking once more`);
+      const download = async (headers: Record<string, string>, notModified: boolean): Promise<Response> => {
+        let res: Response | null = null;
+        let saved = false;
+        for (let attempt = 1; attempt <= TRIES && !saved; attempt++) {
+          const controller = new AbortController();
+          try {
+            res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(DOWNLOAD_MAX_MS)]) });
+            if (res.status === 304 && notModified) break;
+            if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
+            await saveStream(Readable.fromWeb(res.body as never), pbf, controller);
+            saved = true;
+          } catch (e) {
+            if (attempt === TRIES) throw e;
+            ctx.log(`osm: ${part} failed (${String((e as Error)?.message ?? e)}); asking once more`);
+          }
         }
-      }
-      if (!res) throw new Error(`${part}: no answer`);
-      if ((res.status === 304 && held) || filling) {
+        if (!res) throw new Error(`${part}: no answer`);
+        return res;
+      };
+      const res = await download(headers, asked);
+      const unchanged = res.status === 304;
+      // T66: a fill whose extract is unchanged downloads it once, unasked, for the added filters alone, before anything is carried.
+      if (unchanged && filling) await download({}, false);
+      if (unchanged) {
         for (const p of plan.carry) ctx.carry(p);
         notes();
         // FX10: a fill keeps the held copy's ETag and date, so next week asks against the extract its carried answers came from.
-        const keptEtag = filling ? prev!.meta[`etag:${part}`] : etag;
-        const keptModified = filling ? prev!.meta[`modified:${part}`] : modified;
-        if (keptEtag) ctx.setMeta(`etag:${part}`, keptEtag);
-        if (keptModified) ctx.setMeta(`modified:${part}`, keptModified);
+        if (etag) ctx.setMeta(`etag:${part}`, etag);
+        if (modified) ctx.setMeta(`modified:${part}`, modified);
         // OC4: its counts are carried with its answers.
         const note = prev!.meta[`${COUNTS_NOTE}${part}`];
         if (counts && note != null) ctx.setMeta(`${COUNTS_NOTE}${part}`, note);
@@ -239,8 +247,9 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const mod = res.headers.get('last-modified');
       if (tag) ctx.setMeta(`etag:${part}`, tag);
       if (mod) ctx.setMeta(`modified:${part}`, mod);
-      ctx.log(`osm: ${part} downloaded`);
-      for (const f of plan.run) io.exportFilter(ctx, pbf, dir, part, f);
+      ctx.log(`osm: ${part} downloaded${filling ? ', changed since the held copy: every filter runs' : ''}`);
+      // T66: a fill whose extract changed runs every filter on this one download.
+      for (const f of filling ? [...filters, ...added] : plan.run) io.exportFilter(ctx, pbf, dir, part, f);
       notes();
       if (counts) {
         try {
