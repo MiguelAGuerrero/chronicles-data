@@ -17,6 +17,10 @@ ordinary file request. Phones never call a data source: every outside request ha
 - `stores-<region>-<version>.pmtiles`: the stores pack (docs/stores/spec.md, contract v5): shops by what they sell, from
   OpenStreetMap's shop tags, read by the app only to plan an outing. It is listed under its region's `stores` in the
   manifest, has its own place ids and is published only when one of its blocks changed. Its license is ODbL.
+- `fixtures-<region>-<version>.pmtiles`: the fixtures pack (docs/fixtures/spec.md, contract v9): a town's staples by kind
+  (a tourist office, a town hall, a library, a post office, a square, a market, a station and six more, the owner's
+  closed list), from OpenStreetMap's tags with Wikidata's public libraries folded in, each with its kind, position and
+  name where it has one. Listed under its region's `fixtures` in the manifest; never a place to find. Its license is ODbL.
 - `contract/`: the contract below, beside the data it describes.
 
 The app reads `manifest.json` (at most daily) and then only the parts of the current archive it needs.
@@ -30,6 +34,8 @@ What a client may rely on, generated from the code by `npm run contract` and che
 - `places.schema.json`: the canonical shape (candidates, places, a pack's tile feature: name, class, src, id) and the
   class names. Every object is closed; the only numbers are a position. Nothing in it can hold a count, rank or score.
 - `manifest.schema.json`: the manifest's shape.
+- `fixtures.schema.json`: a fixture's shape (kind, position, name where it has one, source, id) and the closed list of
+  kinds, each with its OpenStreetMap tag. Nothing in it can hold a count, a rating or opening hours.
 - `sources.json`: each source's name, license, attribution, role and hosts.
 - `example/`: a small pack and its manifest, built from the test fixtures, for clients' tests.
 

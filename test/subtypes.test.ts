@@ -295,7 +295,7 @@ test('more-attractions audit 18: a pinned natural national monument is natural_m
 test('typed bridges: a suspension bridge with no listing is suspension_bridge, a listed one bridge, a covered bridge bridge', async () => {
   const { classify, listing } = await wd();
   const { CLASSES, ORDER } = (await import(String('../src/adapters/wikidata/classify.mjs'))) as { CLASSES: Record<string, string[]>; ORDER: string[] };
-  assert.equal(CONTRACT_VERSION, 8);
+  assert.ok(CONTRACT_VERSION >= 8, 'v8 or later (v9 since the fixtures pack, which left the classes as they were)');
   assert.ok((CLASS_NAMES as readonly string[]).includes('suspension_bridge'));
   assert.ok(!(UNNAMED_CLASSES as readonly string[]).includes('suspension_bridge'));
   assert.deepEqual(CLASSES.suspension_bridge, ['Q12570']);

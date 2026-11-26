@@ -23,9 +23,11 @@ import { countsForReport } from './adapters/osm/tagCounts';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
-import { decide, decideStores } from './publish';
+import { decide, decideFixtures, decideStores } from './publish';
 import { createRawStore } from './rawStore';
 import { redistributable, run, staleSources } from './runner';
+import { buildFixtures } from './fixtures/build';
+import { fetchLibraries, librariesRun, librariesStale, shouldFetchLibraries, SOURCE as FIXTURES_WIKIDATA } from './fixtures/wikidata';
 import { buildStores } from './stores/build';
 
 /** The adapters, in priority order: the first source's record is promoted whole when two name one place. */
@@ -109,6 +111,16 @@ async function main() {
   const storesRegistry: Registry = existsSync(storesRegFile) ? JSON.parse(readFileSync(storesRegFile, 'utf8')) : emptyRegistry();
   const stores = buildStores({ store, run: r.report.sources.find((x) => x.name === 'osm')?.run ?? null, region, version, registry: storesRegistry, newId: () => `s_${randomBytes(8).toString('hex')}` });
 
+  // FX13: Wikidata's libraries, by their own read (never the places' Wikidata fetch): on a run that fetches every source or
+  // Wikidata, or on any fetching run while they are stale. FX11: the fixtures are built from the OSM run's fixtures parts
+  // and those libraries, apart from the places and the stores; their own registry of ids.
+  if (shouldFetchLibraries({ fetching, only, stale: librariesStale(store, version) })) {
+    await fetchLibraries({ store, version, http: (u, init) => fetch(u, init), clock: realClock, log: (l) => console.error(l) });
+  }
+  const fixturesRegFile = join(state, `registry-fixtures-${region}.json`);
+  const fixturesRegistry: Registry = existsSync(fixturesRegFile) ? JSON.parse(readFileSync(fixturesRegFile, 'utf8')) : emptyRegistry();
+  const fixtures = buildFixtures({ store, osmRun: r.report.sources.find((x) => x.name === 'osm')?.run ?? null, wikidataRun: librariesRun(store, version), region, version, registry: fixturesRegistry, newId: () => `f_${randomBytes(8).toString('hex')}` });
+
   let manifest = null;
   let unreachable = false;
   if (url) {
@@ -146,17 +158,31 @@ async function main() {
     }
     writeFileSync(storesRegFile, `${JSON.stringify(stores.registry)}\n`);
   }
+  // FX11: the fixtures pack, likewise, only when a block of it changed; never built without OSM's fixtures.
+  if (fixtures.pack) {
+    const p = fixtures.pack;
+    const d = decideFixtures({ region: p.region, blocks: p.blocks, manifest, unreachable });
+    reasons.push(`fixtures ${p.region}: ${d.reason}`);
+    if (d.publish) {
+      writeFileSync(join(out, p.file), p.bytes);
+      writeFileSync(join(out, p.file.replace(/\.pmtiles$/, '.blocks.json')), `${JSON.stringify(p.blocks)}\n`);
+      writeFileSync(join(out, p.file.replace(/\.pmtiles$/, '.license')), 'odbl\n');
+      files.push(p.file);
+    }
+    writeFileSync(fixturesRegFile, `${JSON.stringify(fixtures.registry)}\n`);
+  }
   writeFileSync(regFile, `${JSON.stringify(r.registry)}\n`);
   // OC6: the owner's OSM tag counts, only from a run that fetched OpenStreetMap; never in a pack, release or manifest.
   const osmEntry = r.report.sources.find((x) => x.name === 'osm');
   const osmTagCounts = countsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
   // SK7, SK9: every value of the keys a stop is told by, for redrawing the facets; the same rule, and never in a pack.
   const osmKindCounts = kindCountsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
-  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), ...(osmKindCounts ? { osmKindCounts } : {}), stores: stores.report }, null, 1)}\n`);
+  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), ...(osmKindCounts ? { osmKindCounts } : {}), stores: stores.report, fixtures: fixtures.report }, null, 1)}\n`);
   console.log(`publish=${files.length > 0}`);
   console.log(`reason=${reasons.join('; ')}`);
   console.log(`files=${files.join(' ')}`);
-  console.log(`state-sources=${redistributable(ADAPTERS).join(' ')}`);
+  // FX13: Wikidata's libraries are CC0 and kept with the state, beside the adapters' answers.
+  console.log(`state-sources=${[...redistributable(ADAPTERS), FIXTURES_WIKIDATA].join(' ')}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

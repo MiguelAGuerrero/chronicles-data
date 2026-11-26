@@ -11,7 +11,9 @@
 // v6 (More attractions, AT1; the app's specs/more-attractions): museums by type, nature reserves, amusement parks, piers.
 // v7 (more-attractions audit 18, AT9; the owner, Nov 18): `natural_monument`, the US national monuments that are natural places.
 // v8 (typed bridges, AT10; the owner, Nov 18): `suspension_bridge`, a suspension bridge that enters by type, not a listing.
-export const CONTRACT_VERSION = 8;
+// v9 (the fixtures pack, docs/fixtures/spec.md; the app's specs/town-fixtures and decision 0268): a third layer, a town's
+// fixtures by kind, with its own schema and manifest key `fixtures`; the places classes and the stores are unchanged.
+export const CONTRACT_VERSION = 9;
 
 /** In the order a Wikidata place is classified (classify.mjs's ORDER), then the listed places' classes by type. */
 export const CLASS_NAMES = [

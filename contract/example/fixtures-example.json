@@ -1,0 +1,200 @@
+[
+  {
+    "id": "f_0000000000000001",
+    "kind": "library",
+    "at": [
+      -74,
+      40.7
+    ],
+    "name": "Hudson Free Library",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000002",
+    "kind": "tourist_office",
+    "at": [
+      -74.001,
+      40.701
+    ],
+    "name": "Hudson Visitor Center",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000003",
+    "kind": "square",
+    "at": [
+      -74.002,
+      40.702
+    ],
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000004",
+    "kind": "station",
+    "at": [
+      -74.006,
+      40.706
+    ],
+    "name": "Hudson",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000005",
+    "kind": "station",
+    "at": [
+      -74.008,
+      40.708
+    ],
+    "name": "Fulton St",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000006",
+    "kind": "post_office",
+    "at": [
+      -74.0095,
+      40.7095
+    ],
+    "name": "Hudson Post Office",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000007",
+    "kind": "tourist_office",
+    "at": [
+      -74.01,
+      40.71
+    ],
+    "name": "Old Hall",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000008",
+    "kind": "town_hall",
+    "at": [
+      -74.01,
+      40.71
+    ],
+    "name": "Old Hall",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000009",
+    "kind": "market",
+    "at": [
+      -74.011,
+      40.711
+    ],
+    "name": "Hudson Farmers Market",
+    "src": "osm"
+  },
+  {
+    "id": "f_000000000000000a",
+    "kind": "common",
+    "at": [
+      -74.012,
+      40.712
+    ],
+    "name": "Hudson Green",
+    "src": "osm"
+  },
+  {
+    "id": "f_000000000000000b",
+    "kind": "bandstand",
+    "at": [
+      -74.0121,
+      40.7121
+    ],
+    "src": "osm"
+  },
+  {
+    "id": "f_000000000000000c",
+    "kind": "bus_station",
+    "at": [
+      -74.013,
+      40.713
+    ],
+    "name": "Hudson Bus Terminal",
+    "src": "osm"
+  },
+  {
+    "id": "f_000000000000000d",
+    "kind": "courthouse",
+    "at": [
+      -74.014,
+      40.714
+    ],
+    "name": "Hudson County Courthouse",
+    "src": "osm"
+  },
+  {
+    "id": "f_000000000000000e",
+    "kind": "community_centre",
+    "at": [
+      -74.015,
+      40.715
+    ],
+    "name": "Hudson Community Center",
+    "src": "osm"
+  },
+  {
+    "id": "f_000000000000000f",
+    "kind": "ferry_terminal",
+    "at": [
+      -74.016,
+      40.716
+    ],
+    "name": "Hudson Ferry",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000010",
+    "kind": "library",
+    "at": [
+      -74.004,
+      40.7
+    ],
+    "name": "Hudson Free Library",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000011",
+    "kind": "library",
+    "at": [
+      -73.8,
+      40.9
+    ],
+    "name": "Maple Street Library",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000012",
+    "kind": "town_hall",
+    "at": [
+      -74.0015,
+      40.7015
+    ],
+    "name": "Hudson Town Hall",
+    "src": "osm"
+  },
+  {
+    "id": "f_0000000000000013",
+    "kind": "library",
+    "at": [
+      -73.5001,
+      41.2001
+    ],
+    "name": "Ridge Public Library",
+    "src": "wd"
+  },
+  {
+    "id": "f_0000000000000014",
+    "kind": "library",
+    "at": [
+      -73.7,
+      41
+    ],
+    "name": "Crowd Library",
+    "src": "wd"
+  }
+]

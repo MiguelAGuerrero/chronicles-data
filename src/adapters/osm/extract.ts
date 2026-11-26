@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { FetchContext } from '../../adapter';
+import { fingerprint } from '../../fingerprint';
 import { HOURS_FILTER, MIN_PER_EXTRACT, partShopCounts, placeCountExpressions, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
 import { countExpressions, countFilter, COUNTS_NOTE, parseTagsCount, partCounts } from './tagCounts';
 
@@ -66,6 +67,27 @@ export interface Filter {
   then?: string[];
 }
 
+/** FX10: the note a run keeps of an added filter's fingerprint, so a changed one is filled again. */
+export const FILTER_NOTE = 'filter:';
+const partName = (f: Filter, part: string) => `${f.name}-${part}.geojsonl`;
+
+/**
+ * FX10: what one extract's fetch does, pure. `ask`: every filter is held (the base by RB5's rule, each added one by its
+ * note), so the extract is asked for only if it changed, as before. `fill`: the base is held and an added filter is not,
+ * so the extract is downloaded, only the unheld added filters run on it, and the rest of the held copy is carried as it
+ * was, with its ETag, date and counts. `whole`: anything else, every filter run on a fresh download, as before. With no
+ * added filter this is RB5's rule unchanged.
+ */
+export function planPart(o: { sameFetch: boolean; prev: { parts: { part: string }[]; meta: Record<string, string> } | null; counted: boolean; base: Filter[]; added: Filter[]; part: string }): { mode: 'ask' | 'fill' | 'whole'; run: Filter[]; carry: string[] } {
+  const has = (f: Filter) => o.prev?.parts.some((p) => p.part === partName(f, o.part)) ?? false;
+  const all = [...o.base, ...o.added];
+  const baseHeld = o.sameFetch && o.prev != null && o.counted && o.base.every(has);
+  if (!baseHeld) return { mode: 'whole', run: all, carry: [] };
+  const addedHeld = (f: Filter) => has(f) && o.prev!.meta[`${FILTER_NOTE}${f.name}`] === fingerprint([f]);
+  if (o.added.every(addedHeld)) return { mode: 'ask', run: all, carry: all.map((f) => partName(f, o.part)) };
+  return { mode: 'fill', run: o.added.filter((f) => !addedHeld(f)), carry: [...o.base, ...o.added.filter(addedHeld)].map((f) => partName(f, o.part)) };
+}
+
 function osmium(args: string[]): string {
   const r = spawnSync('osmium', args, { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 26 });
   if (r.error || r.status !== 0) throw new Error(`osmium ${args[0]} failed: ${r.error?.message ?? r.stderr.toString().slice(0, 300)}`);
@@ -119,13 +141,32 @@ export function countShopsIn(pbf: string, dir: string, part: string): ShopCounts
   }
 }
 
+/** One filter over a downloaded extract, its GeoJSON lines stored as the raw part `<filter>-<part>.geojsonl`. */
+function exportFilter(ctx: FetchContext, pbf: string, dir: string, part: string, f: Filter) {
+  const kept = join(dir, `${f.name}-${part}.osm.pbf`);
+  const out = join(dir, `${f.name}-${part}.geojsonl`);
+  osmium(['tags-filter', pbf, ...f.expressions, '-o', kept, '--overwrite']);
+  if (f.then?.length) {
+    const narrowed = join(dir, `${f.name}-${part}.then.osm.pbf`);
+    osmium(['tags-filter', kept, ...f.then, '-o', narrowed, '--overwrite']);
+    rmSync(kept, { force: true });
+    osmium(['cat', narrowed, '-o', kept, '--overwrite']);
+    rmSync(narrowed, { force: true });
+  }
+  osmium(['export', kept, '-f', 'geojsonseq', '-a', 'type,id', '-u', 'type_id', '-o', out, '--overwrite']);
+  // geojsonseq writes RS-separated lines; the adapter reads one JSON object per line.
+  ctx.put(`${f.name}-${part}.geojsonl`, readFileSync(out, 'utf8').replace(/\x1e/g, ''));
+  rmSync(kept, { force: true });
+  rmSync(out, { force: true });
+}
+
 /**
  * RD7: downloads each US part, applies every filter to it, stores each filter's GeoJSON lines as a raw part
  * (`<filter>-<part>.geojsonl`), and deletes the extract before the next. Throws when a part can't be had (the run then
  * uses this source's last good answers, PP14). OC3, OC4: with `counts`, also counts those tags in each extract, kept as
  * the run's note `tagCounts:<part>` (never a raw part); a count that fails is logged and changes nothing else (OC7).
  */
-export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>) {
+export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>, added: Filter[] = []) {
   const dir = mkdtempSync(join(tmpdir(), 'osm-'));
   try {
     for (const part of parts) {
@@ -134,9 +175,15 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const prev = ctx.previous;
       // SK11: an extract whose kinds were never counted is asked for whole, once, so the counts do not wait for it to change.
       const counted = !counts || prev?.meta[`${SHOP_COUNTS_NOTE}${part}`] != null;
-      const held = ctx.sameFetch && prev != null && counted && filters.every((f) => prev.parts.some((p) => p.part === `${f.name}-${part}.geojsonl`));
-      const etag = held ? prev.meta[`etag:${part}`] : undefined;
-      const modified = held ? prev.meta[`modified:${part}`] : undefined;
+      // FX10: which filters run on this extract, and which of the held copy's answers are carried.
+      const plan = planPart({ sameFetch: ctx.sameFetch, prev, counted, base: filters, added, part });
+      const held = plan.mode === 'ask';
+      const filling = plan.mode === 'fill';
+      const notes = () => {
+        for (const f of added) ctx.setMeta(`${FILTER_NOTE}${f.name}`, fingerprint([f]));
+      };
+      const etag = held ? prev!.meta[`etag:${part}`] : undefined;
+      const modified = held ? prev!.meta[`modified:${part}`] : undefined;
       const headers: Record<string, string> = {};
       if (etag) headers['if-none-match'] = etag;
       if (modified) headers['if-modified-since'] = modified;
@@ -156,17 +203,28 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         }
       }
       if (!res) throw new Error(`${part}: no answer`);
-      if (res.status === 304 && held) {
-        for (const f of filters) ctx.carry(`${f.name}-${part}.geojsonl`);
-        if (etag) ctx.setMeta(`etag:${part}`, etag);
-        if (modified) ctx.setMeta(`modified:${part}`, modified);
+      if ((res.status === 304 && held) || filling) {
+        for (const p of plan.carry) ctx.carry(p);
+        notes();
+        // FX10: a fill keeps the held copy's ETag and date, so next week asks against the extract its carried answers came from.
+        const keptEtag = filling ? prev!.meta[`etag:${part}`] : etag;
+        const keptModified = filling ? prev!.meta[`modified:${part}`] : modified;
+        if (keptEtag) ctx.setMeta(`etag:${part}`, keptEtag);
+        if (keptModified) ctx.setMeta(`modified:${part}`, keptModified);
         // OC4: its counts are carried with its answers.
-        const note = prev.meta[`${COUNTS_NOTE}${part}`];
+        const note = prev!.meta[`${COUNTS_NOTE}${part}`];
         if (counts && note != null) ctx.setMeta(`${COUNTS_NOTE}${part}`, note);
         // SK5: and its shop counts.
-        const shopNote = prev.meta[`${SHOP_COUNTS_NOTE}${part}`];
+        const shopNote = prev!.meta[`${SHOP_COUNTS_NOTE}${part}`];
         if (counts && shopNote != null) ctx.setMeta(`${SHOP_COUNTS_NOTE}${part}`, shopNote);
-        ctx.log(`osm: ${part} unchanged since ${prev.run}, its answers carried`);
+        if (!filling) {
+          ctx.log(`osm: ${part} unchanged since ${prev!.run}, its answers carried`);
+          continue;
+        }
+        // FX10: the held copy's answers stand; only the added filters new to it run on the download.
+        for (const f of plan.run) exportFilter(ctx, pbf, dir, part, f);
+        ctx.log(`osm: ${part} fixtures filled (${plan.run.map((f) => f.name).join(', ')}); the other answers carried from ${prev!.run}`);
+        rmSync(pbf, { force: true });
         continue;
       }
       const tag = res.headers.get('etag');
@@ -174,23 +232,8 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       if (tag) ctx.setMeta(`etag:${part}`, tag);
       if (mod) ctx.setMeta(`modified:${part}`, mod);
       ctx.log(`osm: ${part} downloaded`);
-      for (const f of filters) {
-        const kept = join(dir, `${f.name}-${part}.osm.pbf`);
-        const out = join(dir, `${f.name}-${part}.geojsonl`);
-        osmium(['tags-filter', pbf, ...f.expressions, '-o', kept, '--overwrite']);
-        if (f.then?.length) {
-          const narrowed = join(dir, `${f.name}-${part}.then.osm.pbf`);
-          osmium(['tags-filter', kept, ...f.then, '-o', narrowed, '--overwrite']);
-          rmSync(kept, { force: true });
-          osmium(['cat', narrowed, '-o', kept, '--overwrite']);
-          rmSync(narrowed, { force: true });
-        }
-        osmium(['export', kept, '-f', 'geojsonseq', '-a', 'type,id', '-u', 'type_id', '-o', out, '--overwrite']);
-        // geojsonseq writes RS-separated lines; the adapter reads one JSON object per line.
-        ctx.put(`${f.name}-${part}.geojsonl`, readFileSync(out, 'utf8').replace(/\x1e/g, ''));
-        rmSync(kept, { force: true });
-        rmSync(out, { force: true });
-      }
+      for (const f of plan.run) exportFilter(ctx, pbf, dir, part, f);
+      notes();
       if (counts) {
         try {
           ctx.setMeta(`${COUNTS_NOTE}${part}`, JSON.stringify(countExtract(pbf, dir, part, counts)));

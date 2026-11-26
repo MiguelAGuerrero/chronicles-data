@@ -92,6 +92,8 @@ jobs:
           # ST6: the stores have their own registry of ids, beside the places'.
           paths="registry-us.json"
           [ -f state/registry-stores-us.json ] && paths="$paths registry-stores-us.json"
+          # FX11: and the fixtures theirs (Wikidata's libraries are among the state-sources, FX13).
+          [ -f state/registry-fixtures-us.json ] && paths="$paths registry-fixtures-us.json"
           for s in ${{ steps.run.outputs.state-sources }}; do [ -d "state/raw/$s" ] && paths="$paths raw/$s"; done
           tar -czf state-us.tar.gz -C state $paths
           gh release view state-us --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \

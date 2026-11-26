@@ -378,7 +378,7 @@ test('PP15: the weekly workflow runs the stages in order, keeps the state asset 
   const first = await cli('20261109', out1);
   assert.equal(first.publish, 'true');
   assert.equal(first.files, 'places-us-20261109.pmtiles');
-  assert.equal(first['state-sources'], 'wikidata osm', 'only redistributable sources go in the saved state (OSM since RD7: ODbL allows it, with attribution)');
+  assert.equal(first['state-sources'], 'wikidata osm wikidata-fixtures', 'only redistributable sources go in the saved state (OSM since RD7: ODbL allows it, with attribution; Wikidata\'s libraries for the fixtures since FX13, CC0)');
   assert.deepEqual(raw.runs('wikidata'), ['20261019', '20261026', '20261102'], 'the state keeps three runs');
   const registry1 = readFileSync(join(state, 'registry-us.json'), 'utf8');
   const blocks = JSON.parse(readFileSync(join(out1, 'places-us-20261109.blocks.json'), 'utf8'));

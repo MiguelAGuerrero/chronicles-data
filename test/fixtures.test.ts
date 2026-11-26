@@ -77,7 +77,7 @@ async function built(o: { osm?: boolean; wd?: boolean; osmRaw?: string } = {}) {
 }
 const byName = (fs: { name?: string; kind: string; src: string }[]) => fs.map((f) => `${f.kind}:${f.name ?? ''}:${f.src}`).sort();
 
-test('FX1: the fixture record is closed: an opaque id, a kind, a position, a src and a name where it has one', { todo: 'test first' }, async () => {
+test('FX1: the fixture record is closed: an opaque id, a kind, a position, a src and a name where it has one', async () => {
   const { FixtureSchema, fixturesJsonSchema } = await load('fixtures/schema');
   assert.ok(FixtureSchema.safeParse(good).success);
   const { name: _n, ...unnamed } = good;
@@ -100,7 +100,7 @@ test('FX1: the fixture record is closed: an opaque id, a kind, a position, a src
   assert.ok(numbers.length <= 2, 'the only numbers are a position');
 });
 
-test('FX2: the kinds are the owner\'s thirteen, each from its one tag, in order; a visitor centre is no tourist office', { todo: 'test first' }, async () => {
+test('FX2: the kinds are the owner\'s thirteen, each from its one tag, in order; a visitor centre is no tourist office', async () => {
   const { KINDS } = await load('fixtures/kinds');
   const { kindsOf } = await load('fixtures/osm');
   const { FixtureSchema } = await load('fixtures/schema');
@@ -117,7 +117,7 @@ test('FX2: the kinds are the owner\'s thirteen, each from its one tag, in order;
   assert.equal(FixtureSchema.safeParse({ ...good, kind: 'visitor_centre' }).success, false, 'a kind outside the list fails');
 });
 
-test('FX3: no practical amenity is a fixture: the filter asks for the thirteen tags only, and other kinds give nothing', { todo: 'test first' }, async () => {
+test('FX3: no practical amenity is a fixture: the filter asks for the thirteen tags only, and other kinds give nothing', async () => {
   const { FIXTURE_FILTER } = await load('fixtures/kinds');
   const { adaptFixtures, kindsOf } = await load('fixtures/osm');
   assert.equal(FIXTURE_FILTER.name, 'fixtures');
@@ -138,7 +138,7 @@ test('FX3: no practical amenity is a fixture: the filter asks for the thirteen t
   for (const n of ['Public Toilets', 'Hudson Lot', 'Town Map', 'Battlefield Visitor Center']) assert.ok(!names.includes(n), `${n} is not a fixture`);
 });
 
-test('FX4: the adapter maps tags to kinds: one candidate per kind, a name where it has one, one position, private dropped, order-free', { todo: 'test first' }, async () => {
+test('FX4: the adapter maps tags to kinds: one candidate per kind, a name where it has one, one position, private dropped, order-free', async () => {
   const { adaptFixtures } = await load('fixtures/osm');
   const cs = adaptFixtures(OSM, AT);
   const at = (n: string, k?: string) => cs.filter((c: any) => c.name === n && (!k || c.kind === k));
@@ -157,7 +157,7 @@ test('FX4: the adapter maps tags to kinds: one candidate per kind, a name where 
   }
 });
 
-test('FX5, town-fixtures audit 5: no crowd field is read, on the OSM side or the Wikidata side', { todo: 'test first' }, async () => {
+test('FX5, town-fixtures audit 5: no crowd field is read, on the OSM side or the Wikidata side', async () => {
   const { adaptFixtures, READS } = await load('fixtures/osm');
   const { FIXTURE_FILTER } = await load('fixtures/kinds');
   const { adaptLibraries, LIBRARY_QUERY } = await load('fixtures/wikidata');
@@ -176,7 +176,7 @@ test('FX5, town-fixtures audit 5: no crowd field is read, on the OSM side or the
   assert.deepEqual(adaptLibraries(row({ sitelinks: { value: '40' }, P1174: { value: '120000' }, listed: { value: 'true' } }), AT), adaptLibraries(row({}), AT));
 });
 
-test('FX6, town-fixtures audit 3: one fixture kept once, OpenStreetMap\'s first, whatever the order', { todo: 'test first' }, async () => {
+test('FX6, town-fixtures audit 3: one fixture kept once, OpenStreetMap\'s first, whatever the order', async () => {
   const { mergeFixtures, normName } = await load('fixtures/merge');
   const { adaptFixtures } = await load('fixtures/osm');
   const { adaptLibraries } = await load('fixtures/wikidata');
@@ -211,7 +211,7 @@ test('FX6, town-fixtures audit 3: one fixture kept once, OpenStreetMap\'s first,
   assert.deepEqual(mergeFixtures([wd, way]).map((f: any) => f.sourceId), ['way/9']);
 });
 
-test('FX7, town-fixtures audit 4: fixtures never reach the places or the stores, and the adapters\' fingerprints are main\'s', { todo: 'test first' }, async () => {
+test('FX7, town-fixtures audit 4: fixtures never reach the places or the stores, and the adapters\' fingerprints are main\'s', async () => {
   const { ADAPTERS, REGIONS } = await import('../src/cli');
   const { osm } = await import('../src/adapters/osm');
   const { partOf } = await import('../src/adapters/wikidata');
@@ -244,7 +244,7 @@ test('FX7, town-fixtures audit 4: fixtures never reach the places or the stores,
   }
 });
 
-test('FX8: the fixtures pack (layer fixtures, z12, order-free bytes, blocks) and the manifest\'s `fixtures`, the old manifest unchanged', { todo: 'test first' }, async () => {
+test('FX8: the fixtures pack (layer fixtures, z12, order-free bytes, blocks) and the manifest\'s `fixtures`, the old manifest unchanged', async () => {
   const { packFixtures } = await load('fixtures/package');
   const r = await built();
   const p = r.pack;
@@ -277,7 +277,7 @@ test('FX8: the fixtures pack (layer fixtures, z12, order-free bytes, blocks) and
   assert.deepEqual({ ...m, regions: [rest] }, JSON.parse(before), 'the places and stores entries are as before');
 });
 
-test('FX9: published for the app: fixtures.schema.json, the example pack and its records, contract v9', { todo: 'test first' }, async () => {
+test('FX9: published for the app: fixtures.schema.json, the example pack and its records, contract v9', async () => {
   assert.equal(CONTRACT_VERSION, 9);
   const schema = JSON.parse(readFileSync(join(ROOT, 'contract/fixtures.schema.json'), 'utf8'));
   assert.equal(schema.contractVersion, 9);
@@ -294,7 +294,7 @@ test('FX9: published for the app: fixtures.schema.json, the example pack and its
   assert.ok(!ms.properties.regions.items.required.includes('fixtures'), 'optional');
 });
 
-test('FX10: one download a week, and a new filter is filled while the held answers are carried as they were', { todo: 'test first' }, async () => {
+test('FX10: one download a week, and a new filter is filled while the held answers are carried as they were', async () => {
   const { planPart } = await load('adapters/osm/extract');
   const { fingerprint } = await import('../src/fingerprint');
   const base = [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/x=y'] }];
@@ -326,7 +326,7 @@ test('FX10: one download a week, and a new filter is filled while the held answe
   assert.match(src, /filterExtracts\(ctx, \[FILTER, SMALL_FILTER, SHOP_FILTER\], US_PARTS, COUNT_TAGS, \[FIXTURE_FILTER\]\)/);
 });
 
-test('FX10: on a real extract, the fill writes the fixtures part and carries the held parts, ETag and counts byte for byte', { skip: !hasOsmium && 'osmium is not installed', todo: 'test first' }, async () => {
+test('FX10: on a real extract, the fill writes the fixtures part and carries the held parts, ETag and counts byte for byte', { skip: !hasOsmium && 'osmium is not installed' }, async () => {
   const { filterExtracts } = await load('adapters/osm/extract');
   const { FIXTURE_FILTER } = await load('fixtures/kinds');
   const pbf = join(mkdtempSync(join(tmpdir(), 'fx10-')), 'x.osm.pbf');
@@ -354,11 +354,15 @@ test('FX10: on a real extract, the fill writes the fixtures part and carries the
   assert.equal(meta['tagCounts:us-west'], '{"a":1}');
   assert.equal(meta['shopCounts:us-west'], '{"b":2}');
   assert.ok(meta['filter:fixtures']);
-  const lines = put['fixtures-us-west.geojsonl'].split('\n').filter(Boolean).map((l) => JSON.parse(l).properties.name).sort();
+  // osmium exports a closed way twice (its line and its area); the merge keeps it once (FX6).
+  const lines = [...new Set(put['fixtures-us-west.geojsonl'].split('\n').filter(Boolean).map((l) => JSON.parse(l).properties.name))].sort();
   assert.deepEqual(lines, ['Hudson', 'Hudson Free Library', 'Hudson Town Hall', 'Hudson Visitor Center'], 'no toilets, no visitor centre');
+  const { adaptFixtures } = await load('fixtures/osm');
+  const { mergeFixtures } = await load('fixtures/merge');
+  assert.equal(mergeFixtures(adaptFixtures(put['fixtures-us-west.geojsonl'], AT)).filter((f: any) => f.kind === 'town_hall').length, 1);
 });
 
-test('FX11: published only when a block changed, never without OSM\'s fixtures; the workflows keep and serve the pack', { todo: 'test first' }, async () => {
+test('FX11: published only when a block changed, never without OSM\'s fixtures; the workflows keep and serve the pack', async () => {
   const { decideFixtures } = await import('../src/publish') as any;
   const blocks = { '8/75/96': 'aaaaaaaaaaaaaaaa' };
   const region = (fixtures?: unknown) => ({ schema: 1, regions: [{ id: 'us', current: { blocks: { '8/1/1': 'bbbbbbbbbbbbbbbb' } }, ...(fixtures ? { fixtures } : {}) }] });
@@ -367,9 +371,14 @@ test('FX11: published only when a block changed, never without OSM\'s fixtures; 
   assert.equal(decideFixtures({ region: 'us', blocks, manifest: region() }).publish, true);
   assert.equal(decideFixtures({ region: 'us', blocks, manifest: null, unreachable: true }).publish, false);
   // OpenStreetMap first: Wikidata's libraries alone build no pack.
-  const none = await built({ osm: false });
-  assert.equal(none.pack, null);
+  const { buildFixtures } = await load('fixtures/build');
+  const store = storeWith({ osm: false });
+  store.put('osm', '20261123', 'shops-us-northeast.geojsonl', '', AT);
+  store.complete('osm', '20261123');
+  const none = buildFixtures({ store, osmRun: '20261123', wikidataRun: '20261109', region: 'example', version: '20261126', registry: emptyRegistry(), newId: ids('f') });
+  assert.equal(none.pack, null, 'run 40\'s OSM answers hold no fixtures: no pack, the libraries alone build none');
   assert.match(none.report.reason, /no fixtures in the OpenStreetMap run/);
+  assert.equal((await built({ osm: false })).pack, null);
   const build = readFileSync(join(ROOT, '.github/workflows/build.yml'), 'utf8');
   assert.match(build, /registry-fixtures-us\.json/);
   const pages = readFileSync(join(ROOT, '.github/workflows/pages.yml'), 'utf8');
@@ -379,7 +388,7 @@ test('FX11: published only when a block changed, never without OSM\'s fixtures; 
   assert.match(cli, /state-sources=\$\{\[\.\.\.redistributable\(ADAPTERS\), FIXTURES_WIKIDATA\]\.join\(' '\)\}/);
 });
 
-test('FX12: nothing counts fixtures: no count in the record, the feature, the manifest entry or the report', { todo: 'test first' }, async () => {
+test('FX12: nothing counts fixtures: no count in the record, the feature, the manifest entry or the report', async () => {
   const { fixturesJsonSchema } = await load('fixtures/schema');
   const js = JSON.stringify(fixturesJsonSchema());
   assert.ok(!/count|total|tally|number_of/i.test(JSON.stringify({ r: fixturesJsonSchema().record, f: fixturesJsonSchema().feature })), 'no count field');
@@ -392,7 +401,7 @@ test('FX12: nothing counts fixtures: no count in the record, the feature, the ma
   assert.ok(!/count/i.test(JSON.stringify(ms.$defs.fixturesFile)));
 });
 
-test('FX13, town-fixtures audit 1, 2: Wikidata\'s public libraries by a read of their own: exact P31, the gone and unlabelled out', { todo: 'test first' }, async () => {
+test('FX13, town-fixtures audit 1, 2: Wikidata\'s public libraries by a read of their own: exact P31, the gone and unlabelled out', async () => {
   const w = await load('fixtures/wikidata');
   assert.equal(w.SOURCE, 'wikidata-fixtures');
   assert.match(w.LIBRARY_QUERY, /wdt:P31 wd:Q28564/);
@@ -428,7 +437,7 @@ test('FX13, town-fixtures audit 1, 2: Wikidata\'s public libraries by a read of 
   assert.deepEqual(r.report.sources, ['osm', 'wikidata']);
 });
 
-test('FX14, town-fixtures audit 6: a heritage railway\'s station is not a fixture; every other station is, subway included', { todo: 'test first' }, async () => {
+test('FX14, town-fixtures audit 6: a heritage railway\'s station is not a fixture; every other station is, subway included', async () => {
   const { kindsOf } = await load('fixtures/osm');
   assert.deepEqual(kindsOf({ railway: 'station' }), ['station']);
   assert.deepEqual(kindsOf({ railway: 'station', station: 'subway' }), ['station']);

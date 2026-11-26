@@ -8,6 +8,7 @@
 import type { Adapter } from '../../adapter';
 import type { ClassName } from '../../classes';
 import { fingerprint } from '../../fingerprint';
+import { FIXTURE_FILTER } from '../../fixtures/kinds';
 import { SHOP_FILTER } from '../../stores/osmShops';
 import { filterExtracts, GEOFABRIK, US_PARTS, type Filter } from './extract';
 import { COUNT_TAGS } from './tagCounts';
@@ -178,20 +179,24 @@ export const osm: Adapter = {
   // RB8: four multi-GB extracts take over an hour on a runner, so only the weekly and hand runs fetch them.
   weekly: true,
 
-  // RB2: the extracts it reads and the filter it keeps; the area is the four US parts, whatever the boxes.
+  // RB2: the extracts it reads and the filter it keeps; the area is the four US parts, whatever the boxes. FX10: the
+  // fixtures' filter is keyed by its own note (`filter:fixtures`), so adding it refetched and moved nothing else.
   fetchKey: () => fingerprint([GEOFABRIK, US_PARTS, FILTER, SMALL_FILTER, SHOP_FILTER]),
 
   // SL9: both filters from the same download of each extract.
   async fetch(ctx) {
     // ST9: the stores' shop filter rides the same pass, so the week's extracts are downloaded once.
     // OC3: the owner's tag counts ride the same pass too; they never reach a place (OC7), so the fingerprint leaves them out.
-    await filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER], US_PARTS, COUNT_TAGS);
+    // FX10: the fixtures' filter rides it too, as an added filter: filled from a download while the held answers are carried.
+    await filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER], US_PARTS, COUNT_TAGS, [FIXTURE_FILTER]);
   },
 
   /** RD7: one confirming candidate per Wikidata id an element carries (`wikidata=Q1;Q2` speaks for both); SL9: the small part locates. */
   adapt(raw, part, fetchedAt) {
     // ST6: the shops' part belongs to the stores pack (src/stores), never to places.
     if (part.startsWith(`${SHOP_FILTER.name}-`)) return [];
+    // FX7: the fixtures' part belongs to the fixtures pack (src/fixtures), never to places.
+    if (part.startsWith(`${FIXTURE_FILTER.name}-`)) return [];
     if (part.startsWith(`${SMALL_FILTER.name}-`)) return adaptSmall(raw, fetchedAt);
     const out: unknown[] = [];
     for (const line of raw.split('\n')) {

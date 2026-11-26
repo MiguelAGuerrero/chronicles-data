@@ -8,6 +8,7 @@
 // - manifest.schema.json: manifest.json, which the app reads to find a region's file and its blocks.
 // - sources.json: each adapter's name, license, attribution, role and hosts (the app credits them; and no phone may
 //   call these hosts, PP16).
+// - fixtures.schema.json: a town fixture's shape and the closed list of kinds (docs/fixtures/spec.md, FX9).
 // - example/: a small pack built from the test fixtures, and its manifest, for the app's tests to read.
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -21,6 +22,8 @@ import { partOf } from './adapters/wikidata';
 import { createRawStore } from './rawStore';
 import { run } from './runner';
 import { jsonSchema } from './schema';
+import { buildFixtures } from './fixtures/build';
+import { fixturesJsonSchema } from './fixtures/schema';
 import { buildStores } from './stores/build';
 import { storesJsonSchema } from './stores/schema';
 
@@ -53,6 +56,15 @@ const MANIFEST_SCHEMA = {
               previous: { type: 'array', items: { $ref: '#/$defs/storesFile' }, description: 'Older versions still served, newest first' },
             },
           },
+          fixtures: {
+            type: 'object',
+            required: ['current', 'previous'],
+            description: 'FX8: the region\'s fixtures pack, beside `current` and `stores`; absent in older manifests and where there is none',
+            properties: {
+              current: { $ref: '#/$defs/fixturesFile' },
+              previous: { type: 'array', items: { $ref: '#/$defs/fixturesFile' }, description: 'Older versions still served, newest first' },
+            },
+          },
         },
       },
     },
@@ -61,6 +73,10 @@ const MANIFEST_SCHEMA = {
     storesFile: {
       allOf: [{ $ref: '#/$defs/file' }],
       properties: { file: { type: 'string', pattern: '^stores-[a-z0-9]+-\\d{8}(?:\\.\\d+)?\\.pmtiles$' } },
+    },
+    fixturesFile: {
+      allOf: [{ $ref: '#/$defs/file' }],
+      properties: { file: { type: 'string', pattern: '^fixtures-[a-z0-9]+-\\d{8}(?:\\.\\d+)?\\.pmtiles$' } },
     },
     file: {
       type: 'object',
@@ -93,6 +109,7 @@ export async function contractFiles(): Promise<Map<string, string | Buffer>> {
   files.set('places.schema.json', json(jsonSchema()));
   files.set('manifest.schema.json', json(MANIFEST_SCHEMA));
   files.set('stores.schema.json', json(storesJsonSchema()));
+  files.set('fixtures.schema.json', json(fixturesJsonSchema()));
   files.set('sources.json', json({
     contractVersion: CONTRACT_VERSION,
     classes: CLASS_NAMES,
@@ -127,6 +144,20 @@ export async function contractFiles(): Promise<Map<string, string | Buffer>> {
   writeFileSync(join(dir, sp.file.replace(/\.pmtiles$/, '.license')), 'odbl\n');
   files.set(`example/${sp.file}`, Buffer.from(sp.bytes));
   files.set('example/stores-example.json', json([...sp.stores].sort((a, b) => (a.id < b.id ? -1 : 1))));
+  // FX9: the example fixtures pack, from the fixtures' OSM fixture and Wikidata's libraries, and the records it holds.
+  const fx = createRawStore(mkdtempSync(join(tmpdir(), 'contract-fixtures-')));
+  fx.put('osm', '20261109', 'fixtures-example.geojsonl', readFileSync(join(FIX, 'osm-fixtures.geojsonl'), 'utf8'), '2026-11-09T07:17:00.000Z');
+  fx.complete('osm', '20261109');
+  fx.put('wikidata-fixtures', '20261109', 'libraries-us.json', readFileSync(join(FIX, 'wikidata-libraries.json'), 'utf8'), '2026-11-09T07:17:00.000Z');
+  fx.complete('wikidata-fixtures', '20261109');
+  let fn = 0;
+  const fr = buildFixtures({ store: fx, osmRun: '20261109', wikidataRun: '20261109', region: 'example', version: '20261109', registry: emptyRegistry(), newId: () => `f_${(++fn).toString(16).padStart(16, '0')}` });
+  const fp = fr.pack!;
+  writeFileSync(join(dir, fp.file), fp.bytes);
+  writeFileSync(join(dir, fp.file.replace(/\.pmtiles$/, '.blocks.json')), `${JSON.stringify(fp.blocks)}\n`);
+  writeFileSync(join(dir, fp.file.replace(/\.pmtiles$/, '.license')), 'odbl\n');
+  files.set(`example/${fp.file}`, Buffer.from(fp.bytes));
+  files.set('example/fixtures-example.json', json([...fp.fixtures].sort((a, b) => (a.id < b.id ? -1 : 1))));
   files.set('example/manifest.json', execFileSync(process.execPath, [join(ROOT, 'scripts/manifest.mjs'), dir], { encoding: 'utf8' }));
   return files;
 }

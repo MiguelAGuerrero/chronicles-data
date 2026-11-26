@@ -44,6 +44,28 @@
           "license": "odbl"
         },
         "previous": []
+      },
+      "fixtures": {
+        "current": {
+          "file": "fixtures-example-20261109.pmtiles",
+          "version": "20261109",
+          "bytes": 1647,
+          "sha256": "2df626570904f124f366d386e032530a2e2f0106045f09e845636cbaf96669b7",
+          "minzoom": 12,
+          "maxzoom": 12,
+          "bounds": [
+            -74.016,
+            40.7,
+            -73.5001,
+            41.2001
+          ],
+          "blocks": {
+            "8/75/95": "2d8ca43cc97032f1",
+            "8/75/96": "fe7d15822f6c2159"
+          },
+          "license": "odbl"
+        },
+        "previous": []
       }
     }
   ]

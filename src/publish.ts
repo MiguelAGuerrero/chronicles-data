@@ -43,3 +43,12 @@ export function decideStores({ region, blocks, manifest, unreachable = false }: 
   const view: Manifest | null = manifest && { ...manifest, regions: (manifest.regions ?? []).map((r) => ({ id: r.id, current: (r as { stores?: { current?: ManifestFile } }).stores?.current })) };
   return decide({ region, blocks, manifest: view, unreachable });
 }
+
+/**
+ * FX11: whether to publish a region's fixtures pack, from its blocks and the live manifest's `fixtures.current.blocks`; the
+ * same rule as the places pack's, so a week in which no block of the fixtures changed publishes nothing.
+ */
+export function decideFixtures({ region, blocks, manifest, unreachable = false }: { region: string; blocks: Record<string, string> | null; manifest: Manifest | null; unreachable?: boolean }) {
+  const view: Manifest | null = manifest && { ...manifest, regions: (manifest.regions ?? []).map((r) => ({ id: r.id, current: (r as { fixtures?: { current?: ManifestFile } }).fixtures?.current })) };
+  return decide({ region, blocks, manifest: view, unreachable });
+}

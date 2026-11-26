@@ -4,6 +4,7 @@
 // its entry as `blocks` (PP11), so the app rebuilds an area only when its block changed.
 // A stores pack (ST7), stores-<region>-<version>.pmtiles with the same sidecars, is listed under its region's
 // `stores` ({current, previous}) beside `current`; a region with none has no `stores` key, as in older manifests.
+// A fixtures pack (FX8), fixtures-<region>-<version>.pmtiles, likewise under `fixtures`, after `stores`.
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +14,7 @@ if (!dir) {
   console.error('usage: manifest.mjs <dir>');
   process.exit(1);
 }
-const NAME = /^(places|stores)-([a-z0-9]+)-(\d{8}(?:\.\d+)?)\.pmtiles$/;
+const NAME = /^(places|stores|fixtures)-([a-z0-9]+)-(\d{8}(?:\.\d+)?)\.pmtiles$/;
 
 /** Bounds and zooms from the PMTiles v3 header (127 bytes). */
 function header(buf) {
@@ -24,6 +25,7 @@ function header(buf) {
 
 const byRegion = new Map();
 const storesByRegion = new Map();
+const fixturesByRegion = new Map();
 for (const file of readdirSync(dir)) {
   const m = NAME.exec(file);
   if (!m) continue;
@@ -35,7 +37,7 @@ for (const file of readdirSync(dir)) {
   // RD11: the pack's license family, from its sidecar (`odbl` when OpenStreetMap changed it); none means CC0.
   const license = path.replace(/\.pmtiles$/, '.license');
   if (existsSync(license)) entry.license = readFileSync(license, 'utf8').trim();
-  const into = m[1] === 'stores' ? storesByRegion : byRegion;
+  const into = m[1] === 'stores' ? storesByRegion : m[1] === 'fixtures' ? fixturesByRegion : byRegion;
   if (!into.has(m[2])) into.set(m[2], []);
   into.get(m[2]).push(entry);
 }
@@ -47,6 +49,11 @@ const regions = [...byRegion].sort(([a], [b]) => a.localeCompare(b)).map(([id, l
   if (stores) {
     stores.sort((a, b) => b.version.localeCompare(a.version, 'en', { numeric: true }));
     region.stores = { current: stores[0], previous: stores.slice(1) };
+  }
+  const fixtures = fixturesByRegion.get(id);
+  if (fixtures) {
+    fixtures.sort((a, b) => b.version.localeCompare(a.version, 'en', { numeric: true }));
+    region.fixtures = { current: fixtures[0], previous: fixtures.slice(1) };
   }
   return region;
 });

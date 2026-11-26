@@ -1,0 +1,155 @@
+{
+  "$comment": "Generated from src/fixtures/schema.ts by `npm run contract`; a test fails when they differ.",
+  "contractVersion": 9,
+  "record": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^f_[0-9a-f]{16}$"
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "tourist_office",
+          "town_hall",
+          "library",
+          "post_office",
+          "square",
+          "market",
+          "station",
+          "bus_station",
+          "courthouse",
+          "community_centre",
+          "ferry_terminal",
+          "common",
+          "bandstand"
+        ]
+      },
+      "at": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          }
+        ],
+        "items": false,
+        "minItems": 2,
+        "maxItems": 2
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "src": {
+        "type": "string",
+        "enum": [
+          "osm",
+          "wd"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "kind",
+      "at",
+      "src"
+    ],
+    "additionalProperties": false
+  },
+  "feature": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "src": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "kind",
+      "id",
+      "src"
+    ],
+    "additionalProperties": false
+  },
+  "kinds": [
+    {
+      "kind": "tourist_office",
+      "osm": "information=office"
+    },
+    {
+      "kind": "town_hall",
+      "osm": "amenity=townhall"
+    },
+    {
+      "kind": "library",
+      "osm": "amenity=library"
+    },
+    {
+      "kind": "post_office",
+      "osm": "amenity=post_office"
+    },
+    {
+      "kind": "square",
+      "osm": "place=square"
+    },
+    {
+      "kind": "market",
+      "osm": "amenity=marketplace"
+    },
+    {
+      "kind": "station",
+      "osm": "railway=station"
+    },
+    {
+      "kind": "bus_station",
+      "osm": "amenity=bus_station"
+    },
+    {
+      "kind": "courthouse",
+      "osm": "amenity=courthouse"
+    },
+    {
+      "kind": "community_centre",
+      "osm": "amenity=community_centre"
+    },
+    {
+      "kind": "ferry_terminal",
+      "osm": "amenity=ferry_terminal"
+    },
+    {
+      "kind": "common",
+      "osm": "leisure=common"
+    },
+    {
+      "kind": "bandstand",
+      "osm": "leisure=bandstand"
+    }
+  ],
+  "wikidata": {
+    "library": "P31 = Q28564 (public library) exactly, in the US, with a coordinate and an English label; never one dissolved (P576) or closed (P3999)"
+  },
+  "notFixtures": {
+    "information=visitor_centre": "an attraction's visitor centre, a place to discover",
+    "heritageStation": "a railway=station also tagged railway:preserved=yes, usage=tourism, tourism=museum|attraction, historic=railway_station"
+  },
+  "encoding": "A pack feature (layer `fixtures`, zoom 12) carries flat string properties: kind, id, src (osm or wd), and name when it has one.",
+  "clients": "A client ignores a kind it does not know and reads the rest; an unknown kind never fails a read and never shows. Kinds are added by contract version only."
+}

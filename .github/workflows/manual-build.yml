@@ -12,7 +12,7 @@ on:
         type: boolean
         default: true
       osm:
-        description: 'OpenStreetMap: corroboration, small places and stores, four Geofabrik extracts (over an hour)'
+        description: 'OpenStreetMap: corroboration, small places, stores and town fixtures, four Geofabrik extracts (over an hour)'
         type: boolean
         default: true
       box:
