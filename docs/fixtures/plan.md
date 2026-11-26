@@ -67,7 +67,10 @@ input the same; FX7 places and stores identical with and without a fixtures part
 yields nothing, the import grep; FX8 pack read back with the pmtiles reader, order-free bytes, places pack bytes unchanged,
 manifest with and without fixtures (byte for byte the old one without); FX9 contract files and version; FX10 `planPart`
 over every case, and with osmium installed a real `filterExtracts` over a small `.osm`: the held run's base parts carried
-byte for byte, the fixtures part written, the notes kept; FX11 decideFixtures, no pack without OSM's fixtures, the workflows' text; FX12 no count
+byte for byte, the fixtures part written, the notes kept (the held copy's 304, then one download); and through audit 11's
+seam, no osmium (the app's T66): a fill's 304 carries every held answer and fills the fixtures from one unconditional
+download, a refused download after it carrying and noting nothing; a fill's 200 runs every filter on its one download, with
+its ETag, date and counts; each way's log line word for word (tend fixtures audit 1); FX11 decideFixtures, no pack without OSM's fixtures, the workflows' text; FX12 no count
 key in the schema, the feature, the manifest entry or the report; FX13 the query's text (exact P31, no `P279`, no listing,
 no sitelinks), a fake answer's rows (dissolved, closed, unlabelled, duplicated), when it is fetched (weekly, Wikidata
 fetched, stale, not stale), a failure keeping the last; FX14 the four heritage signals and a subway station.
