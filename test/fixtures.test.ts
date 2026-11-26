@@ -594,6 +594,17 @@ test('town-fixtures T66: a fill whose extract changed (200) runs every filter on
   assert.ok(seen.logs.some((l) => /us-west downloaded/.test(l)) && !seen.logs.some((l) => /fixtures filled/.test(l)), seen.logs.join(' | '));
 });
 
+test('tend fixtures audit 1: a fill logs which way each extract went, in the words the owner\'s build log is read by', async () => {
+  // docs/fixtures/plan.md, "The build the owner authorised": the manual build is cancelled when an extract's log says
+  // neither "fixtures filled" nor "changed since the held copy", so both lines are pinned word for word.
+  const changed = t66(() => new Response('pbf bytes', { status: 200, headers: { etag: '"new"' } }));
+  await changed.go();
+  assert.deepEqual(changed.seen.logs, ['osm: us-west downloaded, changed since the held copy: every filter runs']);
+  const unchanged = t66((conditional) => conditional ? new Response(null, { status: 304 }) : new Response('pbf bytes', { status: 200 }));
+  await unchanged.go();
+  assert.deepEqual(unchanged.seen.logs, ['osm: us-west fixtures filled (fixtures); the other answers carried from 20261123.40']);
+});
+
 test('town-fixtures audit 12: a station in service is a station, whatever else it is; only a heritage railway\'s is not (decision 0268, narrowed)', async () => {
   const { kindsOf } = await load('fixtures/osm');
   assert.deepEqual(kindsOf({ railway: 'station', public_transport: 'station', tourism: 'attraction', name: 'Union Station' }), ['station']);
