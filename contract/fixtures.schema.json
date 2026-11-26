@@ -148,7 +148,7 @@
   },
   "notFixtures": {
     "information=visitor_centre": "an attraction's visitor centre, a place to discover",
-    "heritageStation": "a railway=station also tagged railway:preserved=yes, usage=tourism, tourism=museum|attraction, historic=railway_station"
+    "heritageStation": "a railway=station also tagged railway:preserved=yes, usage=tourism, tourism=museum"
   },
   "encoding": "A pack feature (layer `fixtures`, zoom 12) carries flat string properties: kind, id, src (osm or wd), and name when it has one.",
   "clients": "A client ignores a kind it does not know and reads the rest; an unknown kind never fails a read and never shows. Kinds are added by contract version only."

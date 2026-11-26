@@ -49,19 +49,19 @@
         "current": {
           "file": "fixtures-example-20261109.pmtiles",
           "version": "20261109",
-          "bytes": 1647,
-          "sha256": "2df626570904f124f366d386e032530a2e2f0106045f09e845636cbaf96669b7",
+          "bytes": 1684,
+          "sha256": "f8d417b9e407a4e49c4950b8499bc66d54b76acd8cb26194c82c02dd6f0e4f15",
           "minzoom": 12,
           "maxzoom": 12,
           "bounds": [
-            -74.016,
+            -74.019,
             40.7,
             -73.5001,
             41.2001
           ],
           "blocks": {
-            "8/75/95": "2d8ca43cc97032f1",
-            "8/75/96": "fe7d15822f6c2159"
+            "8/75/95": "c83233159f1d1ba2",
+            "8/75/96": "49c65c4bc4779160"
           },
           "license": "odbl"
         },

@@ -166,7 +166,15 @@ function exportFilter(ctx: FetchContext, pbf: string, dir: string, part: string,
  * uses this source's last good answers, PP14). OC3, OC4: with `counts`, also counts those tags in each extract, kept as
  * the run's note `tagCounts:<part>` (never a raw part); a count that fails is logged and changes nothing else (OC7).
  */
-export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>, added: Filter[] = []) {
+/** town-fixtures audit 11: the extract step's osmium work, a seam so a test runs every branch without osmium. */
+export interface ExtractIo {
+  exportFilter: typeof exportFilter;
+  countExtract: typeof countExtract;
+  countShopsIn: typeof countShopsIn;
+}
+const OSMIUM: ExtractIo = { exportFilter, countExtract, countShopsIn };
+
+export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>, added: Filter[] = [], io: ExtractIo = OSMIUM) {
   const dir = mkdtempSync(join(tmpdir(), 'osm-'));
   try {
     for (const part of parts) {
@@ -222,7 +230,7 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
           continue;
         }
         // FX10: the held copy's answers stand; only the added filters new to it run on the download.
-        for (const f of plan.run) exportFilter(ctx, pbf, dir, part, f);
+        for (const f of plan.run) io.exportFilter(ctx, pbf, dir, part, f);
         ctx.log(`osm: ${part} fixtures filled (${plan.run.map((f) => f.name).join(', ')}); the other answers carried from ${prev!.run}`);
         rmSync(pbf, { force: true });
         continue;
@@ -232,17 +240,17 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       if (tag) ctx.setMeta(`etag:${part}`, tag);
       if (mod) ctx.setMeta(`modified:${part}`, mod);
       ctx.log(`osm: ${part} downloaded`);
-      for (const f of plan.run) exportFilter(ctx, pbf, dir, part, f);
+      for (const f of plan.run) io.exportFilter(ctx, pbf, dir, part, f);
       notes();
       if (counts) {
         try {
-          ctx.setMeta(`${COUNTS_NOTE}${part}`, JSON.stringify(countExtract(pbf, dir, part, counts)));
+          ctx.setMeta(`${COUNTS_NOTE}${part}`, JSON.stringify(io.countExtract(pbf, dir, part, counts)));
         } catch (e) {
           // OC7: the counts are only for the owner's review; a failure leaves this run with none, and nothing else.
           ctx.log(`osm: ${part} tag counts failed (${String((e as Error)?.message ?? e)}); this run reports no counts`);
         }
         try {
-          ctx.setMeta(`${SHOP_COUNTS_NOTE}${part}`, JSON.stringify(countShopsIn(pbf, dir, part)));
+          ctx.setMeta(`${SHOP_COUNTS_NOTE}${part}`, JSON.stringify(io.countShopsIn(pbf, dir, part)));
         } catch (e) {
           // SK8: for the owner's review only; a failure leaves this run with none, and nothing else.
           ctx.log(`osm: ${part} shop counts failed (${String((e as Error)?.message ?? e)}); this run reports no shop counts`);

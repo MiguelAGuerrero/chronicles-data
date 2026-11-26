@@ -13,19 +13,25 @@ import type { RawStore } from '../rawStore';
 export const SOURCE = 'wikidata-fixtures';
 export const PART = 'libraries-us.json';
 export const ENDPOINT = 'https://query.wikidata.org/sparql';
-/** FX13: the US's public libraries, by their one class; the dissolved and closed are asked so they can be left out. */
-export const LIBRARY_QUERY = `SELECT ?item ?label ?coord ?dissolved ?closed WHERE {
+/**
+ * FX13: the US's public libraries, by their one class; the dissolved and closed are asked so they can be left out, as are
+ * those whose library statement has ended (`pq:P582`) and those whose state of use is permanently closed, demolished or
+ * without its original use (`P5817`; town-fixtures audit 9).
+ */
+export const LIBRARY_QUERY = `SELECT ?item ?label ?coord ?dissolved ?closed ?ended ?use WHERE {
   ?item wdt:P31 wd:Q28564 ; wdt:P17 wd:Q30 ; wdt:P625 ?coord .
   OPTIONAL { ?item rdfs:label ?label . FILTER(LANG(?label) = "en") }
   OPTIONAL { ?item wdt:P576 ?dissolved . }
   OPTIONAL { ?item wdt:P3999 ?closed . }
+  OPTIONAL { ?item p:P31 ?st . ?st ps:P31 wd:Q28564 ; pq:P582 ?ended . }
+  OPTIONAL { ?item wdt:P5817 ?use . FILTER(?use IN (wd:Q104664889, wd:Q56556915, wd:Q110435753)) }
 }`;
 /** FX13: what this read asks for; a change makes it stale. */
 export const fixturesWikidataKey = () => fingerprint([ENDPOINT, LIBRARY_QUERY]);
 const FETCH_KEY = 'fetchKey';
 
 /** The binding keys read, and no others (FX5). */
-const READS = ['item', 'label', 'coord', 'dissolved', 'closed'] as const;
+const READS = ['item', 'label', 'coord', 'dissolved', 'closed', 'ended', 'use'] as const;
 type Row = Partial<Record<(typeof READS)[number], { value?: unknown }>>;
 
 const POINT = /^Point\(\s*(-?[\d.]+(?:e-?\d+)?)\s+(-?[\d.]+(?:e-?\d+)?)\s*\)$/i;
@@ -47,7 +53,7 @@ export function adaptLibraries(raw: string, fetchedAt: string): unknown[] {
     if (!q) continue;
     const e = byItem.get(q) ?? { labels: [], coords: [], gone: false };
     byItem.set(q, e);
-    if (v('dissolved') != null || v('closed') != null) e.gone = true;
+    if (v('dissolved') != null || v('closed') != null || v('ended') != null || v('use') != null) e.gone = true;
     const label = v('label')?.trim();
     if (label) e.labels.push(label);
     const m = POINT.exec(v('coord') ?? '');

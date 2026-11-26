@@ -442,18 +442,19 @@ test('FX14, town-fixtures audit 6: a heritage railway\'s station is not a fixtur
   assert.deepEqual(kindsOf({ railway: 'station' }), ['station']);
   assert.deepEqual(kindsOf({ railway: 'station', station: 'subway' }), ['station']);
   assert.deepEqual(kindsOf({ railway: 'station', station: 'light_rail' }), ['station']);
-  for (const t of [{ 'railway:preserved': 'yes' }, { usage: 'tourism' }, { tourism: 'museum' }, { tourism: 'attraction' }, { historic: 'railway_station' }]) {
+  // Narrowed by the diff review (town-fixtures audit 12): an attraction's or a historic building's station in service is a station.
+  for (const t of [{ 'railway:preserved': 'yes' }, { usage: 'tourism' }, { tourism: 'museum' }]) {
     assert.deepEqual(kindsOf({ railway: 'station', name: 'Old Depot', ...t }), [], JSON.stringify(t));
   }
   const r = await built();
-  assert.deepEqual(byName(r.pack.fixtures.filter((f: any) => f.kind === 'station')), ['station:Fulton St:osm', 'station:Hudson:osm']);
+  assert.deepEqual(byName(r.pack.fixtures.filter((f: any) => f.kind === 'station')), ['station:Fulton St:osm', 'station:Hudson:osm', 'station:Old Depot:osm']);
 });
 
 // The diff review's findings (town-fixtures audit 7-15; the coordinator's rulings, Nov 26).
 const at = (lon: number, lat: number, dNorthM: number, dEastM: number): [number, number] => [lon + dEastM / (111_320 * Math.cos((lat * Math.PI) / 180)), lat + dNorthM / 110_540];
 const cand = (source: string, sourceId: string, a: [number, number], name?: string, item?: string, kind = 'library') => ({ source, sourceId, kind, at: a, ...(name ? { name } : {}), ...(item ? { item } : {}), fetchedAt: AT });
 
-test('town-fixtures audit 7: one fixture kept once in every direction and at every latitude (Seattle, Anchorage)', { todo: 'test first' }, async () => {
+test('town-fixtures audit 7: one fixture kept once in every direction and at every latitude (Seattle, Anchorage)', async () => {
   const { mergeFixtures } = await load('fixtures/merge');
   // The auditor's pairs: 200 m north-south.
   assert.equal(mergeFixtures([cand('osm', 'node/1', [-122.29898, 47.60078], 'A'), cand('osm', 'node/2', [-122.29898, 47.602579], 'A')]).length, 1, 'Seattle');
@@ -473,7 +474,7 @@ test('town-fixtures audit 7: one fixture kept once in every direction and at eve
   }
 });
 
-test('town-fixtures audit 8: a Wikidata item joins two of one fixture only within 1 km', { todo: 'test first' }, async () => {
+test('town-fixtures audit 8: a Wikidata item joins two of one fixture only within 1 km', async () => {
   const { mergeFixtures } = await load('fixtures/merge');
   // Two branches tagged with one item, about 6 km apart: two libraries.
   const two = mergeFixtures([cand('osm', 'node/1', [-74, 40.7], 'Branch A', 'Q1'), cand('osm', 'node/2', [-74.05, 40.75], 'Branch B', 'Q1')]);
@@ -486,7 +487,7 @@ test('town-fixtures audit 8: a Wikidata item joins two of one fixture only withi
   assert.match(spec, /same Wikidata item within 1 km/);
 });
 
-test('town-fixtures audit 9: a library whose library statement has ended, or that is closed, demolished or without its use, yields nothing', { todo: 'test first' }, async () => {
+test('town-fixtures audit 9: a library whose library statement has ended, or that is closed, demolished or without its use, yields nothing', async () => {
   const w = await load('fixtures/wikidata');
   assert.match(w.LIBRARY_QUERY, /p:P31 \?st \. \?st ps:P31 wd:Q28564 ; pq:P582 \?ended/);
   assert.match(w.LIBRARY_QUERY, /wdt:P5817 \?use/);
@@ -499,7 +500,7 @@ test('town-fixtures audit 9: a library whose library statement has ended, or tha
   assert.notEqual(w.fixturesWikidataKey(), '8816490e2b7ca70d', 'run 41 kept its libraries under this key');
 });
 
-test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam takes a fake export, and the held answers are carried', { todo: 'test first' }, async () => {
+test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam takes a fake export, and the held answers are carried', async () => {
   const { filterExtracts } = await load('adapters/osm/extract');
   const { FIXTURE_FILTER } = await load('fixtures/kinds');
   const put: Record<string, string> = {};
@@ -539,14 +540,14 @@ test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam take
   assert.deepEqual(carried.sort(), ['confirm-us-west.geojsonl', 'fixtures-us-west.geojsonl', 'small-us-west.geojsonl']);
 });
 
-test('town-fixtures audit 12: a station in service is a station, whatever else it is; only a heritage railway\'s is not (decision 0268, narrowed)', { todo: 'test first' }, async () => {
+test('town-fixtures audit 12: a station in service is a station, whatever else it is; only a heritage railway\'s is not (decision 0268, narrowed)', async () => {
   const { kindsOf } = await load('fixtures/osm');
   assert.deepEqual(kindsOf({ railway: 'station', public_transport: 'station', tourism: 'attraction', name: 'Union Station' }), ['station']);
   assert.deepEqual(kindsOf({ railway: 'station', historic: 'railway_station', name: 'Old Depot' }), ['station']);
   for (const t of [{ 'railway:preserved': 'yes' }, { usage: 'tourism' }, { tourism: 'museum' }]) assert.deepEqual(kindsOf({ railway: 'station', name: 'Steam Line', ...t }), [], JSON.stringify(t));
 });
 
-test('town-fixtures audit 13: a trailing ", <clause>" is set aside only when what is left is more than a kind\'s word', { todo: 'test first' }, async () => {
+test('town-fixtures audit 13: a trailing ", <clause>" is set aside only when what is left is more than a kind\'s word', async () => {
   const { mergeFixtures, normName } = await load('fixtures/merge');
   assert.equal(normName('Maple Street Library, Brookfield'), normName('Maple Street Library'));
   assert.notEqual(normName('Library, Main Branch'), normName('Library, Branch 2'));

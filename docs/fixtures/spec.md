@@ -93,11 +93,11 @@ Wikidata adds `library` only: items whose `P31` is exactly `Q28564` (public libr
    Wikidata's read asks for and reads only an item's English label, its coordinate, `P31` and the signals that it is gone
    (`P576`, `P3999`): a row carrying a listing, a visitor count (`P1174`) or sitelinks yields the same record.
 6. **FX6 One fixture is kept once, OpenStreetMap's first.** Two candidates of one kind are one fixture when they name the
-   same Wikidata item, when they have the same name within 250 m (letter case, spaces, punctuation, a trailing
-   parenthetical and a trailing ", <town>" aside), or when one has no name and they are within 50 m: a library mapped as
+   same Wikidata item within 1 km, when they have the same name within 250 m (letter case, spaces, punctuation, a trailing
+   parenthetical and a trailing ", <town>" aside, unless what is left is only the kind's word: "Library, Main Branch"), or when one has no name and they are within 50 m: a library mapped as
    its building and as a point inside it is one library. OpenStreetMap is preferred at every step: its candidates are
    merged first (the one kept has a name, then a Wikidata item, then is a way before a relation before a node, then the
-   lower id); a Wikidata library joins the OSM element whose `wikidata` tag names its item, else an OSM library it matches
+   lower id); a Wikidata library joins the OSM element whose `wikidata` tag names its item within 1 km, else an OSM library it matches
    by name within 250 m (or an unnamed one within 50 m), and is kept on its own only when none does. The result is the same
    whatever the order of lines. Two of different kinds at one place are two fixtures.
 7. **FX7 Fixtures never reach the places or the stores.** With fixture elements in the OSM raw store and Wikidata's
@@ -128,14 +128,16 @@ Wikidata adds `library` only: items whose `P31` is exactly `Q28564` (public libr
     of fixtures (the report says only why the pack was or was not built, and what was set aside, by name).
 13. **FX13 Wikidata's public libraries, by a read of their own.** One query to the places' Wikidata endpoint, at its
     declared pace and with its user agent, asks for US items whose `P31` is `Q28564` (no subclass walk), with a coordinate
-    and an English label; an item with `P576` (dissolved) or `P3999` (closed) yields nothing, as does one with no label.
+    and an English label; an item with `P576` (dissolved) or `P3999` (closed), whose library statement has ended
+    (`pq:P582`), or whose state of use (`P5817`) is permanently closed, demolished or without its original use yields
+    nothing, as does one with no label.
     Its answers are kept under their own raw source (`wikidata-fixtures`) with their own fingerprint, never in a places
     Wikidata run: it is fetched on a run that fetches every source, on one that fetches Wikidata, and on any fetching run
     while it is stale (none kept, or its fingerprint changed); a failure keeps the last answer. No new host, adapter or
     dependency.
 14. **FX14 A heritage railway's station is not a fixture.** A `railway=station` also tagged `railway:preserved=yes`,
-    `usage=tourism`, `tourism=museum|attraction` or `historic=railway_station` yields nothing (it stays a place to
-    discover); every other station is a fixture, subway and light rail included. (The kind counts hold none of these keys,
+    `usage=tourism` or `tourism=museum` yields nothing (it stays a place to discover); every other station is a fixture,
+    subway and light rail included, and a station in service that is also an attraction or a historic building. (The kind counts hold none of these keys,
     so they are not sized.)
 
 ## Not run here

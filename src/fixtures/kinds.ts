@@ -25,13 +25,13 @@ export const KIND_NAMES = KINDS.map((k) => k.kind) as unknown as [Kind, ...Kind[
 
 /**
  * FX14 (decision 0268, "All but heritage"): the tags that make a `railway=station` a preserved or scenic railway's, a place
- * to discover and not a fixture. The kind counts hold none of these keys, so they are not sized.
+ * to discover and not a fixture. A station in service that is also an attraction or a historic building (a Union Station)
+ * stays a station (town-fixtures audit 12). The kind counts hold none of these keys, so they are not sized.
  */
 export const HERITAGE_STATION: readonly (readonly [string, readonly string[]])[] = [
   ['railway:preserved', ['yes']],
   ['usage', ['tourism']],
-  ['tourism', ['museum', 'attraction']],
-  ['historic', ['railway_station']],
+  ['tourism', ['museum']],
 ];
 
 /**
