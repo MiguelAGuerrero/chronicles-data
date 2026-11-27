@@ -60,9 +60,9 @@ function heldStore(o: { fixtures?: string; uncounted?: string } = {}): RawStore 
     for (const f of ['confirm', 'small', 'shops', ...(o.fixtures ? ['fixtures'] : [])]) store.put('osm', HELD, `${f}-${p}.geojsonl`, answer(f, p, 'old'), '2026-11-23T20:20:00.000Z');
     store.setMeta('osm', HELD, `etag:${p}`, `"held-${p}"`);
     store.setMeta('osm', HELD, `modified:${p}`, 'Sun, 22 Nov 2026 23:54:02 GMT');
-    if (p === o.uncounted) continue;
     store.setMeta('osm', HELD, `tagCounts:${p}`, '{}');
-    store.setMeta('osm', HELD, `shopCounts:${p}`, '{}');
+    // SK11: an extract whose kinds were never counted holds its tag counts and no shop counts.
+    if (p !== o.uncounted) store.setMeta('osm', HELD, `shopCounts:${p}`, '{}');
   }
   if (o.fixtures) store.setMeta('osm', HELD, 'filter:fixtures', o.fixtures);
   store.setMeta('osm', HELD, 'fetchKey', osm.fetchKey!(AREA));
@@ -309,11 +309,17 @@ test('fix osm-per-extract audit 2: where a carried extract holds no OSM fixtures
   const store = heldStore();
   const { r } = await build(store, (part) => part === 'us-west');
   const { SOURCE, PART } = await load('fixtures/wikidata');
-  store.put(SOURCE, V, PART, libraries, '2026-11-27T05:17:00.000Z');
+  // A block both us-west and us-south reach (their border): us-south's fixtures cover it, so its library stays.
+  const border: [number, number] = [-104.5, 33.5];
+  const shop = (id: number) => JSON.stringify({ type: 'Feature', geometry: { type: 'Point', coordinates: border }, properties: { '@type': 'node', '@id': id, shop: 'books', name: 'Border Books' } });
+  for (const p of ['us-west', 'us-south']) store.put('osm', V, `shops-${p}.geojsonl`, `${store.read('osm', V, `shops-${p}.geojsonl`)}\n${shop(900 + p.length)}`, '2026-11-27T05:00:00.000Z');
+  const withBorder = JSON.parse(libraries);
+  withBorder.results.bindings.push({ item: { value: 'http://www.wikidata.org/entity/Q903' }, label: { value: 'Border Library' }, coord: { value: `Point(${border[0] + 0.01} ${border[1] + 0.01})` } });
+  store.put(SOURCE, V, PART, JSON.stringify(withBorder), '2026-11-27T05:17:00.000Z');
   store.complete(SOURCE, V);
   let f = 0;
   const fixtures = buildFixtures({ store, osmRun: r.report.sources[0].run, wikidataRun: V, region: 'us', version: V, registry: emptyRegistry(), newId: () => `f_${(++f).toString(16).padStart(16, '0')}` });
-  assert.deepEqual(names(fixtures.pack!.fixtures), ['South Bend Library', 'us-midwest town hall (new)', 'us-northeast town hall (new)', 'us-south town hall (new)']);
+  assert.deepEqual(names(fixtures.pack!.fixtures), ['Border Library', 'South Bend Library', 'us-midwest town hall (new)', 'us-northeast town hall (new)', 'us-south town hall (new)']);
   assert.deepEqual((fixtures.report as any).missing, ['us-west'], 'named, never counted (FX12)');
   // With every extract's fixtures there, nothing is left out and nothing is named.
   const all = heldStore();
@@ -370,6 +376,7 @@ test('fix osm-per-extract audit 6: an extract whose held copy lacks only its cou
   assert.deepEqual(Object.keys(entry.carried), ['us-west']);
   const meta = store.meta('osm', V);
   assert.equal(meta['shopCounts:us-west'], undefined, 'no counts carried, so next week asks us-west whole (SK11)');
+  assert.equal(meta['tagCounts:us-west'], undefined, 'not its tag counts either: the extract is carried without counts');
   assert.equal(meta['etag:us-west'], '"held-us-west"');
   assert.deepEqual(store.parts('osm', V).filter((p) => p.carriedFrom).map((p) => p.part), ['confirm-us-west.geojsonl', 'shops-us-west.geojsonl', 'small-us-west.geojsonl']);
   const { countedParts } = await load('adapters/osm/tagCounts');

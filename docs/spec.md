@@ -100,11 +100,16 @@ Open: none (the owner's calls below)
 14. **PP14 A failing source doesn't sink the run.** When a source's fetch fails, its last good raw snapshot is used, the
     report says so, and the other stages publish. Amended Nov 27 (the owner, after run 45932949065 lost three good extracts
     to us-west's cut body): OpenStreetMap's extracts stand one by one. An extract that cannot be had, after a third try
-    five minutes on for a non-answer or a cut body (never past minute 150 of the OSM fetch), carries its held answers,
-    ETag, date and counts as a 304 would, and the others keep their new ones; the run's report names it under the source's
-    `carried`, and the log says what happened. The whole source still falls back when the first extract fails, or when
-    the held copy cannot stand beside the new answers (no held copy, other filters, an extract never counted, or an added
-    filter's part held under another fingerprint).
+    five minutes on for a non-answer or a cut body, carries its held answers, ETag and date as a 304 would, and the others
+    keep their new ones; the run's report names it under the source's `carried`, with the run its answers came from, and
+    the log says what happened. No try of any extract begins after minute 180 of the OSM fetch and every try is cut there,
+    so the job keeps two of its five hours for the rest; an extract not had by then is carried the same way. The owner's
+    tag and kind counts leave a carried extract out and name it (`osmCountsWithout`); an extract whose held copy was never
+    counted is carried without counts. Where a carried extract holds no fixtures, its region is left without fixtures that
+    week, Wikidata's libraries there too, and the fixtures report names it (`missing`); a fixture two extracts hold is
+    one, the copy not carried. The whole source still falls back when the first extract fails, or when the held copy
+    cannot stand beside the new answers (no held copy, other filters, a part missing, or an added filter's part held
+    under another fingerprint).
 15. **PP15 Runs weekly in chronicles-data.** The weekly workflow runs the stages in order, keeps the raw store and the ID
     registry between runs as release assets, and stays within the free tier (one job, under 6 hours).
 </content>

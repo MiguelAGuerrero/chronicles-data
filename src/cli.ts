@@ -19,7 +19,7 @@ import type { Adapter, Box } from './adapter';
 import { osm } from './adapters/osm';
 import { US_PARTS } from './adapters/osm/extract';
 import { kindCountsForReport } from './adapters/osm/shopCounts';
-import { countsForReport } from './adapters/osm/tagCounts';
+import { countedParts, countsForReport } from './adapters/osm/tagCounts';
 import { wikidata } from './adapters/wikidata';
 import { emptyRegistry, type Registry } from './conflate';
 import { realClock } from './http';
@@ -177,7 +177,9 @@ async function main() {
   const osmTagCounts = countsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
   // SK7, SK9: every value of the keys a stop is told by, for redrawing the facets; the same rule, and never in a pack.
   const osmKindCounts = kindCountsForReport(osmEntry, version, fetching && (!only || only.includes('osm')), osmEntry?.run ? store.meta('osm', osmEntry.run) : {}, US_PARTS);
-  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), ...(osmKindCounts ? { osmKindCounts } : {}), stores: stores.report, fixtures: fixtures.report }, null, 1)}\n`);
+  // fix osm-per-extract audit 4: the extracts the counts leave out because this run carried them, by name.
+  const osmCountsWithout = osmTagCounts || osmKindCounts ? countedParts(osmEntry, US_PARTS).without : [];
+  writeFileSync(join(out, 'report.json'), `${JSON.stringify({ ...r.report, ...(osmTagCounts ? { osmTagCounts } : {}), ...(osmKindCounts ? { osmKindCounts } : {}), ...(osmCountsWithout.length ? { osmCountsWithout } : {}), stores: stores.report, fixtures: fixtures.report }, null, 1)}\n`);
   console.log(`publish=${files.length > 0}`);
   console.log(`reason=${reasons.join('; ')}`);
   console.log(`files=${files.join(' ')}`);

@@ -93,12 +93,22 @@ export function sumParts(meta: Record<string, string>, parts: readonly string[],
  * writes none.
  */
 export function countsForReport(
-  entry: { run: string | null; error?: string; fellBack?: string } | undefined,
+  entry: { run: string | null; error?: string; fellBack?: string; carried?: Record<string, string> } | undefined,
   version: string,
   asked: boolean,
   meta: Record<string, string>,
   parts: readonly string[],
 ): TagCounts | null {
   if (!asked || !entry || entry.run !== version || entry.error != null || entry.fellBack != null) return null;
-  return sumParts(meta, parts);
+  const counted = countedParts(entry, parts);
+  return counted.parts.length ? sumParts(meta, counted.parts) : null;
+}
+
+/**
+ * fix osm-per-extract audit 4 (OC6): the extracts whose counts this run counted itself, and those it carried from an
+ * earlier run (PP14, `carried`), which the counts leave out and the report names.
+ */
+export function countedParts(entry: { carried?: Record<string, string> } | undefined, parts: readonly string[]): { parts: string[]; without: string[] } {
+  const without = parts.filter((p) => entry?.carried?.[p] != null);
+  return { parts: parts.filter((p) => !without.includes(p)), without };
 }

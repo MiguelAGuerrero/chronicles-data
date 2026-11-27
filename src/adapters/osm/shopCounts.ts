@@ -2,6 +2,7 @@
 // `craft` in the US, and how many elements of each also say they sell second-hand: the evidence the stores contract's
 // facets are redrawn from. The counts go to out/report.json and nowhere else; they decide, gate and rank nothing.
 // Pure: the osmium calls that produce the text read here live in `./extract.ts`.
+import { countedParts } from './tagCounts';
 
 /** SK1: the keys whose every value is counted. */
 export const SHOP_COUNT_KEYS = ['shop', 'craft'] as const;
@@ -71,14 +72,17 @@ export function sumShopParts(meta: Record<string, string>, parts: readonly strin
 
 /** SK7: what the report holds: the tags by how many carry them, then by name; only from a run that fetched OpenStreetMap itself. */
 export function kindCountsForReport(
-  entry: { run: string | null; error?: string; fellBack?: string } | undefined,
+  entry: { run: string | null; error?: string; fellBack?: string; carried?: Record<string, string> } | undefined,
   version: string,
   asked: boolean,
   meta: Record<string, string>,
   parts: readonly string[],
 ): { minPerExtract: number; tags: ShopCounts } | null {
   if (!asked || !entry || entry.run !== version || entry.error != null || entry.fellBack != null) return null;
-  const sum = sumShopParts(meta, parts);
+  // fix osm-per-extract audit 4: an extract carried from an earlier run is left out (the report names it).
+  const counted = countedParts(entry, parts).parts;
+  if (!counted.length) return null;
+  const sum = sumShopParts(meta, counted);
   if (!sum) return null;
   const tags = Object.fromEntries(Object.entries(sum).sort((a, b) => b[1].all - a[1].all || (a[0] < b[0] ? -1 : 1)));
   return { minPerExtract: MIN_PER_EXTRACT, tags };

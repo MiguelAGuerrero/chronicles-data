@@ -29,7 +29,9 @@ export function failureOf(e: unknown): string {
   const err = e as { message?: unknown; cause?: { code?: unknown; message?: unknown } } | null;
   const msg = String(err?.message ?? e);
   const c = err?.cause;
-  if (!c || typeof c !== 'object') return msg;
+  // fix osm-per-extract audit 7: a cause given as a string (or another plain value) is kept.
+  if (c != null && typeof c !== 'object') return `${msg}: ${String(c)}`;
+  if (!c) return msg;
   const cm = typeof c.message === 'string' ? c.message : '';
   const code = typeof c.code === 'string' && !cm.includes(c.code) ? c.code : '';
   const cause = cm && code ? `${cm} (${code})` : cm || code;
@@ -44,10 +46,34 @@ export function politeFetch(decl: Pick<Declaration, 'pace'>, fetchImpl: Fetch, c
   let last = -Infinity;
   let queue: Promise<unknown> = Promise.resolve();
 
+  // fix osm-per-extract audit 1: a wait ends when the caller's signal does (an extract's try cut at the OSM deadline),
+  // and the request then ends as a time-out; without a signal of the caller's (a query), the waits are as before.
+  const signal = (init: RequestInit) => init.signal ?? null;
+  async function pause(ms: number, init: RequestInit) {
+    const s = signal(init);
+    if (!s) return clock.sleep(ms);
+    if (s.aborted) return;
+    let done = () => {};
+    const ended = new Promise<void>((r) => {
+      done = () => r();
+      s.addEventListener('abort', done, { once: true });
+    });
+    try {
+      await Promise.race([clock.sleep(ms), ended]);
+    } finally {
+      s.removeEventListener('abort', done);
+    }
+  }
+  const ended = (url: string, init: RequestInit) => {
+    const s = signal(init);
+    if (s?.aborted) throw new SourceTimeout(`${url} timed out (${failureOf(s.reason)})`);
+  };
+
   async function once(url: string, init: RequestInit): Promise<Response> {
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
       const wait = last + gap - clock.now();
-      if (wait > 0) await clock.sleep(wait);
+      if (wait > 0) await pause(wait, init);
+      ended(url, init);
       last = clock.now();
       const headers = new Headers(init.headers);
       headers.set('user-agent', decl.pace.userAgent);
@@ -60,14 +86,16 @@ export function politeFetch(decl: Pick<Declaration, 'pace'>, fetchImpl: Fetch, c
       if (res?.ok || res?.status === 304) return res;
       if (res && (res.status === 429 || res.status === 503)) {
         const s = Number(res.headers.get('retry-after'));
-        await clock.sleep(Math.min(Number.isFinite(s) && s > 0 ? s : RETRY_DEFAULT_S, RETRY_CAP_S) * 1000);
+        await pause(Math.min(Number.isFinite(s) && s > 0 ? s : RETRY_DEFAULT_S, RETRY_CAP_S) * 1000, init);
+        ended(url, init);
         continue;
       }
       // A 502 is the source's gateway failing, as Wikidata's query service does under load (two builds lost on Nov 17): waited
       // out and asked again, longer each time; on the last try, a timeout the caller can act on (split the cell, sweep the class).
       if (res && res.status === 502) {
         if (attempt === ATTEMPTS - 1) throw new SourceTimeout(`${url} kept failing at its gateway (502)`);
-        await clock.sleep(Math.min(BAD_GATEWAY_WAIT_S * (attempt + 1), RETRY_CAP_S) * 1000);
+        await pause(Math.min(BAD_GATEWAY_WAIT_S * (attempt + 1), RETRY_CAP_S) * 1000, init);
+        ended(url, init);
         continue;
       }
       // Nov 27: each still a timeout the caller can act on (CF2 splits a cell on it), now named: no answer in time, no

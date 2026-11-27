@@ -37,18 +37,24 @@ export const TRIES = 3;
 /** Nov 27: the pause before the third try, past the half-minute a bad moment at Geofabrik lasts (runs 40 and 45). */
 export const LAST_TRY_WAIT_MS = 5 * 60_000;
 /**
- * Nov 27: no third try runs past this minute of the OSM fetch, so the job's 300 minutes keep room for what comes before
- * it (setup, Wikidata) and after (the extracts left, the libraries, the state): a third try that would begin after it
- * is not asked, and one that begins before it is cut there. Two tries keep their own ceiling (DOWNLOAD_MAX_MS) as before.
+ * Nov 27 (fix osm-per-extract audit 1): the OSM fetch's deadline, one for every extract. No try of any extract begins
+ * after it and every try's request is cut there, so a failure no longer runs the fetch on past the job: the extracts
+ * not had by then are carried (PP14). 180 minutes leaves two hours of the job's 300 for the rest: the setup (about 5,
+ * osmium's install capped at 10), Wikidata before it (4 and 32 minutes in runs 45912355660 and 45932949065), the last
+ * extract's filters after it (about 12), the libraries (about 8) and the state (about 1).
  */
-export const LAST_TRY_BY_MS = 150 * 60_000;
+export const OSM_BY_MS = 180 * 60_000;
 
 /** Nov 27: the third try's pause and ceiling, from when the OSM fetch began; null when it would begin too late. */
 export function lastTry(startedAt: number, now: number): { wait: number; limit: number } | null {
   const begins = now + LAST_TRY_WAIT_MS;
-  const left = startedAt + LAST_TRY_BY_MS - begins;
+  const left = startedAt + OSM_BY_MS - begins;
   return left > 0 ? { wait: LAST_TRY_WAIT_MS, limit: Math.min(DOWNLOAD_MAX_MS, left) } : null;
 }
+
+/** Nov 27 (fix osm-per-extract audit 1): an extract not asked at all because the OSM fetch is past OSM_BY_MS. */
+class PastDeadline extends Error {}
+const minuteOf = (ms: number) => Math.round(ms / 60_000);
 
 /**
  * Nov 17: writes a download's body to `file`, aborting `controller` (the request) when no data arrives for `stallMs`;
@@ -196,12 +202,14 @@ export interface ExtractIo {
   exportFilter: typeof exportFilter;
   countExtract: typeof countExtract;
   countShopsIn: typeof countShopsIn;
+  /** fix osm-per-extract audit 1: the timer a try's request is cut by, so a test sees each try's ceiling; the real one when absent. */
+  timeout?: (ms: number) => AbortSignal;
 }
 const OSMIUM: ExtractIo = { exportFilter, countExtract, countShopsIn };
 
 export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>, added: Filter[] = [], io: ExtractIo = OSMIUM) {
   const dir = mkdtempSync(join(tmpdir(), 'osm-'));
-  // Nov 27: when the OSM fetch began, so a third try never runs past LAST_TRY_BY_MS of it.
+  // Nov 27: when the OSM fetch began, so no try runs past OSM_BY_MS of it.
   const startedAt = ctx.clock.now();
   // PP14, Nov 27: whether an extract of this run has answers yet (downloaded, or carried from the held copy).
   let answered = false;
@@ -228,13 +236,16 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       if (modified) headers['if-modified-since'] = modified;
       const url = `${GEOFABRIK}/${part}-latest.osm.pbf`;
       const download = async (headers: Record<string, string>, notModified: boolean): Promise<Response> => {
-        let limit = DOWNLOAD_MAX_MS;
         for (let attempt = 1; ; attempt++) {
+          // fix osm-per-extract audit 1: every try is cut at the fetch's deadline; none begins after it.
+          const left = startedAt + OSM_BY_MS - ctx.clock.now();
+          if (left <= 0) throw new PastDeadline(`${part}: not asked: the OSM fetch is past minute ${minuteOf(OSM_BY_MS)}`);
+          const limit = Math.min(DOWNLOAD_MAX_MS, left);
           const controller = new AbortController();
           const got = { bytes: 0 };
           let bodyBegan = false;
           try {
-            const res = await ctx.http(url, { headers, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(limit)]) });
+            const res = await ctx.http(url, { headers, signal: AbortSignal.any([controller.signal, io.timeout ? io.timeout(limit) : AbortSignal.timeout(limit)]) });
             if (res.status === 304 && notModified) return res;
             if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
             bodyBegan = true;
@@ -248,6 +259,10 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
           } catch (e) {
             if (attempt === TRIES) throw e;
             const what = failureOf(e);
+            if (startedAt + OSM_BY_MS - ctx.clock.now() <= 0) {
+              ctx.log(`osm: ${part} failed (${what}); no further try past minute ${minuteOf(OSM_BY_MS)} of the OSM fetch`);
+              throw e;
+            }
             if (attempt === 1) {
               ctx.log(`osm: ${part} failed (${what}); asking once more`);
               continue;
@@ -257,12 +272,11 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
             if (!bodyBegan && !(e instanceof SourceTimeout)) throw e;
             const last = lastTry(startedAt, ctx.clock.now());
             if (!last) {
-              ctx.log(`osm: ${part} failed again (${what}); no third try this late in the run (minute ${Math.round((ctx.clock.now() - startedAt) / 60_000)} of the OSM fetch)`);
+              ctx.log(`osm: ${part} failed again (${what}); no third try this late in the run (minute ${minuteOf(ctx.clock.now() - startedAt)} of the OSM fetch)`);
               throw e;
             }
-            ctx.log(`osm: ${part} failed again (${what}); asking a last time in ${Math.round(last.wait / 60_000)} minutes`);
+            ctx.log(`osm: ${part} failed again (${what}); asking a last time in ${minuteOf(last.wait)} minutes`);
             await ctx.clock.sleep(last.wait);
-            limit = last.limit;
           }
         }
       };
@@ -287,12 +301,22 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       } catch (e) {
         // PP14, Nov 27: an extract that cannot be had carries its held answers, as a 304 would, and the others keep their
         // new ones, when the mix is safe (mixable); else, or before any extract has answers, the source falls back whole.
-        if (!answered || !mixable(plan, prev, added, part)) throw e;
+        // fix osm-per-extract audit 6 (the owner, Nov 27, "Allow it"): an extract asked whole only because its held copy
+        // was never counted is carried by the plan a counted one would have, without counts.
+        const carrying = plan.mode === 'whole' && !counted ? planPart({ sameFetch: ctx.sameFetch, prev, counted: true, base: filters, added, part }) : plan;
+        if (!answered || !mixable(carrying, prev, added, part)) throw e;
         rmSync(pbf, { force: true });
-        for (const p of plan.carry) ctx.carry(p);
-        carryNotes();
-        ctx.setMeta(`${CARRIED_NOTE}${part}`, `${prev!.run}: ${failureOf(e)}`);
-        ctx.log(`osm: ${part} failed (${failureOf(e)}); its answers carried from ${prev!.run}, the other extracts' are this run's`);
+        for (const p of carrying.carry) ctx.carry(p);
+        // Its held ETag and date, and its counts when it has them (the run's filter notes were set by an earlier extract).
+        const held = prev!.meta;
+        for (const k of [`etag:${part}`, `modified:${part}`, ...(counts && counted ? [`${COUNTS_NOTE}${part}`, `${SHOP_COUNTS_NOTE}${part}`] : [])]) {
+          if (held[k] != null) ctx.setMeta(k, held[k]);
+        }
+        // fix osm-per-extract audit 3: the run its answers came from, which a carried copy keeps (`carriedFrom`).
+        const origin = prev!.parts.find((p) => carrying.carry.includes(p.part))?.carriedFrom ?? prev!.run;
+        const what = e instanceof PastDeadline ? e.message.slice(part.length + 2) : `failed (${failureOf(e)})`;
+        ctx.setMeta(`${CARRIED_NOTE}${part}`, `${origin}: ${e instanceof PastDeadline ? what : failureOf(e)}`);
+        ctx.log(`osm: ${part} ${what}; its answers carried from ${origin}, the other extracts' are this run's`);
         continue;
       }
       const unchanged = res.status === 304;
