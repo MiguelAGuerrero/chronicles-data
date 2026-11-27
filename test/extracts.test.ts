@@ -54,12 +54,13 @@ function answer(filter: string, part: string, when: 'old' | 'new'): string {
 }
 
 /** Run 40 as the owner's state held it: the three base filters for each extract, no fixtures, ETags, dates and counts. */
-function heldStore(o: { fixtures?: string } = {}): RawStore {
+function heldStore(o: { fixtures?: string; uncounted?: string } = {}): RawStore {
   const store = createRawStore(mkdtempSync(join(tmpdir(), 'osm-held-')));
   for (const p of US_PARTS) {
     for (const f of ['confirm', 'small', 'shops', ...(o.fixtures ? ['fixtures'] : [])]) store.put('osm', HELD, `${f}-${p}.geojsonl`, answer(f, p, 'old'), '2026-11-23T20:20:00.000Z');
     store.setMeta('osm', HELD, `etag:${p}`, `"held-${p}"`);
     store.setMeta('osm', HELD, `modified:${p}`, 'Sun, 22 Nov 2026 23:54:02 GMT');
+    if (p === o.uncounted) continue;
     store.setMeta('osm', HELD, `tagCounts:${p}`, '{}');
     store.setMeta('osm', HELD, `shopCounts:${p}`, '{}');
   }
@@ -74,31 +75,38 @@ const dropped = () => Object.assign(new TypeError('fetch failed'), { cause: Obje
 const partOf = (url: string) => /(us-[a-z]+)-latest/.exec(url)![1];
 const fresh = (part: string) => new Response('pbf bytes', { status: 200, headers: { etag: `"new-${part}"`, 'last-modified': 'Fri, 27 Nov 2026 01:00:00 GMT' } });
 
-/** The seam's fake osmium: each filter's answer for the week, and counts. */
+/** The ceilings each try's request was given (fix osm-per-extract audit 1: the seam's timer). */
+const limits: number[] = [];
+/** The seam's fake osmium: each filter's answer for the week, and counts; and the timer each try's signal is cut by. */
 const io = {
   exportFilter: (c: any, _pbf: string, _dir: string, part: string, f: { name: string }) => c.put(`${f.name}-${part}.geojsonl`, answer(f.name, part, 'new')),
   countExtract: () => ({}),
   countShopsIn: () => ({}),
+  timeout: (ms: number) => { limits.push(ms); return new AbortController().signal; },
 };
 /** The OSM adapter with the seam's osmium, the filters exactly as the adapter passes them (FX10). */
 const viaSeam: Adapter = { ...osm, fetch: (ctx) => filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER], US_PARTS, COUNT_TAGS, [FIXTURE_FILTER], io as any) };
 
-async function build(store: RawStore, failing: (part: string, n: number) => boolean, version = V, unchanged: (part: string) => boolean = () => false) {
+type Respond = (part: string, n: number, clock: ReturnType<typeof fakeClock>) => Response | Promise<Response>;
+async function build(store: RawStore, failing: (part: string, n: number) => boolean, version = V, unchanged: (part: string) => boolean = () => false, respond?: Respond, fetch = true) {
   const clock = fakeClock();
   const logs: string[] = [];
   const asked: { part: string; t: number }[] = [];
+  limits.length = 0;
   const http = async (url: string, init: RequestInit) => {
     const part = partOf(url);
     asked.push({ part, t: clock.now() });
-    if (failing(part, asked.filter((a) => a.part === part).length)) throw dropped();
+    const n = asked.filter((a) => a.part === part).length;
+    if (respond) return respond(part, n, clock);
+    if (failing(part, n)) throw dropped();
     return unchanged(part) && new Headers(init.headers).has('if-none-match') ? new Response(null, { status: 304 }) : fresh(part);
   };
   let n = 0;
   const r = await run({
     adapters: [viaSeam], region: 'us', area: AREA, version, store, registry: emptyRegistry(), edits: { remove: [], add: [] },
-    fetch: true, http, clock, newId: () => `p_${(++n).toString(16).padStart(16, '0')}`, log: (l) => logs.push(l),
+    fetch, http, clock, newId: () => `p_${(++n).toString(16).padStart(16, '0')}`, log: (l) => logs.push(l),
   });
-  return { r, logs, asked, clock };
+  return { r, logs, asked, clock, limits: [...limits] };
 }
 const names = (xs: { name?: string }[]) => xs.map((x) => x.name ?? '').sort();
 
@@ -233,22 +241,156 @@ test('PP3, Nov 27: a failure says what happened (a status, a dropped connection,
   assert.match(refused.seen.logs[0], /^osm: us-west failed \(.*answered 404\); asking once more$/);
 });
 
-test('RD7, Nov 27: the third try fits the job: never begun after minute 150 of the OSM fetch, and cut there', async () => {
-  const { LAST_TRY_WAIT_MS, LAST_TRY_BY_MS, lastTry } = await load('adapters/osm/extract');
+test('RD7, Nov 27: the tries fit the job: none begun after minute 180 of the OSM fetch, the third not past it (fix osm-per-extract audit 1)', async () => {
+  const { LAST_TRY_WAIT_MS, OSM_BY_MS, lastTry } = await load('adapters/osm/extract');
   assert.equal(LAST_TRY_WAIT_MS, 5 * 60_000);
-  assert.equal(LAST_TRY_BY_MS, 150 * 60_000);
+  assert.equal(OSM_BY_MS, 180 * 60_000);
   // Pure: what the third try may take, from when the fetch began and the time now; null when it would begin too late.
-  assert.deepEqual(lastTry(0, 0), { wait: LAST_TRY_WAIT_MS, limit: LAST_TRY_BY_MS - LAST_TRY_WAIT_MS });
-  assert.deepEqual(lastTry(0, 100 * 60_000), { wait: LAST_TRY_WAIT_MS, limit: 45 * 60_000 }, 'cut at minute 150');
-  assert.equal(lastTry(0, LAST_TRY_BY_MS - LAST_TRY_WAIT_MS), null, 'a third try that would begin at minute 150 is not asked');
-  assert.ok(lastTry(0, 0).limit <= DOWNLOAD_MAX_MS);
-  // The job's 300 minutes hold the fetch's first 150 and what comes after (Wikidata before it, the libraries after).
-  assert.match(readFileSync(join(ROOT, '.github/workflows/build.yml'), 'utf8'), /timeout-minutes: 300\n/);
-  // An extract still failing at minute 146 is asked twice, and the log says why there is no third try.
+  assert.deepEqual(lastTry(0, 0), { wait: LAST_TRY_WAIT_MS, limit: DOWNLOAD_MAX_MS });
+  assert.deepEqual(lastTry(0, 100 * 60_000), { wait: LAST_TRY_WAIT_MS, limit: 75 * 60_000 }, 'cut at minute 180');
+  assert.equal(lastTry(0, OSM_BY_MS - LAST_TRY_WAIT_MS), null, 'a third try that would begin at minute 180 is not asked');
+  // The job's 300 minutes hold the fetch's 180 and two hours for the rest: setup, Wikidata before, the last filters,
+  // the libraries and the state after (run 45: about 5, 32, 12 and 9 minutes).
+  const job = Number(/timeout-minutes: (\d+)\n {4}steps:/.exec(readFileSync(join(ROOT, '.github/workflows/build.yml'), 'utf8'))![1]);
+  assert.ok(OSM_BY_MS / 60_000 + 120 <= job, `${OSM_BY_MS / 60_000} + 120 minutes within the job's ${job}`);
+  // An extract still failing at minute 176 is asked twice, and the log says why there is no third try.
   const late = fakeClock(0);
-  const slow = politeFetch(osm.declaration, async () => { late.advance(73 * 60_000); throw dropped(); }, late);
+  const slow = politeFetch(osm.declaration, async () => { late.advance(88 * 60_000); throw dropped(); }, late);
   const r = await oneExtract(() => slow('https://download.geofabrik.de/north-america/us-west-latest.osm.pbf'), late);
   assert.equal(r.seen.asked.length, 2);
-  assert.match(r.seen.logs.at(-1)!, /^osm: us-west failed again \(.*other side closed.*\); no third try this late in the run \(minute 146 of the OSM fetch\)$/);
+  assert.match(r.seen.logs.at(-1)!, /^osm: us-west failed again \(.*other side closed.*\); no third try this late in the run \(minute 176 of the OSM fetch\)$/);
   assert.ok(r.error);
+});
+
+test('fix osm-per-extract audit 1: one deadline for the whole OSM fetch: every try cut at minute 180, none begun after it, the extracts left carried', async () => {
+  // The auditor's case: run 40 held (a fill), us-northeast whole in 35 minutes, every later answer a body cut at 35
+  // minutes. Main fell back at about minute 105; without a fetch-wide deadline the fix ran on to minute 285 and, with
+  // Wikidata and the setup before it, past the job's 300: killed, no state saved, nothing published.
+  const store = heldStore();
+  const respond: Respond = (part, _n, clock) => {
+    clock.advance(35 * 60_000);
+    return part === 'us-northeast' ? fresh(part) : cutAfter(1);
+  };
+  const { r, logs, asked, limits: cut } = await build(store, () => false, V, () => false, respond);
+  const start = Date.parse('2026-11-27T03:46:00Z');
+  const minutes = (ms: number) => Math.round(ms / 60_000);
+  assert.deepEqual(asked.map((a) => `${a.part} ${minutes(a.t - start)}`), ['us-northeast 0', 'us-midwest 35', 'us-midwest 70', 'us-midwest 110', 'us-south 145'], 'no try begins at or after minute 180');
+  assert.deepEqual(cut.map(minutes), [150, 145, 110, 70, 35], 'every try\'s signal ends by minute 180, the third\'s included');
+  const entry = r.report.sources[0] as any;
+  assert.equal(entry.run, V, logs.join('\n'));
+  assert.deepEqual(Object.keys(entry.carried).sort(), ['us-midwest', 'us-south', 'us-west']);
+  assert.ok(logs.includes('osm: us-south failed (us-south: the download broke off after 1.0 MB (terminated: other side closed (UND_ERR_SOCKET))); no further try past minute 180 of the OSM fetch'), logs.join('\n'));
+  assert.ok(logs.includes('osm: us-west not asked: the OSM fetch is past minute 180; its answers carried from 20261123.40, the other extracts\' are this run\'s'), logs.join('\n'));
+});
+
+test('fix osm-per-extract audit 1: a Retry-After wait ends when the request\'s own signal does', { timeout: 3_000 }, async () => {
+  // politeFetch waited out a 429's or 503's Retry-After (up to RETRY_CAP_S) whatever the caller's signal said. Here the
+  // wait lasts ten seconds of real time and the signal ends as it begins: the request must end with the signal.
+  const c = new AbortController();
+  let wait: NodeJS.Timeout | undefined;
+  const clock = { now: () => 0, sleep: (_ms: number) => { c.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')); return new Promise<void>((r) => { wait = setTimeout(r, 10_000); }); } };
+  const http = politeFetch(osm.declaration, async () => new Response('', { status: 503, headers: { 'retry-after': '300' } }), clock);
+  try {
+    await assert.rejects(http('https://download.geofabrik.de/north-america/us-west-latest.osm.pbf', { signal: c.signal }), (e: Error) => e instanceof SourceTimeout && /timed out \(The operation was aborted due to timeout\)/.test(e.message));
+  } finally {
+    clearTimeout(wait);
+  }
+});
+
+/** Wikidata's libraries as its query answers them: one in us-west's block, one in us-south's. */
+const libraries = JSON.stringify({ results: { bindings: [
+  { item: { value: 'http://www.wikidata.org/entity/Q901' }, label: { value: 'West Valley Library' }, coord: { value: `Point(${AT['us-west'][0] + 0.01} ${AT['us-west'][1] + 0.01})` } },
+  { item: { value: 'http://www.wikidata.org/entity/Q902' }, label: { value: 'South Bend Library' }, coord: { value: `Point(${AT['us-south'][0] + 0.01} ${AT['us-south'][1] + 0.01})` } },
+] } });
+
+test('fix osm-per-extract audit 2: where a carried extract holds no OSM fixtures, its Wikidata libraries are left out too, and the report names it', async () => {
+  // The owner, Nov 27: "Leave the region empty (Recommended)": a library kept alone this week would be re-keyed to its
+  // OSM element next week and lose its id.
+  const store = heldStore();
+  const { r } = await build(store, (part) => part === 'us-west');
+  const { SOURCE, PART } = await load('fixtures/wikidata');
+  store.put(SOURCE, V, PART, libraries, '2026-11-27T05:17:00.000Z');
+  store.complete(SOURCE, V);
+  let f = 0;
+  const fixtures = buildFixtures({ store, osmRun: r.report.sources[0].run, wikidataRun: V, region: 'us', version: V, registry: emptyRegistry(), newId: () => `f_${(++f).toString(16).padStart(16, '0')}` });
+  assert.deepEqual(names(fixtures.pack!.fixtures), ['South Bend Library', 'us-midwest town hall (new)', 'us-northeast town hall (new)', 'us-south town hall (new)']);
+  assert.deepEqual((fixtures.report as any).missing, ['us-west'], 'named, never counted (FX12)');
+  // With every extract's fixtures there, nothing is left out and nothing is named.
+  const all = heldStore();
+  const full = await build(all, () => false);
+  all.put(SOURCE, V, PART, libraries, '2026-11-27T05:17:00.000Z');
+  const whole = buildFixtures({ store: all, osmRun: full.r.report.sources[0].run, wikidataRun: V, region: 'us', version: V, registry: emptyRegistry(), newId: () => `f_${(++f).toString(16).padStart(16, '0')}` });
+  assert.ok(names(whole.pack!.fixtures).includes('West Valley Library'));
+  assert.equal((whole.report as any).missing, undefined);
+});
+
+test('fix osm-per-extract audit 3: a carried note and its log name the run the answers came from, not the run before', async () => {
+  const store = heldStore();
+  await build(store, (part) => part === 'us-west');
+  const again = await build(store, (part) => part === 'us-west', '20261130.3');
+  assert.match((again.r.report.sources[0] as any).carried['us-west'], /^20261123\.40: /);
+  assert.ok(again.logs.some((l) => /^osm: us-west failed .*; its answers carried from 20261123\.40, /.test(l)), again.logs.join('\n'));
+});
+
+test('fix osm-per-extract audit 4: the owner\'s tag and kind counts leave a carried extract out and name it', async () => {
+  const { countsForReport, countedParts, COUNTS_NOTE } = await load('adapters/osm/tagCounts');
+  const { kindCountsForReport, SHOP_COUNTS_NOTE } = await load('adapters/osm/shopCounts');
+  const meta: Record<string, string> = {};
+  for (const [i, p] of US_PARTS.entries()) {
+    meta[`${COUNTS_NOTE}${p}`] = JSON.stringify(Object.fromEntries(Object.entries(COUNT_TAGS).flatMap(([k, vs]) => vs.map((v) => [`${k}=${v}`, { all: 10 ** i, withWikidata: 0 }]))));
+    meta[`${SHOP_COUNTS_NOTE}${p}`] = JSON.stringify({ 'shop=books': { all: 10 ** i, secondHand: 0, withHours: 0 } });
+  }
+  const entry = { name: 'osm', run: V, carried: { 'us-west': `${HELD}: no answer` } };
+  const tags = countsForReport(entry, V, true, meta, US_PARTS);
+  assert.equal(tags['tourism=museum'].all, 111, 'us-west\'s 1000 are run 40\'s, so left out');
+  assert.equal(kindCountsForReport(entry, V, true, meta, US_PARTS).tags['shop=books'].all, 111);
+  assert.deepEqual(countedParts(entry, US_PARTS), { parts: ['us-northeast', 'us-midwest', 'us-south'], without: ['us-west'] });
+  assert.equal(countsForReport({ name: 'osm', run: V }, V, true, meta, US_PARTS)['tourism=museum'].all, 1111);
+});
+
+test('fix osm-per-extract audit 5: a fixture in two extracts is one fixture, the copy not carried kept', async () => {
+  const store = createRawStore(mkdtempSync(join(tmpdir(), 'fx5-')));
+  const hall = (name: string, at: [number, number]) => JSON.stringify({ type: 'Feature', geometry: { type: 'Point', coordinates: at }, properties: { '@type': 'node', '@id': 7, amenity: 'townhall', name } });
+  // A town hall on the us-midwest/us-northeast border, renamed and moved 400 m since run 40.
+  store.put('osm', HELD, 'fixtures-us-midwest.geojsonl', hall('Old Border Hall', [-80.5, 41.5]), '2026-11-23T20:20:00.000Z');
+  store.complete('osm', HELD);
+  store.carry('osm', HELD, V, 'fixtures-us-midwest.geojsonl');
+  store.put('osm', V, 'fixtures-us-northeast.geojsonl', hall('Border Town Hall', [-80.5, 41.5036]), '2026-11-27T04:00:00.000Z');
+  let f = 0;
+  const fixtures = buildFixtures({ store, osmRun: V, wikidataRun: null, region: 'us', version: V, registry: emptyRegistry(), newId: () => `f_${(++f).toString(16).padStart(16, '0')}` });
+  assert.deepEqual(names(fixtures.pack!.fixtures), ['Border Town Hall']);
+});
+
+test('fix osm-per-extract audit 6: an extract whose held copy lacks only its counts is carried without them, and the counts leave it out', async () => {
+  // The owner, Nov 27: "Allow it (Recommended)". Main and the first fix fell back whole: three good extracts lost.
+  const store = heldStore({ uncounted: 'us-west' });
+  const { r, logs } = await build(store, (part) => part === 'us-west');
+  const entry = r.report.sources[0] as any;
+  assert.equal(entry.run, V, logs.join('\n'));
+  assert.deepEqual(Object.keys(entry.carried), ['us-west']);
+  const meta = store.meta('osm', V);
+  assert.equal(meta['shopCounts:us-west'], undefined, 'no counts carried, so next week asks us-west whole (SK11)');
+  assert.equal(meta['etag:us-west'], '"held-us-west"');
+  assert.deepEqual(store.parts('osm', V).filter((p) => p.carriedFrom).map((p) => p.part), ['confirm-us-west.geojsonl', 'shops-us-west.geojsonl', 'small-us-west.geojsonl']);
+  const { countedParts } = await load('adapters/osm/tagCounts');
+  assert.deepEqual(countedParts(entry, US_PARTS).without, ['us-west']);
+});
+
+test('fix osm-per-extract audit 7: a cause given as a string is kept', async () => {
+  const { failureOf } = await import('../src/http');
+  assert.equal(failureOf(new TypeError('fetch failed', { cause: 'ECONNRESET' })), 'fetch failed: ECONNRESET');
+  assert.equal(failureOf('plain words'), 'plain words');
+});
+
+test('fix osm-per-extract audit 8: the report names a carried extract when the run used is a fallback or a build from kept answers', async () => {
+  const store = heldStore();
+  await build(store, (part) => part === 'us-west');
+  // The next fetch fails at its first extract: the source falls back to the mixed run, and the report still says us-west is run 40's.
+  const fell = await build(store, () => true, '20261130.3');
+  assert.equal(fell.r.report.sources[0].fellBack, V);
+  assert.deepEqual(Object.keys((fell.r.report.sources[0] as any).carried ?? {}), ['us-west']);
+  // A push's build from kept answers (no fetch) reads the same run.
+  const kept = await build(store, () => true, '20261130.4', () => false, undefined, false);
+  assert.equal(kept.r.report.sources[0].run, V);
+  assert.deepEqual(Object.keys((kept.r.report.sources[0] as any).carried ?? {}), ['us-west']);
 });
