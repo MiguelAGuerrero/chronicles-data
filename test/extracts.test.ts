@@ -10,6 +10,7 @@ import { FILTER, osm, SMALL_FILTER } from '../src/adapters/osm';
 import { DOWNLOAD_MAX_MS, filterExtracts, US_PARTS } from '../src/adapters/osm/extract';
 import { COUNT_TAGS } from '../src/adapters/osm/tagCounts';
 import { emptyRegistry } from '../src/conflate';
+import { fingerprint } from '../src/fingerprint';
 import { buildFixtures } from '../src/fixtures/build';
 import { FIXTURE_FILTER } from '../src/fixtures/kinds';
 import { politeFetch, SourceTimeout } from '../src/http';
@@ -82,19 +83,19 @@ const io = {
 /** The OSM adapter with the seam's osmium, the filters exactly as the adapter passes them (FX10). */
 const viaSeam: Adapter = { ...osm, fetch: (ctx) => filterExtracts(ctx, [FILTER, SMALL_FILTER, SHOP_FILTER], US_PARTS, COUNT_TAGS, [FIXTURE_FILTER], io as any) };
 
-async function build(store: RawStore, failing: (part: string, n: number) => boolean) {
+async function build(store: RawStore, failing: (part: string, n: number) => boolean, version = V, unchanged: (part: string) => boolean = () => false) {
   const clock = fakeClock();
   const logs: string[] = [];
   const asked: { part: string; t: number }[] = [];
-  const http = async (url: string) => {
+  const http = async (url: string, init: RequestInit) => {
     const part = partOf(url);
     asked.push({ part, t: clock.now() });
     if (failing(part, asked.filter((a) => a.part === part).length)) throw dropped();
-    return fresh(part);
+    return unchanged(part) && new Headers(init.headers).has('if-none-match') ? new Response(null, { status: 304 }) : fresh(part);
   };
   let n = 0;
   const r = await run({
-    adapters: [viaSeam], region: 'us', area: AREA, version: V, store, registry: emptyRegistry(), edits: { remove: [], add: [] },
+    adapters: [viaSeam], region: 'us', area: AREA, version, store, registry: emptyRegistry(), edits: { remove: [], add: [] },
     fetch: true, http, clock, newId: () => `p_${(++n).toString(16).padStart(16, '0')}`, log: (l) => logs.push(l),
   });
   return { r, logs, asked, clock };
@@ -140,6 +141,11 @@ test('PP14, Nov 27: three extracts download and the fourth fails every try: thre
   assert.match(westLines[1], /^osm: us-west failed again \(.*other side closed.*\); asking a last time in 5 minutes$/);
   assert.match(westLines[2], /^osm: us-west failed \(.*other side closed.*\); its answers carried from 20261123\.40, the other extracts' are this run's$/);
   assert.ok(!logs.some((l) => /fetch failed .*; using/.test(l)), 'no whole-source fallback');
+  // The next build asks us-west against run 40's copy, so it is filled from a fresh download; the other three stand.
+  const next = await build(store, () => false, '20261130.3');
+  assert.deepEqual(next.r.report.sources[0].carried, undefined);
+  assert.ok(next.logs.includes('osm: us-west downloaded, changed since the held copy: every filter runs'), next.logs.join('\n'));
+  assert.equal(store.parts('osm', '20261130.3').filter((p) => p.part.startsWith('fixtures-')).length, 4);
 });
 
 test('PP14, Nov 27: a failure before any extract has answers, or a held copy that cannot be mixed, still falls back whole', async () => {
@@ -159,6 +165,11 @@ test('PP14, Nov 27: a failure before any extract has answers, or a held copy tha
   other.setMeta('osm', HELD, 'fetchKey', 'another fingerprint');
   const refiltered = await build(other, (part) => part === 'us-west');
   assert.equal(refiltered.r.report.sources[0].fellBack, HELD, refiltered.logs.join('\n'));
+  // A 304 is an answer: us-northeast unchanged and carried, us-midwest failing is carried too, and the rest are this run's.
+  const held = heldStore({ fixtures: fingerprint([FIXTURE_FILTER]) });
+  const after304 = await build(held, (part) => part === 'us-midwest', V, (part) => part === 'us-northeast');
+  assert.deepEqual(Object.keys(after304.r.report.sources[0].carried ?? {}), ['us-midwest'], after304.logs.join('\n'));
+  assert.equal(after304.r.report.sources[0].run, V);
 });
 
 /** One extract through the seam, answered by `answer(n)` for its n-th ask. */
