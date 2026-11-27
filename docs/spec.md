@@ -98,7 +98,13 @@ Open: none (the owner's calls below)
 13. **PP13 Only changed areas are rebuilt** (the app's side; tested in the app repo). The app rebuilds a checklist area or re-reads an atlas ring only when its
     block's hash changes, not on every new file version. Areas built before blocks existed are rebuilt once.
 14. **PP14 A failing source doesn't sink the run.** When a source's fetch fails, its last good raw snapshot is used, the
-    report says so, and the other stages publish.
+    report says so, and the other stages publish. Amended Nov 27 (the owner, after run 45932949065 lost three good extracts
+    to us-west's cut body): OpenStreetMap's extracts stand one by one. An extract that cannot be had, after a third try
+    five minutes on for a non-answer or a cut body (never past minute 150 of the OSM fetch), carries its held answers,
+    ETag, date and counts as a 304 would, and the others keep their new ones; the run's report names it under the source's
+    `carried`, and the log says what happened. The whole source still falls back when the first extract fails, or when
+    the held copy cannot stand beside the new answers (no held copy, other filters, an extract never counted, or an added
+    filter's part held under another fingerprint).
 15. **PP15 Runs weekly in chronicles-data.** The weekly workflow runs the stages in order, keeps the raw store and the ID
     registry between runs as release assets, and stays within the free tier (one job, under 6 hours).
 </content>

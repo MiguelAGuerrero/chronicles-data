@@ -119,7 +119,7 @@ test('SK11: an extract whose kinds were never counted is asked for whole, once; 
     put: () => {},
     http: async (_u: string, init?: { headers?: Record<string, string> }) => { asked.push({ ...(init?.headers ?? {}) }); return new Response(null, { status: 304 }); },
     previous: { run: '20261118', startedAt: null, parts: [{ part: 'confirm-us-west.geojsonl', sha256: 'x', fetchedAt: '2026-11-18T07:17:00Z' }], read: () => '', meta: { 'etag:us-west': '"abc"', [`${COUNTS_NOTE}us-west`]: '{}', ...held } },
-    carry: () => {}, keepClock: () => {}, setMeta: (k: string, v: string) => { meta[k] = v; }, sameFetch: true,
+    carry: () => {}, keepClock: () => {}, setMeta: (k: string, v: string) => { meta[k] = v; }, sameFetch: true, clock: { now: () => 0, sleep: async () => {} },
   } as unknown as FetchContext);
   const filter = [{ name: 'confirm', expressions: ['nwr/wikidata'] }];
   // Never counted: no "only if changed" header, so the extract comes whole (the fake's 304 is then no answer, and the run says so).

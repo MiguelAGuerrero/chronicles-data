@@ -20,6 +20,22 @@ export const BAD_GATEWAY_WAIT_S = 30;
 /** A timeout the caller can act on (a query service's way of saying "ask for less"). */
 export class SourceTimeout extends Error {}
 
+/**
+ * Nov 27: what a failed request ran into, in words: the error and its cause (undici's "fetch failed" or "terminated" says
+ * nothing alone; its cause names the dropped socket, the reset or the refused TLS), so a build log tells a dropped
+ * connection from a server's error.
+ */
+export function failureOf(e: unknown): string {
+  const err = e as { message?: unknown; cause?: { code?: unknown; message?: unknown } } | null;
+  const msg = String(err?.message ?? e);
+  const c = err?.cause;
+  if (!c || typeof c !== 'object') return msg;
+  const cm = typeof c.message === 'string' ? c.message : '';
+  const code = typeof c.code === 'string' && !cm.includes(c.code) ? c.code : '';
+  const cause = cm && code ? `${cm} (${code})` : cm || code;
+  return cause && !msg.includes(cause) ? `${msg}: ${cause}` : msg;
+}
+
 export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
 /** PP3: a fetch held to one source's declared pace and manners. */
@@ -35,7 +51,11 @@ export function politeFetch(decl: Pick<Declaration, 'pace'>, fetchImpl: Fetch, c
       last = clock.now();
       const headers = new Headers(init.headers);
       headers.set('user-agent', decl.pace.userAgent);
-      const res = await fetchImpl(url, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(timeoutMs) }).catch(() => null);
+      let failure: unknown = null;
+      const res = await fetchImpl(url, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(timeoutMs) }).catch((e: unknown) => {
+        failure = e;
+        return null;
+      });
       // RB5: a conditional request's 304 is an answer too: the caller keeps what it has.
       if (res?.ok || res?.status === 304) return res;
       if (res && (res.status === 429 || res.status === 503)) {
@@ -50,7 +70,13 @@ export function politeFetch(decl: Pick<Declaration, 'pace'>, fetchImpl: Fetch, c
         await clock.sleep(Math.min(BAD_GATEWAY_WAIT_S * (attempt + 1), RETRY_CAP_S) * 1000);
         continue;
       }
-      if (!res || res.status === 500 || res.status === 504) throw new SourceTimeout(`${url} timed out`);
+      // Nov 27: each still a timeout the caller can act on (CF2 splits a cell on it), now named: no answer in time, no
+      // answer at all (the connection dropped, reset or refused), or the server's own error.
+      if (!res) {
+        const timedOut = (failure as { name?: unknown } | null)?.name === 'TimeoutError';
+        throw new SourceTimeout(timedOut ? `${url} timed out (${failureOf(failure)})` : `${url} gave no answer (${failureOf(failure)})`);
+      }
+      if (res.status === 500 || res.status === 504) throw new SourceTimeout(`${url} answered ${res.status}`);
       throw new Error(`${url} answered ${res.status}`);
     }
     throw new Error(`${url} kept refusing`);

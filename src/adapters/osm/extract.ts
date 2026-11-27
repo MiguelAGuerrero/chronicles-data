@@ -10,8 +10,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import type { FetchContext } from '../../adapter';
+import { CARRIED_NOTE, type FetchContext } from '../../adapter';
 import { fingerprint } from '../../fingerprint';
+import { failureOf, SourceTimeout } from '../../http';
 import { HOURS_FILTER, MIN_PER_EXTRACT, partShopCounts, placeCountExpressions, SECOND_HAND_FILTER, SHOP_COUNTS_NOTE, shopCountExpressions, shopCountFilter, type ShopCounts } from './shopCounts';
 import { countExpressions, countFilter, COUNTS_NOTE, parseTagsCount, partCounts } from './tagCounts';
 
@@ -28,14 +29,32 @@ export const US_PARTS = ['us-northeast', 'us-midwest', 'us-south', 'us-west'];
 export const DOWNLOAD_MAX_MS = 150 * 60_000;
 /** A download that receives nothing for this long has stalled and is cut off (and asked once more). */
 export const STALL_MS = 5 * 60_000;
-/** Tries per extract: a stalled or refused download is asked once more before the run gives up. */
-const TRIES = 2;
+/**
+ * Tries per extract: a stalled or refused download is asked once more; Nov 27: a non-answer or a body cut mid-download
+ * (run 45932949065's us-west, "terminated" 37 s into its second try) a third time, after a longer pause.
+ */
+export const TRIES = 3;
+/** Nov 27: the pause before the third try, past the half-minute a bad moment at Geofabrik lasts (runs 40 and 45). */
+export const LAST_TRY_WAIT_MS = 5 * 60_000;
+/**
+ * Nov 27: no third try runs past this minute of the OSM fetch, so the job's 300 minutes keep room for what comes before
+ * it (setup, Wikidata) and after (the extracts left, the libraries, the state): a third try that would begin after it
+ * is not asked, and one that begins before it is cut there. Two tries keep their own ceiling (DOWNLOAD_MAX_MS) as before.
+ */
+export const LAST_TRY_BY_MS = 150 * 60_000;
+
+/** Nov 27: the third try's pause and ceiling, from when the OSM fetch began; null when it would begin too late. */
+export function lastTry(startedAt: number, now: number): { wait: number; limit: number } | null {
+  const begins = now + LAST_TRY_WAIT_MS;
+  const left = startedAt + LAST_TRY_BY_MS - begins;
+  return left > 0 ? { wait: LAST_TRY_WAIT_MS, limit: Math.min(DOWNLOAD_MAX_MS, left) } : null;
+}
 
 /**
  * Nov 17: writes a download's body to `file`, aborting `controller` (the request) when no data arrives for `stallMs`;
  * a steady download takes as long as it needs.
  */
-export async function saveStream(body: NodeJS.ReadableStream, file: string, controller: AbortController, stallMs = STALL_MS): Promise<void> {
+export async function saveStream(body: NodeJS.ReadableStream, file: string, controller: AbortController, stallMs = STALL_MS, got = { bytes: 0 }): Promise<void> {
   let timer: NodeJS.Timeout | undefined;
   const stall = new Promise<never>((_, reject) => {
     const arm = () => {
@@ -48,7 +67,11 @@ export async function saveStream(body: NodeJS.ReadableStream, file: string, cont
       }, stallMs);
     };
     arm();
-    body.on('data', arm);
+    body.on('data', (chunk: { length?: number }) => {
+      // Nov 27: how much arrived, so a cut body is named with it.
+      got.bytes += chunk?.length ?? 0;
+      arm();
+    });
   });
   try {
     await Promise.race([pipeline(body as never, createWriteStream(file)), stall]);
@@ -163,8 +186,9 @@ function exportFilter(ctx: FetchContext, pbf: string, dir: string, part: string,
 
 /**
  * RD7: downloads each US part, applies every filter to it, stores each filter's GeoJSON lines as a raw part
- * (`<filter>-<part>.geojsonl`), and deletes the extract before the next. Throws when a part can't be had (the run then
- * uses this source's last good answers, PP14). OC3, OC4: with `counts`, also counts those tags in each extract, kept as
+ * (`<filter>-<part>.geojsonl`), and deletes the extract before the next. PP14, Nov 27: a part that can't be had carries
+ * its held answers when they may stand beside the others' (`mixable`) and an earlier extract has answers; else it throws
+ * (the run then uses this source's last good answers). OC3, OC4: with `counts`, also counts those tags in each extract, kept as
  * the run's note `tagCounts:<part>` (never a raw part); a count that fails is logged and changes nothing else (OC7).
  */
 /** town-fixtures audit 11: the extract step's osmium work, a seam so a test runs every branch without osmium. */
@@ -177,6 +201,10 @@ const OSMIUM: ExtractIo = { exportFilter, countExtract, countShopsIn };
 
 export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts = US_PARTS, counts?: Record<string, readonly string[]>, added: Filter[] = [], io: ExtractIo = OSMIUM) {
   const dir = mkdtempSync(join(tmpdir(), 'osm-'));
+  // Nov 27: when the OSM fetch began, so a third try never runs past LAST_TRY_BY_MS of it.
+  const startedAt = ctx.clock.now();
+  // PP14, Nov 27: whether an extract of this run has answers yet (downloaded, or carried from the held copy).
+  let answered = false;
   try {
     for (const part of parts) {
       const pbf = join(dir, `${part}.osm.pbf`);
@@ -198,31 +226,48 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       const headers: Record<string, string> = {};
       if (etag) headers['if-none-match'] = etag;
       if (modified) headers['if-modified-since'] = modified;
+      const url = `${GEOFABRIK}/${part}-latest.osm.pbf`;
       const download = async (headers: Record<string, string>, notModified: boolean): Promise<Response> => {
-        let res: Response | null = null;
-        let saved = false;
-        for (let attempt = 1; attempt <= TRIES && !saved; attempt++) {
+        let limit = DOWNLOAD_MAX_MS;
+        for (let attempt = 1; ; attempt++) {
           const controller = new AbortController();
+          const got = { bytes: 0 };
+          let bodyBegan = false;
           try {
-            res = await ctx.http(`${GEOFABRIK}/${part}-latest.osm.pbf`, { headers, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(DOWNLOAD_MAX_MS)]) });
-            if (res.status === 304 && notModified) break;
+            const res = await ctx.http(url, { headers, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(limit)]) });
+            if (res.status === 304 && notModified) return res;
             if (!res.ok || !res.body) throw new Error(`${part}: Geofabrik answered ${res.status}`);
-            await saveStream(Readable.fromWeb(res.body as never), pbf, controller);
-            saved = true;
+            bodyBegan = true;
+            try {
+              await saveStream(Readable.fromWeb(res.body as never), pbf, controller, STALL_MS, got);
+            } catch (e) {
+              // Nov 27: a body cut mid-download (undici's "terminated", or a stall) is named with how much had arrived.
+              throw new Error(`${part}: the download broke off after ${(got.bytes / 1e6).toFixed(1)} MB (${failureOf(e)})`);
+            }
+            return res;
           } catch (e) {
             if (attempt === TRIES) throw e;
-            ctx.log(`osm: ${part} failed (${String((e as Error)?.message ?? e)}); asking once more`);
+            const what = failureOf(e);
+            if (attempt === 1) {
+              ctx.log(`osm: ${part} failed (${what}); asking once more`);
+              continue;
+            }
+            // Nov 27: a third try only for a non-answer (none, a time-out, the server's own error) or a body cut mid-download;
+            // a refusal by status is asked twice, as before.
+            if (!bodyBegan && !(e instanceof SourceTimeout)) throw e;
+            const last = lastTry(startedAt, ctx.clock.now());
+            if (!last) {
+              ctx.log(`osm: ${part} failed again (${what}); no third try this late in the run (minute ${Math.round((ctx.clock.now() - startedAt) / 60_000)} of the OSM fetch)`);
+              throw e;
+            }
+            ctx.log(`osm: ${part} failed again (${what}); asking a last time in ${Math.round(last.wait / 60_000)} minutes`);
+            await ctx.clock.sleep(last.wait);
+            limit = last.limit;
           }
         }
-        if (!res) throw new Error(`${part}: no answer`);
-        return res;
       };
-      const res = await download(headers, asked);
-      const unchanged = res.status === 304;
-      // T66: a fill whose extract is unchanged downloads it once, unasked, for the added filters alone, before anything is carried.
-      if (unchanged && filling) await download({}, false);
-      if (unchanged) {
-        for (const p of plan.carry) ctx.carry(p);
+      // The held copy's ETag, date and counts, carried with its answers (a 304, a fill's 304, a failed extract).
+      const carryNotes = () => {
         notes();
         // FX10: a fill keeps the held copy's ETag and date, so next week asks against the extract its carried answers came from.
         if (etag) ctx.setMeta(`etag:${part}`, etag);
@@ -233,6 +278,28 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
         // SK5: and its shop counts.
         const shopNote = prev!.meta[`${SHOP_COUNTS_NOTE}${part}`];
         if (counts && shopNote != null) ctx.setMeta(`${SHOP_COUNTS_NOTE}${part}`, shopNote);
+      };
+      let res: Response;
+      try {
+        res = await download(headers, asked);
+        // T66: a fill whose extract is unchanged downloads it once, unasked, for the added filters alone, before anything is carried.
+        if (res.status === 304 && filling) await download({}, false);
+      } catch (e) {
+        // PP14, Nov 27: an extract that cannot be had carries its held answers, as a 304 would, and the others keep their
+        // new ones, when the mix is safe (mixable); else, or before any extract has answers, the source falls back whole.
+        if (!answered || !mixable(plan, prev, added, part)) throw e;
+        rmSync(pbf, { force: true });
+        for (const p of plan.carry) ctx.carry(p);
+        carryNotes();
+        ctx.setMeta(`${CARRIED_NOTE}${part}`, `${prev!.run}: ${failureOf(e)}`);
+        ctx.log(`osm: ${part} failed (${failureOf(e)}); its answers carried from ${prev!.run}, the other extracts' are this run's`);
+        continue;
+      }
+      const unchanged = res.status === 304;
+      if (unchanged) {
+        for (const p of plan.carry) ctx.carry(p);
+        carryNotes();
+        answered = true;
         if (!filling) {
           ctx.log(`osm: ${part} unchanged since ${prev!.run}, its answers carried`);
           continue;
@@ -251,6 +318,7 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
       // T66: a fill whose extract changed runs every filter on this one download.
       for (const f of filling ? [...filters, ...added] : plan.run) io.exportFilter(ctx, pbf, dir, part, f);
       notes();
+      answered = true;
       if (counts) {
         try {
           ctx.setMeta(`${COUNTS_NOTE}${part}`, JSON.stringify(io.countExtract(pbf, dir, part, counts)));
@@ -270,4 +338,18 @@ export async function filterExtracts(ctx: FetchContext, filters: Filter[], parts
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * PP14, Nov 27: whether a failed extract's held answers may stand beside the other extracts' new ones. Only when a 304
+ * would have carried them: the held copy was made by this run's filters (RB5's `ask`, or a `fill`'s base), so each element
+ * is answered by one rule in every extract. Not when an added filter's part is held under another fingerprint (carried,
+ * that extract's answers would disagree with the others'; left out, an extract published with them would lose them), and
+ * not in `whole` (no held copy, another fetch fingerprint, an extract never counted, a part missing).
+ */
+export function mixable(plan: { mode: 'ask' | 'fill' | 'whole'; run: Filter[] }, prev: { parts: { part: string }[] } | null, added: Filter[], part: string): boolean {
+  if (plan.mode === 'ask') return true;
+  if (plan.mode !== 'fill' || !prev) return false;
+  // A fill runs the added filters that are not held: none of them may have a part in the held copy.
+  return plan.run.filter((f) => added.includes(f)).every((f) => !prev.parts.some((p) => p.part === partName(f, part)));
 }

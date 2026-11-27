@@ -126,7 +126,8 @@ test('PP14, Nov 27: three extracts download and the fourth fails every try: thre
   assert.ok(clock.slept.includes(5 * 60_000));
   // The packs are built from that mix.
   assert.deepEqual(names(r.packs.flatMap((p) => p.places)), ['us-midwest bookcase (new)', 'us-northeast bookcase (new)', 'us-south bookcase (new)', 'us-west bookcase (old)']);
-  const fixtures = buildFixtures({ store, osmRun: entry.run, wikidataRun: null, region: 'us', version: V, registry: emptyRegistry(), newId: () => 'f_0000000000000001' });
+  let f = 0;
+  const fixtures = buildFixtures({ store, osmRun: entry.run, wikidataRun: null, region: 'us', version: V, registry: emptyRegistry(), newId: () => `f_${(++f).toString(16).padStart(16, '0')}` });
   assert.ok(fixtures.pack, fixtures.report.reason);
   assert.deepEqual(names(fixtures.pack.fixtures), ['us-midwest town hall (new)', 'us-northeast town hall (new)', 'us-south town hall (new)']);
   let s = 0;

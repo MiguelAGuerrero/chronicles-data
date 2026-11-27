@@ -302,7 +302,7 @@ test('ST9: the shops filter shares the OSM pass: no second download, no new host
   await osm.fetch({
     area: [], run: 'r2', put: () => { throw new Error('nothing is re-read'); }, log: () => {}, week: 1, box: null, keepClock: () => {}, setMeta: () => {},
     http: async (u: string) => { urls.push(u); return new Response(null, { status: 304 }); },
-    carry: (p: string) => carried.push(p), sameFetch: true,
+    carry: (p: string) => carried.push(p), sameFetch: true, clock: { now: () => 0, sleep: async () => {} },
     previous: { run: 'r1', startedAt: AT, parts: prevParts, read: () => '', meta: metas },
   } as FetchContext);
   assert.equal(urls.length, US_PARTS.length, 'one request per extract, shops included');

@@ -1,5 +1,6 @@
 // The adapter contract (decision 0108): a source's declaration plus two functions. This is the only place a source's
 // quirks live; nothing after `adapt` knows which source a candidate came from except by its name.
+import type { Clock } from './http';
 import type { RawPart, RawStore } from './rawStore';
 import type { Declaration } from './schema';
 
@@ -31,7 +32,15 @@ export interface FetchContext {
   setMeta(key: string, value: string): void;
   /** RB5: whether the earlier complete run fetched with the same fingerprint, so its answers can stand for unchanged files. */
   sameFetch: boolean;
+  /** Nov 27: the run's clock, for a longer pause before a last try and the time it may still take (the polite fetch's own). */
+  clock: Clock;
 }
+
+/**
+ * PP14, Nov 27: the note a run keeps of a part of its answers it could not fetch and carried from its earlier complete run
+ * instead (`carried:<part>`, the value `<run>: <what happened>`), so the report says which part is not this run's.
+ */
+export const CARRIED_NOTE = 'carried:';
 
 /** CF1: what a fetch may read of its source's earlier complete run. */
 export interface PreviousRun {

@@ -126,6 +126,7 @@ test('RB5: an extract unchanged since the copy held is not downloaded, and its a
     keepClock: () => {},
     setMeta: (k, v) => { meta[k] = v; },
     sameFetch,
+    clock,
   });
   await filterExtracts(ctx(true, 304), [filter], ['us-west']);
   assert.deepEqual(asked[0], { etag: '"abc"', since: 'Tue, 03 Nov 2026 21:00:00 GMT' }, 'it asks only if the extract changed');
@@ -166,7 +167,7 @@ test('RD7: the extracts are asked at Geofabrik\'s US region addresses (north-ame
   const ctx: FetchContext = {
     area: AREA, run: '20261111', week: 46, box: null, log: () => {}, put: () => {},
     http: async (url) => { urls.push(url); return new Response(null, { status: 503 }); },
-    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
+    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false, clock,
   };
   await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-northeast']));
   // Asked twice since Nov 17 (one more try before giving up), always at that address.
@@ -179,7 +180,7 @@ test('RD7: an extract\'s download has its own long limit, never the 75 s a query
   const ctx: FetchContext = {
     area: AREA, run: '20261111', week: 46, box: null, log: () => {}, put: () => {},
     http: async (_url, init) => { signals.push(init?.signal); return new Response(null, { status: 503 }); },
-    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
+    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false, clock,
   };
   await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west']));
   assert.ok(signals[0], 'the download carries its own signal, so politeFetch\'s 75 s one is not used');
@@ -208,7 +209,7 @@ test('RD7, Nov 17: an extract that fails is asked once more before the run gives
   const ctx: FetchContext = {
     area: AREA, run: '20261117', week: 47, box: null, log: () => {}, put: () => {},
     http: async (url) => { urls.push(url); return new Response(null, { status: 503 }); },
-    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false,
+    previous: null, carry: () => {}, keepClock: () => {}, setMeta: () => {}, sameFetch: false, clock,
   };
   await assert.rejects(filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west']));
   assert.equal(urls.length, 2);

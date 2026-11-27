@@ -76,7 +76,7 @@ test('OC4: an extract unchanged since the copy held carries its counts with its 
     put: () => assert.fail('nothing is downloaded or written'),
     http: async () => new Response(null, { status: 304 }),
     previous: { run: '20261111', startedAt: null, parts: [{ part: 'confirm-us-west.geojsonl', sha256: 'x', fetchedAt: '2026-11-11T07:17:00Z' }], read: () => '', meta: { 'etag:us-west': '"abc"', [`${COUNTS_NOTE}us-west`]: note, 'shopCounts:us-west': '{}' } },
-    carry: () => {}, keepClock: () => {}, setMeta: (k, v) => { meta[k] = v; }, sameFetch: true,
+    carry: () => {}, keepClock: () => {}, setMeta: (k, v) => { meta[k] = v; }, sameFetch: true, clock: { now: () => 0, sleep: async () => {} },
   };
   await filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }], ['us-west'], COUNT_TAGS);
   assert.equal(meta[`${COUNTS_NOTE}us-west`], note);
@@ -115,7 +115,7 @@ test('OC3, OC7: osmium counts each extract in the run\'s pass, and the raw parts
       area: [[-76, 40, -72, 42]], run: '20261118', week: 47, box: null, log: (l) => logs.push(l),
       put: (p, b) => { puts[p] = b; },
       http: async () => { asked++; return new Response(bytes, { status: 200 }); },
-      previous: null, carry: () => {}, keepClock: () => {}, setMeta: (k, v) => { meta[k] = v; }, sameFetch: false,
+      previous: null, carry: () => {}, keepClock: () => {}, setMeta: (k, v) => { meta[k] = v; }, sameFetch: false, clock: { now: () => 0, sleep: async () => {} },
     };
     await filterExtracts(ctx, [{ name: 'small', expressions: ['nwr/tourism=artwork'] }, { name: 'confirm', expressions: ['nwr/wikidata'], then: ['nwr/tourism=museum'] }], ['us-west'], counts);
     return { puts, meta, logs, asked };

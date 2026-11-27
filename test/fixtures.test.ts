@@ -345,6 +345,7 @@ test('FX10: on a real extract, the fill writes the fixtures part and carries the
     carry: (p: string) => carried.push(p),
     setMeta: (k: string, v: string) => { meta[k] = v; },
     log: () => {},
+    clock: { now: () => 0, sleep: async () => {} },
   };
   await filterExtracts(ctx, [{ name: 'confirm', expressions: ['nwr/wikidata'] }, { name: 'small', expressions: ['nwr/historic=milestone'] }], ['us-west'], { amenity: ['library'] }, [FIXTURE_FILTER]);
   assert.deepEqual(asked, [{ 'if-none-match': '"old"', 'if-modified-since': 'Mon, 23 Nov 2026' }, {}], 'asked against the held copy (a 304), then downloaded once (T66)');
@@ -518,6 +519,7 @@ test('town-fixtures audit 11: the fill runs in CI: the extract step\'s seam take
     carry: (p: string) => carried.push(p),
     setMeta: (k: string, v: string) => { meta[k] = v; },
     log: () => {},
+    clock: { now: () => 0, sleep: async () => {} },
   };
   const io = {
     exportFilter: (c: any, _pbf: string, _dir: string, part: string, f: any) => { exported.push(f.name); c.put(`${f.name}-${part}.geojsonl`, `${f.name} lines`); },
@@ -556,6 +558,7 @@ function t66(answer: (conditional: boolean) => Response) {
     carry: (p: string) => seen.carried.push(p),
     setMeta: (k: string, v: string) => { seen.meta[k] = v; },
     log: (l: string) => seen.logs.push(l),
+    clock: { now: () => 0, sleep: async () => {} },
   };
   const io = {
     exportFilter: (c: any, _pbf: string, _dir: string, part: string, f: any) => { seen.exported.push(f.name); c.put(`${f.name}-${part}.geojsonl`, `${f.name} lines`); },
@@ -642,7 +645,7 @@ test('town-fixtures audit 15: the checks that could not fail, made to bite', asy
   for (const p of US_PARTS) Object.assign(metas, { [`etag:${p}`]: `"${p}"`, [`shopCounts:${p}`]: '{}' });
   const prevParts = US_PARTS.flatMap((p: string) => ['confirm', 'small', 'shops', 'fixtures'].map((n) => ({ part: `${n}-${p}.geojsonl`, sha256: 'x', fetchedAt: AT })));
   const carried: string[] = [];
-  await osm.fetch({ area: [], run: 'r2', put: () => {}, log: () => {}, week: 1, box: null, keepClock: () => {}, setMeta: () => {}, http: async () => new Response(null, { status: 304 }), carry: (p: string) => carried.push(p), sameFetch: true, previous: { run: 'r1', startedAt: AT, parts: prevParts, read: () => '', meta: metas } } as any);
+  await osm.fetch({ area: [], run: 'r2', put: () => {}, log: () => {}, week: 1, box: null, keepClock: () => {}, setMeta: () => {}, http: async () => new Response(null, { status: 304 }), carry: (p: string) => carried.push(p), sameFetch: true, clock: { now: () => 0, sleep: async () => {} }, previous: { run: 'r1', startedAt: AT, parts: prevParts, read: () => '', meta: metas } } as any);
   assert.equal(carried.filter((c) => c.startsWith('fixtures-')).length, US_PARTS.length, 'the fixtures filter rides the OSM pass');
   // FX14: no transit tag a station in service carries drops it.
   const { kindsOf } = await load('fixtures/osm');

@@ -1,7 +1,7 @@
 // The runner (PP1-PP4, PP7, PP14, decision 0108): checks each adapter's declaration, fetches through its polite
 // fetch into the raw store, adapts every raw answer and checks each candidate, then conflates, gates, applies the
 // owner's edits and packages. Only `fetch` touches the network; with `fetch: false` the run reads the raw store alone.
-import type { Adapter, Box } from './adapter';
+import { CARRIED_NOTE, type Adapter, type Box } from './adapter';
 import { conflate, createIds, roleFor, type Registry, type SourceInfo } from './conflate';
 import { applyEdits, gate, type Edits } from './gate';
 import { politeFetch, type Clock, type Fetch } from './http';
@@ -10,7 +10,8 @@ import type { RawStore } from './rawStore';
 import { CandidateSchema, DeclarationSchema, type Candidate, type LicenseFamily, type Place } from './schema';
 
 export interface Report {
-  sources: { name: string; run: string | null; fellBack?: string; error?: string }[];
+  /** PP14, Nov 27: `carried`, the parts of the run used that are an earlier run's answers, and why (CARRIED_NOTE). */
+  sources: { name: string; run: string | null; fellBack?: string; error?: string; carried?: Record<string, string> }[];
   setAside: { source: string; part: string; reason: string }[];
   /** Nominations, for the owner to read: never in a pack, the registry or the crosswalk (PP7). */
   review: { source: string; name: string; evidence?: string }[];
@@ -168,6 +169,7 @@ export async function run(o: RunOptions): Promise<RunResult> {
           },
           setMeta: (key, value) => o.store.setMeta(d.name, o.version, key, value),
           sameFetch: key != null && previous?.meta[FETCH_KEY] === key,
+          clock: o.clock,
         });
         if (key != null) o.store.setMeta(d.name, o.version, FETCH_KEY, key);
         o.store.complete(d.name, o.version);
@@ -185,6 +187,9 @@ export async function run(o: RunOptions): Promise<RunResult> {
     entry.run = used;
     report.sources.push(entry);
     if (!used) continue;
+    // PP14, Nov 27: the parts of the run used that it carried from an earlier one because their fetch failed, by name.
+    const carried = Object.entries(o.store.meta(d.name, used)).filter(([k]) => k.startsWith(CARRIED_NOTE));
+    if (carried.length) entry.carried = Object.fromEntries(carried.map(([k, v]) => [k.slice(CARRIED_NOTE.length), v]));
 
     // CF5: a source that settles its answers reads them all at once; the others one answer at a time.
     const batches: { part: string; rows: () => unknown[] }[] = a.settle
